@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.53.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.54.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -520,6 +520,7 @@
       else if (kind === 'coin') pat = 8;
       else if (kind === 'boss') pat = [30, 40, 30, 40, 50];
       else if (kind === 'perfect') pat = [6, 18, 10]; // 3.34 soft double-tap
+      else if (kind === 'close') pat = 5; // 3.54 soft CLOSE / clear tick
       else pat = 12;
       navigator.vibrate(scaleVibePattern(pat, mul));
     } catch (_) {}
@@ -1970,6 +1971,7 @@ function updateComboMeter(visible) {
   }
 
   function showDeath() {
+    if (typeof clearPlayShimmer === 'function') clearPlayShimmer();
     state = 'dead';
     hideAllScreens();
     screenDeath.hidden = false;
@@ -3729,7 +3731,7 @@ function updateComboMeter(visible) {
   }
 
   function spawnPipeClearJuice(x, y, kind) {
-    // 3.50–3.53 soft clear ring — gold default, cyan for CLOSE (tiny juice)
+    // 3.50–3.54 soft clear ring — gold / CLOSE cyan / PERFECT mint
     if (reduceMotion || !bird) return;
     if (particles.length > particleBudget() * 0.9) return;
     var grow = 36 + Math.min(14, combo * 1.4);
@@ -3793,18 +3795,24 @@ function updateComboMeter(visible) {
     }
     var gained = basePts * mult;
     setScore(score + gained);
-    // 3.51–3.53: soft pipe-clear SFX/mix; tinted ring; no stacked score on PERFECT
+    // 3.51–3.54: soft pipe-clear SFX/mix; tinted ring; soft squash juice; no stacked score on PERFECT
+    var juiceKind = tag === 'PERFECT!' ? 'perfect' : (tag.indexOf('CLOSE') === 0 ? 'close' : 'clear');
     if (!reduceMotion) {
-      var juiceKind = tag === 'PERFECT!' ? 'perfect' : (tag.indexOf('CLOSE') === 0 ? 'close' : 'clear');
-      spawnPipeClearJuice(bird.x + 8, bird.y, juiceKind);
+      // skip clear ring on PERFECT when particle pressure high (stars already fire)
+      if (juiceKind !== 'perfect' || particles.length < particleBudget() * 0.75) {
+        spawnPipeClearJuice(bird.x + 8, bird.y, juiceKind);
+      }
+      // tiny feel: soft squash pulse
+      if (squashTarget > 0.82) squashTarget = 0.86;
     }
     if (tag === 'PERFECT!') {
       /* perfect() already played */
     } else if (FTAudio && FTAudio.pipeClear) {
-      FTAudio.pipeClear({ combo: combo });
+      FTAudio.pipeClear({ combo: combo, kind: juiceKind });
     } else if (FTAudio && FTAudio.score) {
       FTAudio.score();
     }
+    if (juiceKind === 'close') haptic('close');
     popScore(gained, bird.x + 20, bird.y - 30);
     if (tag && basePts >= 3) {
       popScore(tag, bird.x, bird.y - 48);

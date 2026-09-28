@@ -1,15 +1,14 @@
 # Urr Jaa! STATUS
 
-## Current: **3.53.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.54.0-urrjaa** (2026-09-28 PKT)
 
-### This pack (NEW vs ≤3.52)
-- **Bugfixes** — clear Play shimmer on run start · pipeClear respects mute mid-blip · shimmer debounce only after claim · day-rollover via visibilitychange
-- **Tiny juice** — CLOSE cyan / PERFECT mint clear-ring tints
-- No garage bloat · feel/stability first
-- KEEP ALL ≤3.52 incl. **15s Mystery Spin once**, Close (X), …
+### This pack (NEW vs ≤3.53)
+- **Light juice** — soft squash pulse on pipe clear · CLOSE brighter pipeClear SFX · soft CLOSE haptic
+- **Bugfixes / stability** — haptic('close') was falling through to default · skip PERFECT clear-ring under particle pressure · clear shimmer on death screen
+- No UI stack creep · KEEP ALL ≤3.53 incl. **15s Mystery Spin once**, Close (X), …
 
-SW cache: `urrjaa-v62-20260928`
+SW cache: `urrjaa-v63-20260928`
 
-**Ship commit:** `43f0d24` · tag `v3.53.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.53.0-urrjaa  
+**Ship commit:** _(pending)_ · tag `v3.54.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.54.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/

@@ -284,17 +284,22 @@
     opts = opts || {};
     var combo = opts.combo | 0;
     if (combo < 1) combo = 1;
+    var kind = opts.kind || 'clear';
     var base = 0.032;
     var comboMul = 1 + Math.min(0.28, (combo - 1) * 0.035);
     var duck = 1;
     if (now < voiceDuckUntil) duck = 0.42;
     else if (voiceDuckMul < 0.99) duck = Math.max(0.42, voiceDuckMul);
     var g = base * comboMul * duck;
+    // 3.54: CLOSE slightly brighter/softer; keep clear warm
+    var f0 = kind === 'close' ? 820 : 740;
+    var f1 = kind === 'close' ? 1120 : 990;
+    if (kind === 'close') g *= 0.92;
     var j = (Math.random() - 0.5) * 28;
-    tone(740 + j, 0.038, 'sine', g);
+    tone(f0 + j, 0.038, 'sine', g);
     setTimeout(function () {
       if (muted) return; // 3.53: respect mute mid-blip
-      tone(990 + j * 0.5, 0.05, 'triangle', g * 0.82);
+      tone(f1 + j * 0.5, 0.05, 'triangle', g * 0.82);
     }, 36);
   }
   /** 3.45/3.46: soft night cricket / owl ambience blip · volume gated */
