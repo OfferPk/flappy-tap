@@ -292,7 +292,10 @@
     var g = base * comboMul * duck;
     var j = (Math.random() - 0.5) * 28;
     tone(740 + j, 0.038, 'sine', g);
-    setTimeout(function () { tone(990 + j * 0.5, 0.05, 'triangle', g * 0.82); }, 36);
+    setTimeout(function () {
+      if (muted) return; // 3.53: respect mute mid-blip
+      tone(990 + j * 0.5, 0.05, 'triangle', g * 0.82);
+    }, 36);
   }
   /** 3.45/3.46: soft night cricket / owl ambience blip · volume gated */
   function setNightAmbienceVolume(level) {

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.52.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.53.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -1898,6 +1898,13 @@ function updateComboMeter(visible) {
     return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
   }
 
+  function clearPlayShimmer() {
+    // 3.53: drop leftover Play shimmer when leaving menu / starting a run
+    clearTimeout(maybePlayShimmer._t);
+    maybePlayShimmer._t = 0;
+    if (btnPlay) btnPlay.classList.remove('btn-play-milestone');
+  }
+
   function maybePlayShimmer() {
     if (reduceMotion) return;
     if (typeof document !== 'undefined' && document.hidden) return; // background tab
@@ -1905,7 +1912,6 @@ function updateComboMeter(visible) {
     if (!(W > 8 && H > 8)) return; // canvas not ready
     var now = performance.now();
     if (maybePlayShimmer._lastTry && (now - maybePlayShimmer._lastTry) < 900) return; // debounce
-    maybePlayShimmer._lastTry = now;
     var today = playSplashTodayKey();
     try {
       var prev = localStorage.getItem(PLAY_SPLASH_DAY_KEY);
@@ -1916,6 +1922,7 @@ function updateComboMeter(visible) {
       if (_playSplashSessionFallback) return;
       _playSplashSessionFallback = true;
     }
+    maybePlayShimmer._lastTry = now; // stamp only when we actually show
     if (btnPlay) {
       btnPlay.classList.remove('btn-play-milestone');
       void btnPlay.offsetWidth;
@@ -1935,6 +1942,14 @@ function updateComboMeter(visible) {
     if (!el) return;
     el.textContent = '💡 ' + pickTutorialTip(Date.now() / 8000);
     el.hidden = false;
+  }
+
+  // 3.53: day rollover while tab was hidden — retry shimmer on return to menu
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) return;
+      if (state === 'menu') maybePlayShimmer();
+    });
   }
 
   function refreshDeathTip(isRecord) {
@@ -2254,6 +2269,7 @@ function updateComboMeter(visible) {
 
   function startRun(fromContinue, mode) {
     FTAudio.unlock();
+    if (typeof clearPlayShimmer === 'function') clearPlayShimmer();
     if (FTAudio.stopMenuMusic) FTAudio.stopMenuMusic();
     starCoinRunGain = 0; // 3.43 star coin run cap
     starCoinLastAt = 0;
@@ -3712,16 +3728,19 @@ function updateComboMeter(visible) {
     }
   }
 
-  function spawnPipeClearJuice(x, y) {
-    // 3.50–3.52 soft gold pipe-clear ring (combo-scaled grow = small juice)
+  function spawnPipeClearJuice(x, y, kind) {
+    // 3.50–3.53 soft clear ring — gold default, cyan for CLOSE (tiny juice)
     if (reduceMotion || !bird) return;
     if (particles.length > particleBudget() * 0.9) return;
     var grow = 36 + Math.min(14, combo * 1.4);
+    var col = combo >= 5 ? 'rgba(251,191,36,0.55)' : 'rgba(255,217,61,0.42)';
+    if (kind === 'close') col = combo >= 5 ? 'rgba(125,211,252,0.58)' : 'rgba(125,211,252,0.45)';
+    else if (kind === 'perfect') col = 'rgba(167,243,208,0.5)';
     particles.push({
       x: x, y: y,
       vx: 0, vy: 0,
       life: 0.3, max: 0.3,
-      color: combo >= 5 ? 'rgba(251,191,36,0.55)' : 'rgba(255,217,61,0.42)',
+      color: col,
       r: 10 + Math.min(3, combo * 0.25),
       kind: 'ring',
       grow: grow
@@ -3774,8 +3793,11 @@ function updateComboMeter(visible) {
     }
     var gained = basePts * mult;
     setScore(score + gained);
-    // 3.51/3.52: soft pipe-clear SFX w/ volume mix; no stacked score on PERFECT
-    if (!reduceMotion) spawnPipeClearJuice(bird.x + 8, bird.y);
+    // 3.51–3.53: soft pipe-clear SFX/mix; tinted ring; no stacked score on PERFECT
+    if (!reduceMotion) {
+      var juiceKind = tag === 'PERFECT!' ? 'perfect' : (tag.indexOf('CLOSE') === 0 ? 'close' : 'clear');
+      spawnPipeClearJuice(bird.x + 8, bird.y, juiceKind);
+    }
     if (tag === 'PERFECT!') {
       /* perfect() already played */
     } else if (FTAudio && FTAudio.pipeClear) {
