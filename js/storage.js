@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.28.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.29.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -34,6 +34,7 @@
     coachStep: PREFIX + 'coach-step',
     garageSort: PREFIX + 'garage-sort',
     haptics: PREFIX + 'haptics',
+    hapticIntensity: PREFIX + 'haptic-intensity',
     unlockedSkins: PREFIX + 'unlocked-skins',
     coins: PREFIX + 'coins',
     unlockedBirds: PREFIX + 'unlocked-birds',
@@ -981,6 +982,16 @@
   }
   function getHaptics() { return get(KEYS.haptics, '1') === '1'; }
   function setHaptics(on) { set(KEYS.haptics, on ? '1' : '0'); }
+  /** 3.29: haptic intensity low | normal | high */
+  function getHapticIntensity() {
+    const v = get(KEYS.hapticIntensity, 'normal');
+    return (v === 'low' || v === 'normal' || v === 'high') ? v : 'normal';
+  }
+  function setHapticIntensity(v) {
+    if (v !== 'low' && v !== 'normal' && v !== 'high') v = 'normal';
+    set(KEYS.hapticIntensity, v);
+    return v;
+  }
   function getVoicePack() { return get(KEYS.voicePack, '1') === '1'; }
   function setVoicePack(on) { set(KEYS.voicePack, on ? '1' : '0'); }
 
@@ -1243,7 +1254,7 @@
     msUntilDailyReset, formatDailyCountdown, resetPreferences,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,
     getGarageSort, setGarageSort,
-    getHaptics, setHaptics, getVoicePack, setVoicePack,
+    getHaptics, setHaptics, getHapticIntensity, setHapticIntensity, getVoicePack, setVoicePack,
     getUnlockedSkins, isSkinUnlocked, unlockSkin,
     getCoins, setCoins, addCoins, spendCoins,
     getUnlockedBirds, isBirdUnlocked, unlockBird,

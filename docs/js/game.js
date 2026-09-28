@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.28.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.29.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -146,6 +146,9 @@
   let sensitivity = 1;
   let reduceMotion = false;
   let hapticsOn = true;
+  let hapticIntensity = 'normal'; // 3.29 low|normal|high
+  let bossWarnActive = false;
+  let bossWarnPulse = 0;
   let trailAcc = 0;
   let metersFlown = 0;
   let runCoins = 0;
@@ -233,6 +236,7 @@
   const reduceMotionChk = document.getElementById('reduce-motion');
   const soundToggleChk = document.getElementById('sound-toggle');
   const hapticsToggleChk = document.getElementById('haptics-toggle');
+  const hapticIntensitySel = document.getElementById('haptic-intensity');
   const voiceToggleChk = document.getElementById('voice-toggle');
   const quietNightChk = document.getElementById('quiet-night-toggle');
   const confettiIntensitySel = document.getElementById('confetti-intensity');
@@ -357,14 +361,20 @@
     var beforeSpins = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
     var total = FTStorage.addGiftBoxes(n);
     var afterSpins = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
+    var per = (FTStorage.GIFTS_PER_SPIN || 10);
+    var toward = total % per;
     if (afterSpins > beforeSpins) {
       pendingSpinUnlockPopup = true;
       spinUnlockShownThisUnlock = false;
       if (state === 'playing') {
-        showToast('🎰 Spin unlocked! · Mystery Box kholo', 1800);
+        showToast('🎰 Spin ready! ' + afterSpins + ' charge' + (afterSpins === 1 ? '' : 's') + ' · ' + per + '/' + per, 2000, 'gift');
       } else {
         maybeShowSpinUnlockPopup();
       }
+    } else if (state === 'playing') {
+      // 3.29: mid-run gift→spin progress toast
+      var shown = toward === 0 ? per : toward;
+      showToast('🎁 ' + shown + ' / ' + per + ' to next spin', 1100, 'gift');
     }
     return total;
   }
@@ -400,16 +410,29 @@
     }
   }
 
+  function hapticScale() {
+    if (hapticIntensity === 'low') return 0.55;
+    if (hapticIntensity === 'high') return 1.45;
+    return 1;
+  }
+  function scaleVibePattern(pat, mul) {
+    if (typeof pat === 'number') return Math.max(1, Math.round(pat * mul));
+    return pat.map(function (n) { return Math.max(1, Math.round(n * mul)); });
+  }
   function haptic(kind) {
     if (!hapticsOn) return;
     try {
       if (!navigator.vibrate) return;
-      if (kind === 'death') navigator.vibrate([40, 30, 80]);
-      else if (kind === 'power') navigator.vibrate(18);
-      else if (kind === 'gift') navigator.vibrate([12, 40, 18, 40, 28]);
-      else if (kind === 'nearmiss') navigator.vibrate(10);
-      else if (kind === 'coin') navigator.vibrate(8);
-      else navigator.vibrate(12);
+      var mul = hapticScale();
+      var pat;
+      if (kind === 'death') pat = [40, 30, 80];
+      else if (kind === 'power') pat = 18;
+      else if (kind === 'gift') pat = [12, 40, 18, 40, 28];
+      else if (kind === 'nearmiss') pat = 10;
+      else if (kind === 'coin') pat = 8;
+      else if (kind === 'boss') pat = [30, 40, 30, 40, 50];
+      else pat = 12;
+      navigator.vibrate(scaleVibePattern(pat, mul));
     } catch (_) {}
   }
 
@@ -1907,6 +1930,8 @@
       bossActive = false;
       bossUntil = 0;
       bossKind = null;
+      bossWarnActive = false;
+      bossWarnPulse = 0;
       nextBossAt = BOSS_EVERY_M;
       weatherDynId = null;
       mysteryAdUsed = false;
@@ -2502,7 +2527,7 @@
     noteGiftAdd(1);
     voiceGiftCue();
     if (bird) spawnGiftPop(bird.x, bird.y);
-    showToast('📦 → Mystery Rewards', 1300, 'gift');
+    if (state !== 'playing') showToast('📦 → Mystery Rewards', 1300, 'gift');
     updateCoinHud();
     return { gifts: 1, text: '+1 Gift' };
   }
@@ -2517,7 +2542,6 @@
     noteGiftAdd(1);
     voiceGiftCue();
     spawnGiftPop(box.x, box.y);
-    showToast('📦 → Mystery Rewards', 1200, 'gift');
     popScore('📦', box.x, box.y - 10);
   }
 
@@ -3535,21 +3559,38 @@
 
     metersFlown += currentSpeed * sdt * M_PER_PX;
 
+    // 3.29: pre-chase warning when within ~28m of next boss
+    if (!bossActive && !isPractice() && metersFlown < nextBossAt) {
+      var distLeft = nextBossAt - metersFlown;
+      if (distLeft <= 28) {
+        if (!bossWarnActive) {
+          bossWarnActive = true;
+          bossWarnPulse = 1;
+          showToast('⚠ Chase inbound · brace!', 1200, 'close');
+          haptic('boss');
+        }
+      } else {
+        bossWarnActive = false;
+      }
+    }
     // Boss / Chase events every N distance (30–60s then normal)
     if (!bossActive && metersFlown >= nextBossAt && !isPractice()) {
       bossActive = true;
+      bossWarnActive = false;
       bossPulse = 1;
+      bossWarnPulse = 1;
       var dur = (BOSS_MIN_S + rng() * (BOSS_MAX_S - BOSS_MIN_S)) * 1000;
       bossUntil = now + dur;
       bossDurMs = dur;
       bossKind = FTSkins.pickBossKind ? FTSkins.pickBossKind(rng) : { id: 'truck', label: 'GIANT TRUCK', emoji: '🚛' };
       nextBossAt = metersFlown + BOSS_EVERY_M + rng() * 40;
       if (FTAudio.boss) FTAudio.boss();
-      showBanner((bossKind.emoji || '⚠') + ' DANGER — ' + (bossKind.label || 'CHASE') + '!', 1800);
-      showToast((bossKind.emoji || '⚠') + ' Chase incoming!', 1400, 'close');
+      showBanner((bossKind.emoji || '⚠') + ' DANGER — ' + (bossKind.label || 'CHASE') + '!', 2000);
+      showToast((bossKind.emoji || '⚠') + ' CHASE! Survive ' + Math.round(dur / 1000) + 's', 1600, 'close');
       voiceCue('bach_ke');
       triggerShake();
-      if (!reduceMotion) spawnConfettiBurst(W * 0.5, 80, 8);
+      haptic('boss');
+      if (!reduceMotion) spawnConfettiBurst(W * 0.5, 80, 10);
       // Spawn heavy traffic / giant obstacle feel (3.13: eagle uses bird-height hawk-ish truck, police multi-wave)
       if (bossKind.id === 'storm') weatherDynId = 'storm';
       else if (bossKind.id === 'eagle') {
@@ -3575,6 +3616,7 @@
       difficultyFor(score);
     }
     if (bossPulse > 0) bossPulse = Math.max(0, bossPulse - sdt * 0.85);
+    if (bossWarnPulse > 0) bossWarnPulse = Math.max(0, bossWarnPulse - sdt * 1.1);
 
     // Mild dynamic weather drift (not unfair)
     if (!bossActive && state === 'playing' && metersFlown >= nextWeatherAt) {
@@ -4527,26 +4569,48 @@
         ctx.fillRect(0, 0, W, H);
       }
     }
+    // 3.29: pre-chase warning wash + inbound meter
+    if (state === 'playing' && bossWarnActive && !bossActive && !reduceMotion) {
+      var distL = Math.max(0, nextBossAt - metersFlown);
+      var warnA = 0.08 + 0.1 * Math.sin(performance.now() / 140) + bossWarnPulse * 0.15;
+      ctx.fillStyle = 'rgba(220, 38, 38,' + warnA.toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, 10);
+      ctx.fillRect(0, H - 10, W, 10);
+      ctx.fillStyle = 'rgba(15,23,42,0.75)';
+      ctx.fillRect(W / 2 - 70, 8, 140, 28);
+      ctx.fillStyle = '#fca5a5';
+      ctx.font = 'bold 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚠ INBOUND · ' + Math.ceil(distL) + 'm', W / 2, 26);
+    }
     if (state === 'playing' && bossActive && bossKind) {
       var left = Math.max(0, (bossUntil - performance.now()) / 1000);
-      var pulseA = 0.10 + 0.08 * Math.sin(performance.now() / 180) + bossPulse * 0.2;
+      var pulseA = 0.12 + 0.1 * Math.sin(performance.now() / 160) + bossPulse * 0.22;
       ctx.fillStyle = 'rgba(180,20,40,' + pulseA.toFixed(3) + ')';
       ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = 'rgba(120,10,20,0.82)';
-      ctx.fillRect(0, 36, W, 40);
+      // siren stripes
+      if (!reduceMotion) {
+        var stripeT = performance.now() / 90;
+        for (var si = 0; si < 6; si++) {
+          ctx.fillStyle = 'rgba(255,255,255,' + (0.04 + 0.03 * Math.sin(stripeT + si)).toFixed(3) + ')';
+          ctx.fillRect(((si * 70 + stripeT * 40) % (W + 70)) - 70, 0, 28, H);
+        }
+      }
+      ctx.fillStyle = 'rgba(120,10,20,0.88)';
+      ctx.fillRect(0, 32, W, 52);
       ctx.fillStyle = '#ffd93d';
-      ctx.font = 'bold 13px system-ui';
+      ctx.font = 'bold 14px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText((bossKind.emoji || '⚠') + ' DANGER — ' + bossKind.label, W / 2, 54);
-      var barW = 160;
+      ctx.fillText((bossKind.emoji || '⚠') + ' DANGER — ' + bossKind.label, W / 2, 52);
+      var barW = 180;
       var pct = Math.max(0, Math.min(1, (left * 1000) / Math.max(1, bossDurMs)));
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(W / 2 - barW / 2, 60, barW, 6);
-      ctx.fillStyle = '#ff6b6b';
-      ctx.fillRect(W / 2 - barW / 2, 60, barW * pct, 6);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(W / 2 - barW / 2, 62, barW, 8);
+      ctx.fillStyle = pct < 0.25 ? '#fbbf24' : '#ff6b6b';
+      ctx.fillRect(W / 2 - barW / 2, 62, barW * pct, 8);
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 10px system-ui';
-      ctx.fillText(Math.ceil(left) + 's left', W / 2, 78);
+      ctx.font = 'bold 11px system-ui';
+      ctx.fillText('Survive ' + Math.ceil(left) + 's', W / 2, 82);
     }
     if (state === 'dying') drawReplayPathStub();
     if (kick) ctx.restore();
@@ -4862,6 +4926,7 @@
     sensitivity = FTStorage.getSensitivity();
     reduceMotion = FTStorage.getReduceMotion();
     hapticsOn = FTStorage.getHaptics();
+    hapticIntensity = (FTStorage.getHapticIntensity && FTStorage.getHapticIntensity()) || 'normal';
     practiceGhostOpacity = (FTStorage.getPracticeGhostOpacity && FTStorage.getPracticeGhostOpacity()) || 0.38;
     garageSortMode = (FTStorage.getGarageSort && FTStorage.getGarageSort()) || 'owned';
     if (sensSlider) sensSlider.value = String(sensitivity);
@@ -4869,6 +4934,11 @@
     if (reduceMotionChk) reduceMotionChk.checked = reduceMotion;
     applyReduceMotionClass();
     if (hapticsToggleChk) hapticsToggleChk.checked = hapticsOn;
+    if (hapticIntensitySel) {
+      hapticIntensity = (FTStorage.getHapticIntensity && FTStorage.getHapticIntensity()) || 'normal';
+      hapticIntensitySel.value = hapticIntensity;
+      hapticIntensitySel.disabled = !hapticsOn;
+    }
     if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
     if (soundToggleChk) soundToggleChk.checked = !FTStorage.isMuted();
@@ -4908,6 +4978,10 @@
     if (reduceMotionChk) reduceMotionChk.checked = reduceMotion;
     if (soundToggleChk) soundToggleChk.checked = !FTStorage.isMuted();
     if (hapticsToggleChk) hapticsToggleChk.checked = hapticsOn;
+    if (hapticIntensitySel) {
+      hapticIntensitySel.value = hapticIntensity || 'normal';
+      hapticIntensitySel.disabled = !hapticsOn;
+    }
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
     if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
     if (confettiIntensitySel && FTStorage.getConfettiIntensity) {
@@ -4945,6 +5019,15 @@
   if (hapticsToggleChk) hapticsToggleChk.addEventListener('change', function () {
     hapticsOn = !!hapticsToggleChk.checked;
     FTStorage.setHaptics(hapticsOn);
+    if (hapticIntensitySel) hapticIntensitySel.disabled = !hapticsOn;
+    if (hapticsOn) haptic('power');
+  });
+  if (hapticIntensitySel) hapticIntensitySel.addEventListener('change', function () {
+    hapticIntensity = FTStorage.setHapticIntensity
+      ? FTStorage.setHapticIntensity(hapticIntensitySel.value)
+      : hapticIntensitySel.value;
+    showToast('Haptics: ' + hapticIntensity, 900);
+    if (hapticsOn) haptic('gift');
   });
   if (quietNightChk) quietNightChk.addEventListener('change', function () {
     if (FTStorage.setQuietNight) FTStorage.setQuietNight(!!quietNightChk.checked);
@@ -5741,6 +5824,7 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   sensitivity = FTStorage.getSensitivity();
   reduceMotion = FTStorage.getReduceMotion();
   hapticsOn = FTStorage.getHaptics();
+  hapticIntensity = (FTStorage.getHapticIntensity && FTStorage.getHapticIntensity()) || 'normal';
   // 3.25 leftover bugfix: load ghost opacity + garage sort + coach at boot
   practiceGhostOpacity = (FTStorage.getPracticeGhostOpacity && FTStorage.getPracticeGhostOpacity()) || 0.38;
   garageSortMode = (FTStorage.getGarageSort && FTStorage.getGarageSort()) || 'owned';

@@ -1,5 +1,23 @@
 # Urr Jaa! STATUS
 
+## Current: **3.29.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.28)
+- **Haptic intensity** — Low / Normal / High (scales vibrate patterns)
+- **Better boss warning** — inbound meter + siren stripes + survive timer
+- **Gift→spin mid-run toast** — `🎁 X / 10 to next spin` while playing
+- **Panel slide-in** — panels/settings/pause slide from the right
+- KEEP ALL ≤3.28 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v38-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.29.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.29.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.28.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.27)

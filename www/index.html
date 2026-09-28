@@ -63,7 +63,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.28.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.29.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -319,6 +319,15 @@
           <input id="haptics-toggle" type="checkbox" checked />
         </label>
         <p class="setting-hint">Vibration when supported · tap Preview below</p>
+        <label class="setting-row" for="haptic-intensity">
+          <span>Haptic intensity</span>
+        </label>
+        <select id="haptic-intensity" class="setting-select" aria-label="Haptic intensity">
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
+        </select>
+        <p class="setting-hint">Scales vibration strength (when Haptics is ON)</p>
         <button id="btn-haptic-preview" class="btn ghost btn-sm" type="button">Preview haptic</button>
         <label class="setting-row" for="sens-slider">
           <span>Sensitivity</span>
@@ -365,7 +374,7 @@
         </div>
       </div>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.28.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.29.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -436,6 +445,7 @@
           <li><strong>3.26:</strong> death freeze + 5s replay stub · better mute icons · pipe parallax · gift sparkle.</li>
           <li><strong>3.27:</strong> death freeze UX · path replay viz · env transition fade · coin +N popup.</li>
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
+          <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>

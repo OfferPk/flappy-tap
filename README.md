@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.28.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.29.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,10 +29,10 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.28.0-urrjaa)
+## Features (v3.29.0-urrjaa)
 
-- **Power expiry pulse** · **near-miss edge flash** · **daily reset countdown** · **settings reset confirm**
-- Death freeze UX · path replay · env fade · coin popup · mute SVG · parallax · gift sparkle
+- **Haptic intensity** · **better boss warning** · **gift→spin mid-run toast** · **panel slide-in**
+- Power expiry pulse · near-miss edge flash · daily countdown · settings reset · freeze UX · path replay
 - Pause blur · coin rain · heart break · clear history · iOS PWA · calendars · fanfare · thunder
 - **Mystery wheel 15s** Spin once (KEEP) · Close (X) · tips · fireworks · pipes · safe-area
 - Power VFX clarity (Slow-mo / Ghost / Turbo) · Challenge stage picker · One Life heart HUD

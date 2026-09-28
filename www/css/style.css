@@ -2603,3 +2603,27 @@ html.large-buttons .chip {
   border: 1px solid rgba(248, 113, 113, 0.4);
 }
 .reset-prefs-confirm[hidden] { display: none !important; }
+
+
+/* ——— v3.29: panel slide-in ——— */
+@keyframes panel-slide-in {
+  from { opacity: 0; transform: translateX(22px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.screen.panel-screen:not([hidden]),
+.screen.settings-screen:not([hidden]),
+.screen.pause-screen:not([hidden]) {
+  animation: panel-slide-in 0.28s cubic-bezier(.2,.8,.25,1);
+}
+html.reduce-motion .screen.panel-screen:not([hidden]),
+html.reduce-motion .screen.settings-screen:not([hidden]),
+html.reduce-motion .screen.pause-screen:not([hidden]) {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen.panel-screen:not([hidden]),
+  .screen.settings-screen:not([hidden]),
+  .screen.pause-screen:not([hidden]) {
+    animation: none !important;
+  }
+}
