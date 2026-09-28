@@ -1,5 +1,22 @@
 # Urr Jaa! STATUS
 
+## Current: **3.41.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.40)
+- **Shooting star** — rare night streak (skipped under reduce-motion)
+- **Better claim-all toast** — richer copy, longer duration, toast-claim glow
+- **Garage search** — filter skins by name/id; empty CTA clears search
+- Micro polish + dataset.label on skin cards
+- KEEP ALL ≤3.40 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v50-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.41.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.41.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.40.0-urrjaa** (2026-09-28 PKT) · milestone
 
 ### This pack (NEW vs 3.11–3.39)

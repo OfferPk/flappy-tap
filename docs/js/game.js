@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.40.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.41.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -320,8 +320,8 @@
     if (!toastEl) return;
     toastEl.textContent = msg;
     toastEl.hidden = false;
-    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal');
-    if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal') {
+    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim');
+    if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal' || kind === 'claim') {
       toastEl.classList.add('toast-' + kind);
     }
     void toastEl.offsetWidth;
@@ -329,7 +329,7 @@
     clearTimeout(showToast._t);
     showToast._t = setTimeout(function () {
       toastEl.hidden = true;
-      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal');
+      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim');
     }, ms || 1600);
   }
 
@@ -4243,6 +4243,7 @@ function updateComboMeter(visible) {
   // 3.40: cached night starfield (perf + polish)
   var starfieldCache = null;
   var starfieldW = 0, starfieldH = 0;
+  var shootingStar = null; // 3.41 rare night shooting star
   function ensureStarfield() {
     if (starfieldCache && starfieldW === W && starfieldH === H) return starfieldCache;
     starfieldW = W; starfieldH = H;
@@ -4288,6 +4289,50 @@ function updateComboMeter(visible) {
       ctx.fillStyle = band;
       ctx.fillRect(0, 0, W, H * 0.35);
     }
+    // 3.41: rare shooting star (night only; skip under reduce-motion)
+    drawShootingStar();
+  }
+
+  function drawShootingStar() {
+    if (reduceMotion) { shootingStar = null; return; }
+    if (!shootingStar || shootingStar.life <= 0) {
+      // ~0.18% per night frame ≈ rare streak every ~10–30s at 60fps
+      if (Math.random() > 0.0018) return;
+      var fromLeft = Math.random() < 0.55;
+      var life = 36 + Math.floor(Math.random() * 28);
+      shootingStar = {
+        x: fromLeft ? -12 : W + 12,
+        y: 18 + Math.random() * Math.max(40, H * 0.32),
+        vx: fromLeft ? (7.5 + Math.random() * 5.5) : -(7.5 + Math.random() * 5.5),
+        vy: 2.8 + Math.random() * 3.6,
+        life: life,
+        maxLife: life
+      };
+    }
+    var s = shootingStar;
+    s.x += s.vx;
+    s.y += s.vy;
+    s.life--;
+    var a = Math.max(0, s.life / s.maxLife);
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,248,220,' + (0.75 * a) + ')';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x - s.vx * 3.8, s.y - s.vy * 3.8);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.95 * a) + ')';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,220,140,' + (0.35 * a) + ')';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    if (s.life <= 0 || s.x < -80 || s.x > W + 80 || s.y > H * 0.55) shootingStar = null;
   }
 
   function drawSky() {
@@ -5967,17 +6012,32 @@ function updateComboMeter(visible) {
 
   function applyGarageFilter() {
     var hint = document.getElementById('garage-filter-hint');
+    var searchEl = document.getElementById('garage-search');
+    var q = searchEl ? String(searchEl.value || '').trim().toLowerCase() : '';
     if (hint) {
-      hint.textContent = garageFilter === 'theme'
-        ? 'Showing theme skins — Jungle · Mountains · Sea (+ matching vehicles)'
-        : garageFilter === 'seasonal'
-          ? 'Showing seasonal packs — unlock by date window or score'
-          : 'Theme skins: Jungle · Mountains · Sea (score or coins)';
+      if (q) {
+        hint.textContent = 'Search: "' + q + '"' + (garageFilter !== 'all' ? ' · filter ' + garageFilter : '');
+      } else {
+        hint.textContent = garageFilter === 'theme'
+          ? 'Showing theme skins — Jungle · Mountains · Sea (+ matching vehicles)'
+          : garageFilter === 'seasonal'
+            ? 'Showing seasonal packs — unlock by date window or score'
+            : 'Theme skins: Jungle · Mountains · Sea (score or coins) · search below';
+      }
     }
     document.querySelectorAll('#screen-garage .skin-card').forEach(function (card) {
       var show = true;
       if (garageFilter === 'theme') show = card.dataset.theme === '1';
       else if (garageFilter === 'seasonal') show = card.dataset.seasonal === '1';
+      if (show && q) {
+        var lab = (card.dataset.label || '').toLowerCase();
+        if (!lab) {
+          var span = card.querySelector('span');
+          lab = span ? String(span.textContent || '').toLowerCase() : '';
+        }
+        var id = (card.dataset.id || '').toLowerCase();
+        show = lab.indexOf(q) >= 0 || id.indexOf(q) >= 0;
+      }
       card.hidden = !show;
     });
     // Hide empty section titles lightly via row emptiness
@@ -5999,9 +6059,13 @@ function updateComboMeter(visible) {
     if (gEmpty) {
       gEmpty.hidden = anyVisible;
       if (!anyVisible) {
+        var emptyTitle = q ? 'No skins match' : 'Nothing in this filter';
+        var emptyHint = q
+          ? 'Clear search or try another name / id.'
+          : 'Switch filter or grab unlocks from Mystery Rewards.';
         gEmpty.innerHTML = '<div class="panel-empty-ico" aria-hidden="true">🧺</div>' +
-          '<p class="panel-empty-title">Nothing in this filter</p>' +
-          '<p class="hint">Switch filter or grab unlocks from Mystery Rewards.</p>' +
+          '<p class="panel-empty-title">' + emptyTitle + '</p>' +
+          '<p class="hint">' + emptyHint + '</p>' +
           '<div class="panel-empty-cta btn-row">' +
           '<button type="button" class="btn primary btn-sm" data-garage-empty-cta="all">Show all</button>' +
           '<button type="button" class="btn ghost btn-sm" data-garage-empty-cta="mystery">Mystery Rewards</button>' +
@@ -6011,6 +6075,8 @@ function updateComboMeter(visible) {
             var act = btn.getAttribute('data-garage-empty-cta');
             if (act === 'all') {
               garageFilter = 'all';
+              var gs = document.getElementById('garage-search');
+              if (gs) gs.value = '';
               document.querySelectorAll('.garage-filter').forEach(function (b) {
                 var on = b.getAttribute('data-garage-filter') === 'all';
                 b.classList.toggle('active', on);
@@ -6133,6 +6199,13 @@ function updateComboMeter(visible) {
       applyGarageFilter();
     });
   });
+
+  var garageSearchEl = document.getElementById('garage-search');
+  if (garageSearchEl && !garageSearchEl._urrjaaBound) {
+    garageSearchEl._urrjaaBound = true;
+    garageSearchEl.addEventListener('input', function () { applyGarageFilter(); });
+    garageSearchEl.addEventListener('search', function () { applyGarageFilter(); });
+  }
   document.querySelectorAll('[data-close="garage"]').forEach(function (b) {
     b.addEventListener('click', function () { stopGaragePreview(); showMenu(); });
   });
@@ -6270,10 +6343,14 @@ function updateComboMeter(visible) {
         else if (FTAudio.combo) FTAudio.combo();
         showBanner('CLAIM ALL ×' + r.count + '!', 1100);
         var bits = [];
-        if (r.coins) bits.push('+' + r.coins + '🪙');
-        if (r.fragments) bits.push('+' + r.fragments + '✦');
-        if (r.gifts) bits.push('+' + r.gifts + '🎁');
-        showToast('Claimed ' + r.count + ': ' + (bits.join(' · ') || 'done!'), 2200, 'medal');
+        if (r.coins) bits.push('+' + r.coins + ' 🪙');
+        if (r.fragments) bits.push('+' + r.fragments + ' ✦');
+        if (r.gifts) bits.push('+' + r.gifts + ' 🎁');
+        // 3.41 richer claim-all toast
+        var claimMsg = '🎁 Claimed all · ' + r.count + ' mission' + (r.count === 1 ? '' : 's');
+        if (bits.length) claimMsg += ' · ' + bits.join(' · ');
+        else claimMsg += ' · nice!';
+        showToast(claimMsg, 3400, 'claim');
         if (r.gifts) detectSpinUnlockFromDelta(r.gifts);
         voiceCue('zabardast');
         refreshMissions(); updateCoinHud();

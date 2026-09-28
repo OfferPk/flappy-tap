@@ -1322,6 +1322,7 @@
       btn.className = 'skin-card' + (item.id === selectedId && unlocked ? ' selected' : '') + (!unlocked ? ' locked' : '') +
         (isTheme ? ' theme-skin' : '') + (isSeasonal ? ' seasonal-skin' : '');
       btn.dataset.id = item.id;
+      btn.dataset.label = item.label || item.id;
       btn.dataset.theme = isTheme ? '1' : '0';
       btn.dataset.seasonal = isSeasonal ? '1' : '0';
       const c = document.createElement('canvas');
