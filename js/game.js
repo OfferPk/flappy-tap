@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.31.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.32.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -1551,8 +1551,8 @@
     if (FTAudio.setAreaMusicEnabled) FTAudio.setAreaMusicEnabled(on);
     if (areaMusicChk) areaMusicChk.checked = on;
     if (!on) {
-      if (FTAudio.stopAreaMusic) FTAudio.stopAreaMusic();
-      if (FTAudio.stopMenuMusic) FTAudio.stopMenuMusic();
+      if (FTAudio.stopAreaMusic) FTAudio.stopAreaMusic(true);
+      if (FTAudio.stopMenuMusic) FTAudio.stopMenuMusic(true);
     }
   }
 
@@ -2158,9 +2158,11 @@
       var dx = Math.abs(pipes[i].x + PIPE_W / 2 - bird.x);
       if (dx < bestDx) { bestDx = dx; nearest = pipes[i]; }
     }
+    var kickDirY = 0;
     if (nearest) {
       var g = nearest.gap != null ? nearest.gap : currentGap;
       var cy = nearest.gapY + g / 2;
+      kickDirY = (cy > bird.y) ? 1 : -1;
       bird.y += (cy - bird.y) * 0.58; // 3.11: stronger center recover
       if (bird.vy > 80) bird.vy *= 0.28;
       if (bird.vy < -120) bird.vy *= 0.42;
@@ -2168,6 +2170,13 @@
       if (bird.y + bird.h / 2 >= H - GROUND_H) bird.y = H - GROUND_H - bird.h / 2 - 4;
       if (bird.y - bird.h / 2 <= 0) bird.y = bird.h / 2 + 4;
       bird.vy *= 0.4;
+    }
+    // 3.32: soft camera nudge toward safety + tiny zoom
+    if (!reduceMotion) {
+      nearMissCamUntil = performance.now() + 280;
+      camKickX = nearest ? ((nearest.x + PIPE_W / 2 > bird.x) ? -3 : 3) : 0;
+      camKickY = kickDirY * 6;
+      camKickZoom = 0.022;
     }
     if (FTAudio.lucky) FTAudio.lucky();
     else FTAudio.nearmiss();
@@ -5617,6 +5626,8 @@
     b.addEventListener('click', function () { showMenu(); });
   });
 
+  var collectionFilter = 'all'; // 3.32 all | owned | locked
+
   function refreshCollection() {
     if (!collectionList) return;
     var counts = FTStorage.collectionCounts();
@@ -5687,20 +5698,59 @@
       tiers.appendChild(b);
     });
     collectionList.appendChild(tiers);
+    // 3.32: collection filter chips
+    var filterRow = document.createElement('div');
+    filterRow.className = 'collection-filters';
+    filterRow.setAttribute('role', 'tablist');
+    filterRow.setAttribute('aria-label', 'Collection filter');
+    [
+      { id: 'all', label: 'All' },
+      { id: 'owned', label: 'Owned' },
+      { id: 'locked', label: 'Locked' }
+    ].forEach(function (f) {
+      var fb = document.createElement('button');
+      fb.type = 'button';
+      fb.className = 'collection-filter-chip' + (collectionFilter === f.id ? ' active' : '');
+      fb.setAttribute('role', 'tab');
+      fb.setAttribute('aria-selected', collectionFilter === f.id ? 'true' : 'false');
+      fb.dataset.filter = f.id;
+      fb.textContent = f.label;
+      fb.addEventListener('click', function () {
+        collectionFilter = f.id;
+        refreshCollection();
+      });
+      filterRow.appendChild(fb);
+    });
+    collectionList.appendChild(filterRow);
     function section(title, map, labels) {
       var h = document.createElement('h3');
+      h.className = 'collection-section-title';
       h.textContent = title;
       collectionList.appendChild(h);
       var row = document.createElement('div');
-      row.className = 'skin-row';
+      row.className = 'skin-row collect-chip-row';
+      var shown = 0;
       Object.keys(labels).forEach(function (id) {
         if (id === 'none') return;
-        var el = document.createElement('div');
-        el.className = 'collect-chip' + (map[id] ? ' owned' : '');
-        el.textContent = (map[id] ? '✓ ' : '🔒 ') + labels[id];
+        var owned = !!map[id];
+        if (collectionFilter === 'owned' && !owned) return;
+        if (collectionFilter === 'locked' && owned) return;
+        shown++;
+        var el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'collect-chip' + (owned ? ' owned' : ' locked');
+        el.setAttribute('aria-pressed', owned ? 'true' : 'false');
+        el.textContent = (owned ? '✓ ' : '🔒 ') + labels[id];
         row.appendChild(el);
       });
-      collectionList.appendChild(row);
+      if (!shown) {
+        var empty = document.createElement('p');
+        empty.className = 'hint collect-filter-empty';
+        empty.textContent = collectionFilter === 'owned' ? 'No owned items here yet.' : 'None locked — nice!';
+        collectionList.appendChild(empty);
+      } else {
+        collectionList.appendChild(row);
+      }
     }
     var birdLabels = {}; FTSkins.BIRDS.forEach(function (b) { birdLabels[b.id] = b.label; });
     var vehLabels = {}; FTSkins.VEHICLES.forEach(function (b) { vehLabels[b.id] = b.label; });
@@ -5997,13 +6047,38 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('orientationchange', function () { setTimeout(resizeCanvas, 100); });
 
+  var offlineReadyToasted = false;
+  var wasOffline = false;
   function updateOfflineBanner() {
     var el = document.getElementById('offline-banner');
     if (!el) return;
     var offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
     el.hidden = !offline;
-    if (offline) el.classList.add('offline-show');
-    else el.classList.remove('offline-show');
+    if (offline) {
+      el.classList.add('offline-show');
+      el.textContent = '📡 Offline — Urr Jaa! still plays from cache.';
+      wasOffline = true;
+    } else {
+      el.classList.remove('offline-show');
+      if (wasOffline) {
+        wasOffline = false;
+        showToast('✓ Back online · still offline-ready', 1600);
+      }
+    }
+  }
+  /** 3.32: one-shot toast after boot confirming cache-ready play. */
+  function maybeToastOfflineReady() {
+    if (offlineReadyToasted) return;
+    offlineReadyToasted = true;
+    try {
+      if (sessionStorage.getItem('urrjaa:offline-ready-toast') === '1') return;
+      sessionStorage.setItem('urrjaa:offline-ready-toast', '1');
+    } catch (e) { /* private */ }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      showToast('📡 Offline-ready · playing from cache', 1800);
+    } else {
+      showToast('✓ Offline-ready · works without network', 1600);
+    }
   }
   function setBootProgress(pct, label) {
     var fill = document.getElementById('splash-progress-fill');
@@ -6035,6 +6110,7 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
     setTimeout(function () {
       setBootProgress(100, 'Ready — Urr Jao!');
       hideBootSplash();
+      setTimeout(maybeToastOfflineReady, 520);
     }, 420);
   }
   window.addEventListener('online', updateOfflineBanner);

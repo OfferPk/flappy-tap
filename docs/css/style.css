@@ -2700,3 +2700,69 @@ html.reduce-motion .screen.pause-screen:not([hidden]) {
   50% { filter: brightness(1.25); transform: scale(1.03); }
 }
 html.reduce-motion .wheel-wrap.wheel-jackpot .wheel-rim { animation: none; }
+
+
+/* 3.32: collection filter chips + polish */
+.collection-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 6px;
+  justify-content: center;
+}
+.collection-filter-chip {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease, transform .12s ease;
+}
+.collection-filter-chip:hover {
+  background: rgba(255,255,255,.12);
+  color: var(--text);
+}
+.collection-filter-chip.active,
+.collection-filter-chip[aria-selected="true"] {
+  background: linear-gradient(135deg, rgba(255,217,61,.28), rgba(255,140,66,.22));
+  border-color: rgba(255,217,61,.55);
+  color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(255,217,61,.2), 0 2px 8px rgba(0,0,0,.2);
+}
+.collection-filter-chip:active { transform: scale(0.96); }
+.collection-section-title {
+  margin-top: 12px;
+}
+.collect-chip {
+  cursor: default;
+  transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+}
+.collect-chip.owned {
+  background: linear-gradient(135deg, rgba(255,217,61,.16), rgba(255,140,66,.1));
+  box-shadow: 0 1px 4px rgba(255,217,61,.12);
+}
+.collect-chip.locked {
+  opacity: 0.72;
+  background: rgba(0,0,0,.18);
+}
+.collect-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.28);
+}
+.collect-filter-empty {
+  margin: 4px 0 8px;
+  font-style: italic;
+  opacity: 0.85;
+}
+@keyframes offline-ready-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.offline-banner.offline-show {
+  animation: a2hs-in .3s ease-out, offline-ready-pulse 2.4s ease-in-out 0.4s infinite;
+}

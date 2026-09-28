@@ -266,39 +266,108 @@
 
   let areaMusicTimer = null;
   let areaMusicId = null;
-  function stopAreaMusic() {
-    if (areaMusicTimer) { clearInterval(areaMusicTimer); areaMusicTimer = null; }
-    areaMusicId = null;
-  }
   let menuMusicTimer = null;
   let areaMusicEnabled = true;
+  // 3.32: music bed volume fade 0..1
+  let musicFade = 0;
+  let musicFadeTarget = 0;
+  let musicFadeRaf = 0;
+  let musicFadeMode = null; // 'menu' | 'area' | null
+  function musicGainNow() {
+    return 0.018 + musicFade * 0.01; // base quiet beds
+  }
+  function tickMusicFade() {
+    musicFadeRaf = 0;
+    var step = 0.045;
+    if (musicFade < musicFadeTarget) {
+      musicFade = Math.min(musicFadeTarget, musicFade + step);
+    } else if (musicFade > musicFadeTarget) {
+      musicFade = Math.max(musicFadeTarget, musicFade - step);
+    }
+    if (Math.abs(musicFade - musicFadeTarget) > 0.001) {
+      musicFadeRaf = (typeof requestAnimationFrame === 'function')
+        ? requestAnimationFrame(tickMusicFade)
+        : setTimeout(tickMusicFade, 32);
+    } else if (musicFadeTarget <= 0.001) {
+      // fully faded — hard stop timers
+      if (areaMusicTimer) { clearInterval(areaMusicTimer); areaMusicTimer = null; }
+      if (menuMusicTimer) { clearInterval(menuMusicTimer); menuMusicTimer = null; }
+      areaMusicId = null;
+      musicFadeMode = null;
+    }
+  }
+  function setMusicFadeTarget(t) {
+    musicFadeTarget = Math.max(0, Math.min(1, t));
+    if (!musicFadeRaf) {
+      if (typeof requestAnimationFrame === 'function') musicFadeRaf = requestAnimationFrame(tickMusicFade);
+      else musicFadeRaf = setTimeout(tickMusicFade, 32);
+    }
+  }
+  function stopAreaMusic(immediate) {
+    if (immediate) {
+      if (areaMusicTimer) { clearInterval(areaMusicTimer); areaMusicTimer = null; }
+      areaMusicId = null;
+      if (musicFadeMode === 'area') { musicFade = 0; musicFadeTarget = 0; musicFadeMode = null; }
+      return;
+    }
+    if (musicFadeMode === 'area' || areaMusicTimer) setMusicFadeTarget(0);
+    else {
+      if (areaMusicTimer) { clearInterval(areaMusicTimer); areaMusicTimer = null; }
+      areaMusicId = null;
+    }
+  }
   function setAreaMusicEnabled(on) {
     areaMusicEnabled = !!on;
-    if (!areaMusicEnabled) { stopAreaMusic(); stopMenuMusic(); }
+    if (!areaMusicEnabled) { stopAreaMusic(true); stopMenuMusic(true); musicFade = 0; musicFadeTarget = 0; }
   }
   function isAreaMusicEnabled() { return areaMusicEnabled; }
-  function stopMenuMusic() {
-    if (menuMusicTimer) { clearInterval(menuMusicTimer); menuMusicTimer = null; }
+  function stopMenuMusic(immediate) {
+    if (immediate) {
+      if (menuMusicTimer) { clearInterval(menuMusicTimer); menuMusicTimer = null; }
+      if (musicFadeMode === 'menu') { musicFade = 0; musicFadeTarget = 0; musicFadeMode = null; }
+      return;
+    }
+    if (musicFadeMode === 'menu' || menuMusicTimer) setMusicFadeTarget(0);
+    else if (menuMusicTimer) { clearInterval(menuMusicTimer); menuMusicTimer = null; }
   }
-  /** 3.31: soft menu stub loop (very quiet arpeggio). */
+  /** 3.31/3.32: soft menu stub with fade-in. */
   function playMenuMusic() {
-    if (muted || !areaMusicEnabled) { stopMenuMusic(); return; }
-    if (menuMusicTimer) return;
+    if (muted || !areaMusicEnabled) { stopMenuMusic(true); return; }
+    if (musicFadeMode === 'menu' && menuMusicTimer) {
+      setMusicFadeTarget(1);
+      return;
+    }
+    // crossfade from area
+    if (areaMusicTimer) {
+      if (areaMusicTimer) { clearInterval(areaMusicTimer); areaMusicTimer = null; }
+      areaMusicId = null;
+    }
+    if (menuMusicTimer) { clearInterval(menuMusicTimer); menuMusicTimer = null; }
     ensure();
+    musicFadeMode = 'menu';
+    musicFade = Math.max(musicFade, 0.05);
+    setMusicFadeTarget(1);
     var notes = [262, 330, 392, 523, 392, 330];
     var i = 0;
     menuMusicTimer = setInterval(function () {
-      if (muted || !areaMusicEnabled) return;
-      tone(notes[i % notes.length], 0.14, 'sine', 0.018);
+      if (muted || !areaMusicEnabled || musicFade < 0.04) return;
+      tone(notes[i % notes.length], 0.14, 'sine', 0.012 + musicFade * 0.014);
       i++;
     }, 520);
   }
   function playAreaMusic(areaId) {
-    if (muted || !areaMusicEnabled) { stopAreaMusic(); return; }
-    if (areaMusicId === areaId) return;
-    stopMenuMusic();
-    stopAreaMusic();
+    if (muted || !areaMusicEnabled) { stopAreaMusic(true); return; }
+    if (areaMusicId === areaId && areaMusicTimer) {
+      setMusicFadeTarget(1);
+      return;
+    }
+    // stop menu immediately for clean handoff, fade area in
+    if (menuMusicTimer) { clearInterval(menuMusicTimer); menuMusicTimer = null; }
+    if (areaMusicTimer) { clearInterval(areaMusicTimer); areaMusicTimer = null; }
     areaMusicId = areaId;
+    musicFadeMode = 'area';
+    musicFade = 0.08;
+    setMusicFadeTarget(1);
     ensure();
     const themes = {
       city: [392, 494, 523, 587],
@@ -312,8 +381,8 @@
     const notes = themes[areaId] || themes.city;
     let i = 0;
     areaMusicTimer = setInterval(function () {
-      if (muted) return;
-      tone(notes[i % notes.length], 0.12, 'triangle', 0.025);
+      if (muted || !areaMusicEnabled || musicFade < 0.04) return;
+      tone(notes[i % notes.length], 0.12, 'triangle', 0.014 + musicFade * 0.018);
       i++;
     }, 420);
   }
@@ -824,7 +893,7 @@
     return voice('oye_hoye', { force: true });
   }
 
-  function setMuted(on) { muted = !!on; if (muted) { stopAreaMusic(); stopMenuMusic(); stopSpinWhoosh(); } }
+  function setMuted(on) { muted = !!on; if (muted) { stopAreaMusic(true); stopMenuMusic(true); stopSpinWhoosh(); } }
   function isMuted() { return muted; }
   /** 3.18: night quiet — softens SFX (~35%) without full mute. */
   function setQuietMode(on) { quietMul = on ? 0.35 : 1; }
