@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.26.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.27.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -97,6 +97,12 @@
   var deathFreezeCanvas = null;
   var deathCamZoom = 0;
   var REPLAY_WINDOW_MS = 5000;
+  var replaySnapshot = []; // 3.27 frozen copy for death-screen viz
+  var envFade = 0;
+  var envFadeFrom = null; // previous area id
+  var lastEnvArea = null;
+  var deathFreezeMs = 900;
+  var replayVizRaf = 0;
 
 
 
@@ -238,6 +244,9 @@
   const garageSortSel = document.getElementById('garage-sort');
   const deathFreezeThumb = document.getElementById('death-freeze-thumb');
   const btnReplayStub = document.getElementById('btn-replay-stub');
+  const replayVizCanvas = document.getElementById('replay-viz-canvas');
+  const deathFreezeWrap = document.getElementById('death-freeze-wrap');
+  const deathFreezeBadge = document.getElementById('death-freeze-badge');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -1175,15 +1184,19 @@
     updateCoinHud();
   }
 
-  function popScore(amount, x, y) {
+  function popScore(amount, x, y, opts) {
     if (reduceMotion) return;
+    opts = opts || {};
     var txt = (typeof amount === 'string') ? amount : ('+' + amount);
+    if (opts.coin && typeof amount === 'number') txt = '+' + amount + ' 🪙';
     scorePops.push({
       text: txt,
       x: x == null ? bird.x : x,
       y: y == null ? bird.y - 20 : y,
-      life: 0.7,
-      max: 0.7
+      life: opts.coin ? 0.85 : 0.7,
+      max: opts.coin ? 0.85 : 0.7,
+      kind: opts.coin ? 'coin' : (opts.kind || 'score'),
+      scale: opts.coin ? 1.15 : 1
     });
     if (scoreEl) {
       scoreEl.classList.remove('score-bump');
@@ -1834,9 +1847,14 @@
       turboTrail.length = 0;
       ghostSilTrail.length = 0;
       replayBuf.length = 0;
+      replaySnapshot.length = 0;
       replaySampleAcc = 0;
       deathFreezeCanvas = null;
       deathCamZoom = 0;
+      envFade = 0;
+      envFadeFrom = null;
+      lastEnvArea = null;
+      if (replayVizRaf) { cancelAnimationFrame(replayVizRaf); replayVizRaf = 0; }
       score2xUntil = 0;
       metersFlown = 0;
       runCoins = 0;
@@ -2410,7 +2428,7 @@
     if (FTAudio.coin) FTAudio.coin(); else FTAudio.score();
     haptic('coin');
     spawnCoinPop(c.x, c.y);
-    popScore(gained, c.x, c.y - 10);
+    popScore(gained, c.x, c.y - 10, { coin: true });
     if (mult >= 5) {
       FTAudio.combo();
       showBanner('COIN x' + mult + '!', 900);
@@ -2852,7 +2870,7 @@
   }
 
 
-  /** 3.26: capture canvas freeze frame at death impact. */
+  /** 3.26/3.27: capture canvas freeze frame at death impact. */
   function captureDeathFreezeFrame() {
     try {
       if (!canvas) return;
@@ -2875,47 +2893,73 @@
     if (replayBuf.length > 64) replayBuf.shift();
   }
 
-  function drawReplayPathStub() {
-    if (!replayBuf.length || reduceMotion) return;
+  function drawReplayPathStub(buf) {
+    buf = buf || replayBuf;
+    if (!buf.length || reduceMotion) return;
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,217,61,0.55)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 4]);
+    // glow underlay
+    ctx.strokeStyle = 'rgba(251,191,36,0.25)';
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    for (var i = 0; i < replayBuf.length; i++) {
-      var p = replayBuf[i];
+    for (var i = 0; i < buf.length; i++) {
+      var p = buf[i];
       if (i === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
     }
     ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,217,61,0.75)';
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    for (var i2 = 0; i2 < buf.length; i2++) {
+      var p2 = buf[i2];
+      if (i2 === 0) ctx.moveTo(p2.x, p2.y);
+      else ctx.lineTo(p2.x, p2.y);
+    }
+    ctx.stroke();
     ctx.setLineDash([]);
-    // silhouette dots
-    for (var j = 0; j < replayBuf.length; j += 3) {
-      var q = replayBuf[j];
-      var a = 0.15 + 0.35 * (j / replayBuf.length);
+    for (var j = 0; j < buf.length; j += 2) {
+      var q = buf[j];
+      var a = 0.2 + 0.45 * (j / buf.length);
       ctx.globalAlpha = a;
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath();
-      ctx.arc(q.x, q.y, 3, 0, Math.PI * 2);
+      ctx.arc(q.x, q.y, 2.8, 0, Math.PI * 2);
       ctx.fill();
     }
+    // start / end markers
+    ctx.globalAlpha = 0.9;
+    var s0 = buf[0], s1 = buf[buf.length - 1];
+    ctx.fillStyle = '#4ade80';
+    ctx.beginPath(); ctx.arc(s0.x, s0.y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f87171';
+    ctx.beginPath(); ctx.arc(s1.x, s1.y, 4.5, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
   function drawDeathFreezeOverlay() {
     if (state !== 'dying' || !bird) return;
-    var rem = Math.max(0, (deathFreezeUntil - performance.now()) / Math.max(1, DEATH_FREEZE_MS));
-    // freeze vignette around impact (path drawn inside camera transform)
+    var rem = Math.max(0, (deathFreezeUntil - performance.now()) / Math.max(1, deathFreezeMs));
     ctx.save();
-    var gV = ctx.createRadialGradient(bird.x, bird.y, 24, bird.x, bird.y, Math.max(W, H) * 0.72);
+    var gV = ctx.createRadialGradient(bird.x, bird.y, 20, bird.x, bird.y, Math.max(W, H) * 0.75);
     gV.addColorStop(0, 'rgba(0,0,0,0)');
-    gV.addColorStop(1, 'rgba(15,5,10,' + (0.32 + 0.28 * (1 - rem)).toFixed(3) + ')');
+    gV.addColorStop(0.55, 'rgba(30,10,15,' + (0.12 * (1 - rem)).toFixed(3) + ')');
+    gV.addColorStop(1, 'rgba(15,5,10,' + (0.38 + 0.28 * (1 - rem)).toFixed(3) + ')');
     ctx.fillStyle = gV;
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(255,230,230,0.92)';
+    // progress chip
+    var bw = 72, bh = 6;
+    var bx = bird.x - bw / 2, by = Math.max(36, bird.y - 56);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = '#fca5a5';
+    ctx.fillRect(bx, by, bw * rem, bh);
+    ctx.fillStyle = 'rgba(254,226,226,0.95)';
     ctx.font = 'bold 11px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('❄ FREEZE', bird.x, Math.max(28, bird.y - 42));
+    ctx.fillText('❄ IMPACT FREEZE', bird.x, by - 8);
     ctx.restore();
   }
 
@@ -2937,16 +2981,112 @@
     ctx.restore();
   }
 
-  function updateDeathFreezeThumb() {
-    if (!deathFreezeThumb) return;
-    if (deathFreezeCanvas) {
-      try {
-        deathFreezeThumb.src = deathFreezeCanvas.toDataURL('image/jpeg', 0.72);
-        deathFreezeThumb.hidden = false;
-      } catch (e) { deathFreezeThumb.hidden = true; }
-    } else {
-      deathFreezeThumb.hidden = true;
+  /** 3.27: paint path replay onto death-screen mini canvas (+ optional animate). */
+  function paintReplayViz(progress) {
+    if (!replayVizCanvas) return false;
+    var buf = replaySnapshot.length ? replaySnapshot : replayBuf;
+    if (!buf.length) {
+      replayVizCanvas.hidden = true;
+      return false;
     }
+    replayVizCanvas.hidden = false;
+    var w = replayVizCanvas.width;
+    var h = replayVizCanvas.height;
+    var rctx = replayVizCanvas.getContext('2d');
+    rctx.clearRect(0, 0, w, h);
+    // bg
+    var bg = rctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#0f172a');
+    bg.addColorStop(1, '#1e293b');
+    rctx.fillStyle = bg;
+    rctx.fillRect(0, 0, w, h);
+    // fit path
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (var i = 0; i < buf.length; i++) {
+      minX = Math.min(minX, buf[i].x); maxX = Math.max(maxX, buf[i].x);
+      minY = Math.min(minY, buf[i].y); maxY = Math.max(maxY, buf[i].y);
+    }
+    var pad = 18;
+    var spanX = Math.max(40, maxX - minX);
+    var spanY = Math.max(40, maxY - minY);
+    var scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
+    function tx(p) { return pad + (p.x - minX) * scale + (w - pad * 2 - spanX * scale) / 2; }
+    function ty(p) { return pad + (p.y - minY) * scale + (h - pad * 2 - spanY * scale) / 2; }
+    rctx.strokeStyle = 'rgba(251,191,36,0.35)';
+    rctx.lineWidth = 4;
+    rctx.lineJoin = 'round';
+    rctx.beginPath();
+    for (var j = 0; j < buf.length; j++) {
+      var p = buf[j];
+      if (j === 0) rctx.moveTo(tx(p), ty(p));
+      else rctx.lineTo(tx(p), ty(p));
+    }
+    rctx.stroke();
+    rctx.strokeStyle = '#fbbf24';
+    rctx.lineWidth = 2;
+    rctx.beginPath();
+    for (var k = 0; k < buf.length; k++) {
+      var q = buf[k];
+      if (k === 0) rctx.moveTo(tx(q), ty(q));
+      else rctx.lineTo(tx(q), ty(q));
+    }
+    rctx.stroke();
+    // markers
+    rctx.fillStyle = '#4ade80';
+    rctx.beginPath(); rctx.arc(tx(buf[0]), ty(buf[0]), 4, 0, Math.PI * 2); rctx.fill();
+    rctx.fillStyle = '#f87171';
+    rctx.beginPath(); rctx.arc(tx(buf[buf.length - 1]), ty(buf[buf.length - 1]), 4, 0, Math.PI * 2); rctx.fill();
+    // animated bird cursor
+    var pr = progress == null ? 1 : Math.max(0, Math.min(1, progress));
+    var idx = Math.min(buf.length - 1, Math.floor(pr * (buf.length - 1)));
+    var cur = buf[idx];
+    rctx.fillStyle = '#38bdf8';
+    rctx.beginPath();
+    rctx.ellipse(tx(cur), ty(cur), 7, 5, cur.rot || 0, 0, Math.PI * 2);
+    rctx.fill();
+    rctx.fillStyle = 'rgba(226,232,240,0.85)';
+    rctx.font = 'bold 10px system-ui';
+    rctx.textAlign = 'left';
+    rctx.fillText('Last ' + Math.round(REPLAY_WINDOW_MS / 1000) + 's path', 8, 14);
+    return true;
+  }
+
+  function startReplayVizAnim() {
+    if (replayVizRaf) { cancelAnimationFrame(replayVizRaf); replayVizRaf = 0; }
+    var buf = replaySnapshot.length ? replaySnapshot : replayBuf;
+    if (!buf.length) {
+      showToast('No path to replay yet', 1200);
+      return;
+    }
+    var t0 = performance.now();
+    var dur = 2000;
+    function tick(now) {
+      var p = Math.min(1, (now - t0) / dur);
+      paintReplayViz(p);
+      if (p < 1) replayVizRaf = requestAnimationFrame(tick);
+      else replayVizRaf = 0;
+    }
+    showToast('Replaying last 5s path…', 1000);
+    replayVizRaf = requestAnimationFrame(tick);
+  }
+
+  function updateDeathFreezeThumb() {
+    if (deathFreezeThumb && deathFreezeCanvas) {
+      try {
+        deathFreezeThumb.src = deathFreezeCanvas.toDataURL('image/jpeg', 0.78);
+        deathFreezeThumb.hidden = false;
+        if (deathFreezeWrap) deathFreezeWrap.hidden = false;
+        if (deathFreezeBadge) deathFreezeBadge.hidden = false;
+      } catch (e) {
+        deathFreezeThumb.hidden = true;
+        if (deathFreezeWrap) deathFreezeWrap.hidden = true;
+      }
+    } else {
+      if (deathFreezeThumb) deathFreezeThumb.hidden = true;
+      if (deathFreezeWrap) deathFreezeWrap.hidden = true;
+    }
+    // always try static path viz
+    paintReplayViz(1);
   }
 
   function beginDeath() {
@@ -3413,6 +3553,14 @@
       lastAreaMusic = areaNow;
       FTAudio.playAreaMusic(areaNow);
     }
+    // 3.27 env transition fade
+    if (lastEnvArea == null) lastEnvArea = areaNow;
+    else if (areaNow !== lastEnvArea) {
+      envFadeFrom = lastEnvArea;
+      envFade = 1;
+      lastEnvArea = areaNow;
+    }
+    if (envFade > 0) envFade = Math.max(0, envFade - sdt * 1.35);
 
     trailAcc += sdt;
     if (trailAcc >= TRAIL_INTERVAL) { trailAcc = 0; spawnTrailParticle(); }
@@ -3523,12 +3671,25 @@
     var weather = effectiveWeather();
     var palEnv = (area === 'rain' || area === 'monsoon') ? 'city' : area;
     var pal = FTSkins.envPalette(palEnv, weather);
+    // 3.27: crossfade previous env sky
+    if (envFade > 0.02 && envFadeFrom && !reduceMotion) {
+      var fromEnv = (envFadeFrom === 'rain' || envFadeFrom === 'monsoon') ? 'city' : envFadeFrom;
+      var palFrom = FTSkins.envPalette(fromEnv, weather);
+      var gFrom = ctx.createLinearGradient(0, 0, 0, H);
+      gFrom.addColorStop(0, palFrom.sky0);
+      gFrom.addColorStop(0.55, palFrom.sky1);
+      gFrom.addColorStop(1, palFrom.sky2);
+      ctx.fillStyle = gFrom;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1 - envFade;
+    }
     var g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, pal.sky0);
     g.addColorStop(0.55, pal.sky1);
     g.addColorStop(1, pal.sky2);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+    if (envFade > 0.02 && envFadeFrom && !reduceMotion) ctx.globalAlpha = 1;
 
     ctx.fillStyle = pal.sun;
     ctx.beginPath();
@@ -3922,12 +4083,29 @@
   function drawScorePops() {
     scorePops.forEach(function (sp) {
       var a = Math.max(0, sp.life / sp.max);
+      var sc = sp.scale || 1;
+      ctx.save();
       ctx.globalAlpha = a;
-      ctx.fillStyle = '#ffd93d';
-      ctx.font = 'bold 16px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText(sp.text, sp.x, sp.y);
-      ctx.globalAlpha = 1;
+      ctx.translate(sp.x, sp.y);
+      ctx.scale(sc, sc);
+      if (sp.kind === 'coin') {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(15,23,42,0.55)';
+        ctx.fillStyle = '#fde68a';
+        ctx.font = 'bold 18px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText(sp.text, 0, 0);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(sp.text, 0, 0);
+      } else {
+        ctx.fillStyle = '#ffd93d';
+        ctx.font = 'bold 16px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sp.text, 0, 0);
+      }
+      ctx.restore();
     });
   }
 
@@ -4489,13 +4667,7 @@
     startRun(false, playMode === 'challenge' && challengeWon ? 'classic' : playMode);
   }
   if (btnReplayStub) btnReplayStub.addEventListener('click', function () {
-    var n = replayBuf.length;
-    showToast(n ? ('Replay stub · ' + n + ' samples / last 5s') : 'Replay stub · no path yet', 1400);
-    // flash path on canvas briefly if possible
-    if (n && canvas) {
-      drawFrame(false);
-      drawReplayPathStub();
-    }
+    startReplayVizAnim();
   });
   btnRetry.addEventListener('click', function () { retryFlow(); });
   btnMenu.addEventListener('click', function () { showMenu(); });

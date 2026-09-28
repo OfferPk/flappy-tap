@@ -1,5 +1,23 @@
 # Urr Jaa! STATUS
 
+## Current: **3.27.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.26)
+- **Death freeze UX** — Impact badge, progress chip, polished card, correct freeze duration
+- **Path replay viz** — mini canvas + animated cursor along last 5s path
+- **Env transition fade** — sky crossfade when area band changes
+- **Coin collect popup** — outlined +N 🪙 float text
+- KEEP ALL ≤3.26 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v36-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.27.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.27.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.26.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.25)
