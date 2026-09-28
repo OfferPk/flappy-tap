@@ -23,12 +23,14 @@ html, body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: var(--bg);
+  background: #0b1020; /* 3.21: iOS status bar / letterbox match */
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   user-select: none;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
 }
 
 #app {
@@ -2221,4 +2223,86 @@ html.reduce-motion .mission-card.claim-juice { animation: none; }
 .mission-cal-cell.today {
   outline: 2px solid #ffd93d;
   outline-offset: 1px;
+}
+
+
+/* ——— v3.21: pause blur, coin rain, one-life heart break, clear history, iOS PWA ——— */
+#app.paused-blur #game.paused-blur-canvas,
+canvas.paused-blur-canvas {
+  filter: blur(5px) brightness(0.72) saturate(0.85);
+  transform: scale(1.02);
+  transition: filter 0.22s ease, transform 0.22s ease;
+}
+html.reduce-motion canvas.paused-blur-canvas {
+  filter: brightness(0.78);
+  transform: none;
+  transition: none;
+}
+.pause-screen {
+  background: linear-gradient(180deg, rgba(15,23,42,.42) 0%, rgba(15,23,42,.72) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+.pause-screen.pause-blur-ready .pause-stats,
+.pause-screen.pause-blur-ready h2 {
+  text-shadow: 0 2px 16px rgba(0,0,0,.45);
+}
+.pause-screen .btn-col {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 14px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+html.reduce-motion .pause-screen {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(15,23,42,.88);
+}
+
+/* One-life heart loss */
+.lives-hud.life-loss-pop .life-heart.life-break {
+  animation: life-break-anim 0.7s cubic-bezier(.2,.8,.2,1) forwards;
+  display: inline-block;
+}
+.lives-hud.life-loss-pop .life-label {
+  animation: life-label-fade 0.7s ease forwards;
+}
+@keyframes life-break-anim {
+  0% { transform: scale(1) rotate(0); filter: none; opacity: 1; }
+  35% { transform: scale(1.45) rotate(-12deg); filter: brightness(1.4); }
+  55% { transform: scale(1.1) rotate(8deg); filter: grayscale(0.4); }
+  100% { transform: scale(0.85) rotate(0); filter: grayscale(1); opacity: 0.85; content: '🖤'; }
+}
+@keyframes life-label-fade {
+  0% { opacity: 1; color: #ff6b6b; }
+  100% { opacity: 0.85; }
+}
+html.reduce-motion .lives-hud.life-loss-pop .life-heart.life-break,
+html.reduce-motion .lives-hud.life-loss-pop .life-label { animation: none; }
+.lives-hud.lives-lost .life-heart.life-break {
+  filter: grayscale(1);
+}
+
+.btn-clear-history {
+  margin-left: 6px;
+  padding: 4px 10px !important;
+  font-size: 0.72rem !important;
+  min-height: 0;
+  opacity: 0.85;
+}
+.btn-clear-history:disabled { opacity: 0.35; }
+
+/* iOS standalone status bar fill */
+@supports (padding-top: env(safe-area-inset-top)) {
+  #app {
+    min-height: 100%;
+  }
+}
+@media (display-mode: standalone) {
+  html, body { background: #0b1020; }
+  #app {
+    padding-top: 0;
+  }
 }

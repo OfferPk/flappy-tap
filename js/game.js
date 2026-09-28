@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.20.0-urrjaa — Milestone: daily mission calendar polish, skin unlock fanfare,
- * storm thunder rumble, micro-perf, guide notes (confetti / quiet night), bugfixes.
- * KEEP ALL ≤3.19 incl. 15s Mystery Spin once + Close (X) + Top 5 + streak calendar.
+ * Urr Jaa! v3.21.0-urrjaa — Pause blur polish, coin rain celebration, one-life heart loss anim,
+ * mystery history clear button, iOS PWA status bar, bugfixes.
+ * KEEP ALL ≤3.20 incl. 15s Mystery Spin once + Close (X) + fanfare + thunder + calendars.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  */
 (function () {
@@ -771,12 +771,21 @@
     if (isOneLife() && (state === 'playing' || state === 'dying' || state === 'paused' || state === 'dead')) {
       livesHudEl.hidden = false;
       var lost = state === 'dying' || state === 'dead' || !bird || (bird && !bird.alive);
-      livesHudEl.innerHTML = lost
-        ? '<span class="life-heart life-lost">🖤</span><span class="life-label">Gone</span>'
-        : '<span class="life-heart">❤️</span><span class="life-label">×1</span>';
+      var wasLost = livesHudEl.classList.contains('lives-lost');
+      if (lost) {
+        livesHudEl.innerHTML = '<span class="life-heart life-lost life-break" aria-hidden="true">❤️</span><span class="life-label">Gone</span>';
+      } else {
+        livesHudEl.innerHTML = '<span class="life-heart">❤️</span><span class="life-label">×1</span>';
+      }
       livesHudEl.classList.toggle('lives-lost', !!lost);
+      if (lost && !wasLost) {
+        livesHudEl.classList.remove('life-loss-pop');
+        void livesHudEl.offsetWidth;
+        livesHudEl.classList.add('life-loss-pop');
+      }
     } else {
       livesHudEl.hidden = true;
+      livesHudEl.classList.remove('lives-lost', 'life-loss-pop');
     }
   }
 
@@ -1262,6 +1271,7 @@
 
   function showMenu() {
     stopGaragePreview();
+    setPauseBlur(false);
     state = 'menu';
     hideAllScreens();
     screenStart.hidden = false;
@@ -1396,8 +1406,9 @@
       showToast('Shabaash! New record!', 2200, 'medal');
       // 3.17 high-score fireworks
       spawnFireworks(W * 0.5, H * 0.32, 5);
+      spawnCoinRain(28);
       setTimeout(function () { spawnFireworks(W * 0.35, H * 0.28, 3); }, 280);
-      setTimeout(function () { spawnFireworks(W * 0.65, H * 0.3, 3); }, 520);
+      setTimeout(function () { spawnFireworks(W * 0.65, H * 0.3, 3); spawnCoinRain(16); }, 520);
       if (newRecordBanner) {
         newRecordBanner.classList.remove('fw-boom');
         void newRecordBanner.offsetWidth;
@@ -1473,10 +1484,16 @@
     if (allNew.length) showToast('Unlocked: ' + allNew.join(', '), 2500);
   }
 
+  function setPauseBlur(on) {
+    if (appEl) appEl.classList.toggle('paused-blur', !!on);
+    if (canvas) canvas.classList.toggle('paused-blur-canvas', !!on);
+    if (screenPause) screenPause.classList.toggle('pause-blur-ready', !!on);
+  }
   function pauseGame() {
     if (state !== 'playing') return;
     state = 'paused';
     if (screenPause) screenPause.hidden = false;
+    setPauseBlur(true);
     var pauseScore = document.getElementById('pause-score');
     var pauseMode = document.getElementById('pause-mode');
     var pauseTip = document.getElementById('pause-tip');
@@ -1496,10 +1513,12 @@
     if (state !== 'paused') return;
     state = 'playing';
     if (screenPause) screenPause.hidden = true;
+    setPauseBlur(false);
     lastTs = 0;
   }
   function quitToMenu() {
     if (screenPause) screenPause.hidden = true;
+    setPauseBlur(false);
     showMenu();
   }
 
@@ -1836,6 +1855,32 @@
       });
     }
     particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.3, max: 0.3, color: 'rgba(125,211,252,.55)', r: 8, kind: 'ring', grow: 42 });
+    trimParticles();
+  }
+
+
+  /** 3.21: cascading coin rain for big celebrations (records / unlocks). */
+  function spawnCoinRain(count) {
+    if (reduceMotion) return;
+    var scale = confettiScale();
+    if (scale <= 0) return;
+    count = Math.max(4, Math.round((count || 24) * scale));
+    var cols = ['#ffd93d', '#fff3bf', '#f59e0b', '#fde68a'];
+    for (var i = 0; i < count; i++) {
+      particles.push({
+        x: rng() * W,
+        y: -10 - rng() * 80,
+        vx: (rng() - 0.5) * 40,
+        vy: 90 + rng() * 160,
+        life: 1.1 + rng() * 0.7,
+        max: 1.8,
+        color: cols[i % cols.length],
+        r: 2.4 + rng() * 2.2,
+        kind: 'coin_rain',
+        rot: rng() * Math.PI,
+        spin: (rng() - 0.5) * 10
+      });
+    }
     trimParticles();
   }
 
@@ -2177,6 +2222,8 @@
     var total = FTStorage.getSpinHistoryTotal ? FTStorage.getSpinHistoryTotal() : 0;
     if (totalEl) totalEl.textContent = total > 0 ? (total.toLocaleString() + ' 🪙 won') : 'No wins yet';
     if (countEl) countEl.textContent = hist.length ? (hist.length + ' spin' + (hist.length === 1 ? '' : 's')) : '';
+    var clearBtn = document.getElementById('btn-clear-spin-history');
+    if (clearBtn) clearBtn.disabled = !hist.length;
     if (!list) return;
     list.innerHTML = '';
     if (!hist.length) {
@@ -2209,6 +2256,17 @@
       li.appendChild(meta);
       list.appendChild(li);
     });
+  }
+
+
+  function clearMysteryHistoryUI() {
+    if (!FTStorage.clearSpinHistory) return;
+    var hist = FTStorage.getSpinHistory ? FTStorage.getSpinHistory() : [];
+    if (!hist.length) { showToast('History already empty', 1000); return; }
+    if (!window.confirm('Clear Mystery spin history? This cannot be undone.')) return;
+    FTStorage.clearSpinHistory();
+    refreshSpinHistoryUI();
+    showToast('Spin history cleared', 1200, 'gift');
   }
 
   function openGiftsScreen() {
@@ -2731,6 +2789,10 @@
           pt.vy += 90 * dt;
           pt.rot = (pt.rot || 0) + (pt.spin || 6) * dt;
           pt.vx *= 0.99;
+        } else if (pt.kind === 'coin_rain') {
+          pt.vy += 40 * dt;
+          pt.rot = (pt.rot || 0) + (pt.spin || 4) * dt;
+          if (pt.y > H - GROUND_H - 4) { pt.vy *= -0.25; pt.y = H - GROUND_H - 4; pt.life *= 0.7; }
         } else if (pt.kind === 'fw_rocket') {
           pt.vy += 40 * dt;
           if (pt.y <= (pt.bloomY || H * 0.35) || pt.life < 0.12) {
@@ -3322,6 +3384,27 @@
         ctx.translate(pt.x, pt.y);
         ctx.rotate(pt.rot || 0);
         ctx.fillRect(-pt.r, -pt.r * 0.4, pt.r * 2, pt.r * 0.8);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (pt.kind === 'coin_rain') {
+        ctx.globalAlpha = a;
+        ctx.save();
+        ctx.translate(pt.x, pt.y);
+        ctx.rotate(pt.rot || 0);
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, pt.r * 1.1, pt.r * 0.85, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(122,90,0,0.55)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(122,90,0,0.55)';
+        ctx.font = 'bold ' + Math.max(7, pt.r + 3) + 'px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🪙', 0, 0.5);
         ctx.restore();
         ctx.globalAlpha = 1;
         continue;
@@ -3952,6 +4035,7 @@
     if (!reduceMotion) {
       spawnConfettiBurst(W * 0.5, H * 0.35, 22);
       spawnFireworks(W * 0.5, H * 0.3, 3);
+      spawnCoinRain(20);
     }
   }
 
@@ -4602,7 +4686,14 @@
       }
     } else showToast('Gift skipped');
   });
-  if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen(); });
+    var btnClearSpinHistory = document.getElementById('btn-clear-spin-history');
+  if (btnClearSpinHistory) {
+    btnClearSpinHistory.addEventListener('click', function (e) {
+      e.stopPropagation();
+      clearMysteryHistoryUI();
+    });
+  }
+if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen(); });
   if (btnCollectionGifts) btnCollectionGifts.addEventListener('click', function () { openGiftsScreen(); });
   document.querySelectorAll('[data-close="gifts"]').forEach(function (b) {
     b.addEventListener('click', function () {

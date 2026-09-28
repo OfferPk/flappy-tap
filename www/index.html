@@ -3,9 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#4ecdc4" />
+  <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#4ecdc4" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Urr Jaa!" />
+  <meta name="format-detection" content="telephone=no" />
   <meta name="description" content="Urr Jaa! — offline one-tap fly arcade. Pakistani birds, vehicles, cities. Tap to flap." />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
@@ -43,7 +48,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.20.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.21.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
@@ -180,6 +185,7 @@
           <div class="spin-history-meta">
             <span id="spin-history-count" class="spin-history-count"></span>
             <span id="spin-history-total" class="spin-history-total">No wins yet</span>
+            <button type="button" id="btn-clear-spin-history" class="btn ghost btn-sm btn-clear-history" disabled aria-label="Clear spin history">Clear</button>
           </div>
         </div>
         <ul id="spin-history-list" class="spin-history-list">
@@ -361,6 +367,7 @@
           <li><strong>Settings · Quiet at night:</strong> softens SFX in night/storm — Desi voice stays on.</li>
           <li><strong>Settings · Confetti intensity:</strong> Off / Low / Normal / High for celebrations.</li>
           <li><strong>3.20:</strong> mission calendar · unlock fanfare · storm thunder rumble · smoother perf.</li>
+          <li><strong>3.21:</strong> pause blur · coin rain on records · one-life heart break · clear spin history · iOS PWA status bar.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>

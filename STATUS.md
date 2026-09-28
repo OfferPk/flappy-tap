@@ -1,5 +1,24 @@
 # Urr Jaa! STATUS
 
+## Current: **3.21.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.20)
+- **Pause blur polish** — canvas soft blur + frosted pause panel
+- **Coin rain celebration** — cascading coins on new records + unlocks
+- **One-life heart loss anim** — break/pop when the last heart goes
+- **Mystery history Clear** — confirm + clearSpinHistory on Gifts screen
+- **iOS PWA status bar** — black-translucent, theme-color, apple title, dark fill
+- KEEP ALL ≤3.20 incl. **15s Mystery Spin once**, Close (X), calendars, fanfare, …
+
+SW cache: `urrjaa-v30-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.21.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.21.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.20.0-urrjaa** (2026-09-28 PKT)
 
 ### Milestone pack (NEW vs 3.11–3.19)
