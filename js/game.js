@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.13.0-urrjaa — boss juice, near-miss camera, medals/share/A2HS, night lights, magnet, continue, a11y.
+ * Urr Jaa! v3.14.0-urrjaa — Perfect rails, Time Attack HUD, Practice ghost, voice, gifts, pipes, splash, offline.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all prior features — different pack from 3.11–3.12.
+ * KEEP all prior features — different pack from 3.11–3.13.
  */
 (function () {
   'use strict';
@@ -47,7 +47,9 @@
   const GHOST_MS = 2500;
   const TRAIL_INTERVAL = 0.035;
   const COIN_R = 14;
-  const BOX_CHANCE = 0.10;
+  const BOX_CHANCE = 0.075;      // 3.14: slightly rarer early gifts (was 0.10)
+  const BOX_CHANCE_LATE = 0.12;  // after score 40+
+
   const M_PER_PX = 0.08;
   const TIME_ATTACK_S = 60;
   const TRAFFIC_CHANCE = 0.018;
@@ -80,6 +82,9 @@
   let camKickZoom = 0;
   let nearMissCamUntil = 0;
   let bossPulse = 0;
+  let perfectRailFlash = 0; // 0–1 visual after PERFECT
+  let practiceGhost = null; // {x,y,rot} for Practice mode guide
+
 
 
   let scorePops = [];
@@ -691,12 +696,31 @@
 
   function updateTimerHud() {
     if (!timerHudEl) return;
-    if (isTimeAttack() && (state === 'playing' || state === 'dying')) {
+    if (isTimeAttack() && (state === 'playing' || state === 'dying' || state === 'paused')) {
       timerHudEl.hidden = false;
-      timerHudEl.textContent = Math.ceil(Math.max(0, timeLeft)) + 's';
+      var sec = Math.ceil(Math.max(0, timeLeft));
+      var pace = runStartTs ? (score / Math.max(1, (TIME_ATTACK_S - timeLeft))) * 60 : 0;
+      timerHudEl.innerHTML = '';
+      var ring = document.createElement('span');
+      ring.className = 'ta-ring';
+      ring.setAttribute('aria-hidden', 'true');
+      var pct = Math.max(0, Math.min(1, timeLeft / TIME_ATTACK_S));
+      ring.style.setProperty('--ta', String(pct));
+      var label = document.createElement('strong');
+      label.className = 'ta-time';
+      label.textContent = sec + 's';
+      var sub = document.createElement('span');
+      sub.className = 'ta-sub';
+      sub.textContent = '⏱ ' + Math.round(pace) + '/min';
+      timerHudEl.appendChild(ring);
+      timerHudEl.appendChild(label);
+      timerHudEl.appendChild(sub);
       timerHudEl.classList.toggle('timer-low', timeLeft <= 10);
+      timerHudEl.classList.toggle('timer-critical', timeLeft <= 5);
+      timerHudEl.classList.add('ta-hud');
     } else {
       timerHudEl.hidden = true;
+      timerHudEl.classList.remove('ta-hud', 'timer-low', 'timer-critical');
     }
   }
 
@@ -854,11 +878,20 @@
 
   function maybeSpawnBox(pipe) {
     if (isNoCoin()) return;
-    if (rng() > BOX_CHANCE) return;
+    // 3.14 balance: rarer early, ramp mid-run; skip if powerup already on this gap
+    var chance = score >= 40 ? BOX_CHANCE_LATE : (score >= 15 ? 0.09 : BOX_CHANCE);
+    if (isPractice()) chance *= 0.55;
+    if (isTimeAttack()) chance *= 0.85;
+    if (firstRunProtect()) chance *= 0.65;
+    // avoid gift piled on top of a power-up in same gap
+    for (var i = 0; i < powerups.length; i++) {
+      if (powerups[i].pipeRef === pipe && !powerups[i].taken) chance *= 0.35;
+    }
+    if (rng() > chance) return;
     var gap = pipe.gap != null ? pipe.gap : currentGap;
     boxes.push({
       x: pipe.x + PIPE_W / 2,
-      y: pipe.gapY + gap * 0.2,
+      y: pipe.gapY + gap * (0.18 + rng() * 0.2),
       taken: false,
       pipeRef: pipe
     });
@@ -873,7 +906,7 @@
     var kind;
     if (phase.simple || firstRunProtect()) {
       // Simple patterns: mostly pipes / soft props
-      var simple = ['pipe', 'pipe', 'pipe', 'signboard', 'tree', 'kite'];
+      var simple = ['pipe', 'pipe', 'tiled', 'terracotta', 'signboard', 'tree', 'kite'];
       kind = simple[Math.floor(rng() * simple.length)];
     } else {
       kind = FTSkins.pickObstacleKind(rng, activeArea());
@@ -2230,7 +2263,21 @@
       showBanner('PERFECT!', 800);
       showToast('PERFECT!', 900, 'perfect');
       spawnPerfectStars(bird.x, bird.y);
-      voiceCue('wah_ji');
+      perfectRailFlash = 1;
+      // rail sparkles along gap center
+      if (!reduceMotion) {
+        for (var ri = 0; ri < 8; ri++) {
+          particles.push({
+            x: p.x + PIPE_W / 2 + (rng() - 0.5) * 10,
+            y: center + (rng() - 0.5) * (PERFECT_CENTER_PX * 2),
+            vx: (rng() - 0.5) * 40, vy: (rng() - 0.5) * 30 - 20,
+            life: 0.4, max: 0.55, color: ri % 2 ? '#7dd3fc' : '#ffd93d',
+            r: 1.8 + rng(), kind: 'spark'
+          });
+        }
+        trimParticles();
+      }
+      voiceCue(rng() < 0.5 ? 'perfect_pass' : 'wah_ji');
     }
     // Near-miss bonus score already tracked separately; if just near-missed this pipe, bump
     if (p._wasNearMiss) {
@@ -2419,6 +2466,24 @@
       if (Math.abs(camKickY) < 0.05) camKickY = 0;
       if (camKickZoom < 0.001) camKickZoom = 0;
     }
+    if (perfectRailFlash > 0) perfectRailFlash = Math.max(0, perfectRailFlash - dt * 2.2);
+    // Practice ghost: smooth toward next gap center (3.14)
+    if (isPractice() && state === 'playing' && bird && pipes.length) {
+      var target = null;
+      for (var gi = 0; gi < pipes.length; gi++) {
+        if (pipes[gi].x + PIPE_W > bird.x - 10) { target = pipes[gi]; break; }
+      }
+      if (target) {
+        var tg = target.gap != null ? target.gap : currentGap;
+        var ty = target.gapY + tg / 2;
+        if (!practiceGhost) practiceGhost = { x: bird.x - 36, y: bird.y, rot: 0 };
+        practiceGhost.x = bird.x - 42;
+        practiceGhost.y += (ty - practiceGhost.y) * Math.min(1, sdt * 3.2);
+        practiceGhost.rot += (((ty - practiceGhost.y) / 80) - practiceGhost.rot) * Math.min(1, sdt * 6);
+      }
+    } else if (state !== 'playing') {
+      practiceGhost = null;
+    }
 
     if (state === 'dying') {
       if (performance.now() >= deathFreezeUntil) showDeath();
@@ -2449,6 +2514,8 @@
         deathFreezeUntil = now + 400;
         FTAudio.combo();
         showBanner('TIME!', 1000);
+        voiceCue('time_up');
+        showToast('Time\'s up! Score ' + score, 1600, 'medal');
         return;
       }
     }
@@ -3001,6 +3068,63 @@
     ctx.restore();
   }
 
+  function drawPerfectRails() {
+    if (state !== 'playing' || !pipes.length || reduceMotion) return;
+    // Find nearest ahead pipe; draw center rail when bird is near gap
+    var p = null;
+    for (var i = 0; i < pipes.length; i++) {
+      if (pipes[i].x + PIPE_W > bird.x - 20) { p = pipes[i]; break; }
+    }
+    if (!p || !bird) return;
+    var gap = p.gap != null ? p.gap : currentGap;
+    var center = p.gapY + gap / 2;
+    var dist = Math.abs(bird.y - center);
+    var approaching = p.x < bird.x + 90 && p.x + PIPE_W > bird.x - 20;
+    if (!approaching && perfectRailFlash <= 0) return;
+    var align = Math.max(0, 1 - dist / (PERFECT_CENTER_PX * 2.5));
+    var a = Math.max(perfectRailFlash * 0.9, approaching ? align * 0.55 : 0);
+    if (a < 0.08) return;
+    var x0 = p.x - 6;
+    var x1 = p.x + PIPE_W + 6;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = perfectRailFlash > 0.2 ? '#ffd93d' : '#7dd3fc';
+    ctx.lineWidth = 2 + perfectRailFlash * 2;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath();
+    ctx.moveTo(x0, center);
+    ctx.lineTo(x1, center);
+    ctx.stroke();
+    // soft rail band
+    ctx.globalAlpha = a * 0.25;
+    ctx.fillStyle = perfectRailFlash > 0.2 ? 'rgba(255,217,61,0.5)' : 'rgba(125,211,252,0.45)';
+    ctx.fillRect(x0, center - PERFECT_CENTER_PX, x1 - x0, PERFECT_CENTER_PX * 2);
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawPracticeGhost() {
+    if (!isPractice() || state !== 'playing' || !practiceGhost || reduceMotion) return;
+    ctx.save();
+    ctx.globalAlpha = 0.38;
+    FTSkins.draw(ctx, birdId, practiceGhost.x, practiceGhost.y, practiceGhost.rot, 0.92, {
+      vehicle: 'none', hat: 'none', reduceMotion: true, wingFlap: Math.sin(performance.now() / 120) * 0.4
+    });
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = 'rgba(125,211,252,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(practiceGhost.x, practiceGhost.y, 18, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(125,211,252,0.9)';
+    ctx.font = 'bold 9px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('GHOST', practiceGhost.x, practiceGhost.y - 24);
+    ctx.restore();
+  }
+
   function drawMagnetAura() {
     if (!bird || performance.now() >= magnetUntil) return;
     var t = performance.now() / 1000;
@@ -3025,6 +3149,7 @@
     }
     drawSky();
     pipes.forEach(drawPipe);
+    drawPerfectRails();
     traffic.forEach(function (t) { FTSkins.drawTraffic(ctx, t); });
     powerups.forEach(drawPowerup);
     coins.forEach(drawCoin);
@@ -3032,6 +3157,7 @@
     drawGround();
     drawParticles();
     drawWeatherFX();
+    drawPracticeGhost();
     if (bird) {
       drawShieldAura();
       drawGhostAura();
@@ -3473,6 +3599,8 @@
         daily: 'Daily', practice: 'Practice'
       };
       showToast(names[m] || m);
+      if (m === 'practice') showToast('Practice · follow the ghost path', 1800, 'lucky');
+      if (m === 'timeattack') showToast('Time Attack · 60s — go!', 1600, 'medal');
     });
   });
 
@@ -3830,6 +3958,28 @@
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('orientationchange', function () { setTimeout(resizeCanvas, 100); });
+
+  function updateOfflineBanner() {
+    var el = document.getElementById('offline-banner');
+    if (!el) return;
+    var offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+    el.hidden = !offline;
+    if (offline) el.classList.add('offline-show');
+    else el.classList.remove('offline-show');
+  }
+  function hideBootSplash() {
+    var splash = document.getElementById('boot-splash');
+    if (!splash || splash.hidden) return;
+    splash.classList.add('splash-hide');
+    setTimeout(function () {
+      splash.hidden = true;
+      splash.setAttribute('aria-hidden', 'true');
+    }, 450);
+  }
+  window.addEventListener('online', updateOfflineBanner);
+  window.addEventListener('offline', updateOfflineBanner);
+  updateOfflineBanner();
   showMenu();
   loop(performance.now());
+  requestAnimationFrame(function () { requestAnimationFrame(hideBootSplash); });
 })();

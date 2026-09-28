@@ -14,6 +14,17 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <div id="boot-splash" class="boot-splash" role="status" aria-live="polite">
+    <div class="splash-inner">
+      <div class="splash-logo">Urr Jaa!</div>
+      <div class="splash-ur">اڑ جا!</div>
+      <div class="splash-bar" aria-hidden="true"><span></span></div>
+      <p class="splash-hint">Loading offline arcade…</p>
+    </div>
+  </div>
+  <div id="offline-banner" class="offline-banner" hidden role="status">
+    📡 You&apos;re offline — Urr Jaa! still plays from cache.
+  </div>
   <div id="app">
     <canvas id="game" width="400" height="600" aria-label="Urr Jaa! game"></canvas>
 
@@ -31,7 +42,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.13.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.14.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary btn-play-pulse" type="button">▶ Play</button>
@@ -299,6 +310,8 @@
           <li><strong>Daily missions:</strong> 3 rotate each day (PERFECT, combo, gifts, fly…).</li>
           <li><strong>Chase events:</strong> DANGER bosses every stretch — survive the timer.</li>
           <li><strong>Share:</strong> preview your score card before sending.</li>
+          <li><strong>Perfect rail:</strong> center the cyan/gold rail for PERFECT.</li>
+          <li><strong>Practice:</strong> follow the ghost bird through gaps.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant packs unlock by local date windows or score milestones — no server seasons.</li>

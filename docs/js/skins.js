@@ -944,50 +944,104 @@
   // ——— PK Obstacle drawing (cosmetic pipe replacements) ———
   const OBSTACLE_KINDS = [
     'pipe', 'kite', 'rickshaw', 'cycle', 'bus', 'signboard',
-    'tree', 'construction', 'brick', 'wires', 'clothesline', 'truck'
+    'tree', 'construction', 'brick', 'wires', 'clothesline', 'truck',
+    'mosaic', 'terracotta', 'neon_pipe', 'tiled'
   ];
 
   const AREA_OBSTACLES = {
-    city: ['pipe', 'signboard', 'bus', 'rickshaw', 'construction'],
-    bridge: ['pipe', 'wires', 'signboard', 'bus', 'truck'],
-    mountains: ['pipe', 'tree', 'brick', 'kite'],
-    village: ['pipe', 'tree', 'clothesline', 'cycle', 'kite'],
-    rain: ['pipe', 'wires', 'signboard', 'bus'],
-    night: ['pipe', 'signboard', 'bus', 'wires', 'rickshaw'],
-    desert: ['pipe', 'brick', 'construction', 'truck'],
-    lahore: ['pipe', 'kite', 'rickshaw', 'signboard', 'bus'],
-    islamabad: ['pipe', 'tree', 'signboard', 'kite'],
-    karachi: ['pipe', 'bus', 'signboard', 'rickshaw', 'truck'],
+    city: ['pipe', 'mosaic', 'neon_pipe', 'signboard', 'bus', 'rickshaw', 'construction'],
+    bridge: ['pipe', 'tiled', 'wires', 'signboard', 'bus', 'truck'],
+    mountains: ['pipe', 'terracotta', 'tree', 'brick', 'kite'],
+    village: ['pipe', 'terracotta', 'tree', 'clothesline', 'cycle', 'kite'],
+    rain: ['pipe', 'tiled', 'wires', 'signboard', 'bus'],
+    night: ['pipe', 'neon_pipe', 'signboard', 'bus', 'wires', 'rickshaw'],
+    desert: ['pipe', 'terracotta', 'brick', 'construction', 'truck'],
+    lahore: ['pipe', 'mosaic', 'kite', 'rickshaw', 'signboard', 'bus'],
+    islamabad: ['pipe', 'tiled', 'tree', 'signboard', 'kite'],
+    karachi: ['pipe', 'neon_pipe', 'bus', 'signboard', 'rickshaw', 'truck'],
     murree: ['pipe', 'tree', 'kite', 'wires'],
     canal: ['pipe', 'wires', 'signboard', 'cycle', 'rickshaw'],
     hunza: ['pipe', 'tree', 'brick', 'kite'],
     gwadar: ['pipe', 'bus', 'signboard', 'truck', 'wires'],
     quetta: ['pipe', 'signboard', 'rickshaw', 'brick', 'wires'],
     monsoon: ['pipe', 'tree', 'clothesline', 'kite', 'wires'],
-    oldcity: ['pipe', 'clothesline', 'brick', 'wires', 'signboard']
+    oldcity: ['pipe', 'mosaic', 'terracotta', 'clothesline', 'brick', 'wires', 'signboard']
   };
 
   function pickObstacleKind(rng, areaId) {
     const pool = AREA_OBSTACLES[areaId] || AREA_OBSTACLES.city;
     const r = rng();
-    if (r < 0.28) return 'pipe';
+    // 3.14: fewer plain pipes — more patterned skins
+    if (r < 0.16) return 'pipe';
+    if (r < 0.28) {
+      const fancy = ['mosaic', 'terracotta', 'neon_pipe', 'tiled'];
+      return fancy[Math.floor(rng() * fancy.length)];
+    }
     return pool[Math.floor(rng() * pool.length)];
+  }
+
+  function drawPipeSkin(ctx, p, pal, groundY, gap, skin) {
+    skin = skin || 'pipe';
+    const body = skin === 'terracotta' ? '#c0392b' :
+      skin === 'mosaic' ? (pal.neon || '#1abc9c') :
+      skin === 'neon_pipe' ? '#0f3460' :
+      skin === 'tiled' ? '#5d6d7e' : pal.pipe;
+    const cap = skin === 'terracotta' ? '#e67e22' :
+      skin === 'mosaic' ? '#f1c40f' :
+      skin === 'neon_pipe' ? (pal.neon || '#4ecdc4') :
+      skin === 'tiled' ? '#95a5a6' : pal.pipeCap;
+    function column(y0, y1) {
+      const h = y1 - y0;
+      if (h <= 0) return;
+      ctx.fillStyle = body;
+      ctx.fillRect(p.x, y0, p.w, h);
+      // rivet / band details
+      if (skin === 'pipe' || skin === 'tiled') {
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        for (let y = y0 + 10; y < y1 - 8; y += 18) ctx.fillRect(p.x + 4, y, p.w - 8, 3);
+      } else if (skin === 'mosaic') {
+        for (let y = y0 + 4; y < y1 - 4; y += 10) {
+          for (let x = 0; x < 3; x++) {
+            ctx.fillStyle = ((Math.floor(y / 10) + x) % 2) ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)';
+            ctx.fillRect(p.x + 6 + x * 18, y, 14, 8);
+          }
+        }
+      } else if (skin === 'terracotta') {
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 1;
+        for (let y = y0 + 8; y < y1; y += 14) {
+          ctx.beginPath(); ctx.moveTo(p.x, y); ctx.lineTo(p.x + p.w, y); ctx.stroke();
+        }
+      } else if (skin === 'neon_pipe') {
+        ctx.strokeStyle = cap;
+        ctx.globalAlpha = 0.85;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x + 3, y0 + 2, p.w - 6, Math.max(2, h - 4));
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(78,205,196,0.15)';
+        ctx.fillRect(p.x, y0, 4, h);
+      }
+    }
+    column(0, p.gapY);
+    ctx.fillStyle = cap;
+    ctx.fillRect(p.x - 4, p.gapY - 22, p.w + 8, 22);
+    // cap highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.fillRect(p.x - 2, p.gapY - 20, p.w + 4, 4);
+    const by = p.gapY + gap;
+    column(by, groundY);
+    ctx.fillStyle = cap;
+    ctx.fillRect(p.x - 4, by, p.w + 8, 22);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(p.x - 2, by + 2, p.w + 4, 4);
   }
 
   function drawObstaclePair(ctx, p, pal, groundY, ghost) {
     const gap = p.gap;
     const kind = p.kind || 'pipe';
     ctx.globalAlpha = ghost ? 0.55 : 1;
-    if (kind === 'pipe' || !kind) {
-      ctx.fillStyle = pal.pipe;
-      ctx.fillRect(p.x, 0, p.w, p.gapY);
-      ctx.fillStyle = pal.pipeCap;
-      ctx.fillRect(p.x - 4, p.gapY - 22, p.w + 8, 22);
-      const by = p.gapY + gap;
-      ctx.fillStyle = pal.pipe;
-      ctx.fillRect(p.x, by, p.w, groundY - by);
-      ctx.fillStyle = pal.pipeCap;
-      ctx.fillRect(p.x - 4, by, p.w + 8, 22);
+    if (kind === 'pipe' || !kind || kind === 'mosaic' || kind === 'terracotta' || kind === 'neon_pipe' || kind === 'tiled') {
+      drawPipeSkin(ctx, p, pal, groundY, gap, kind === 'pipe' || !kind ? 'pipe' : kind);
     } else if (kind === 'kite') {
       drawKiteColumn(ctx, p.x, 0, p.gapY, p.w, '#e74c3c');
       drawKiteColumn(ctx, p.x, p.gapY + gap, groundY - (p.gapY + gap), p.w, '#3498db');

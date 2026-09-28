@@ -1,4 +1,5 @@
 /**
+ * Urr Jaa! v3.14.0-urrjaa — expanded desi voice lines.
  * Urr Jaa! v3.6.0-urrjaa — Web Audio SFX + Desi voice (speechSynthesis) + chirp fallback.
  * Mute (game SFX) and Desi voice are independent toggles.
  * Voice still works when game mute is ON (voiceOn only).
@@ -252,7 +253,17 @@
     are_wah: 'Are wah!',
     jee_haan: 'Jee haan!',
     lelo: 'Le lo!',
-    box_mila: 'Box mila!'
+    box_mila: 'Box mila!',
+    perfect_pass: 'Perfect!',
+    bilkul_center: 'Bilkul center!',
+    time_up: 'Time up!',
+    jaldi: 'Jaldi!',
+    dheere: 'Dheere!',
+    practice_ok: 'Practice!',
+    full_paisa: 'Full paisa!',
+    oye_bhai: 'Oye bhai!',
+    chalo_jee: 'Chalo jee!',
+    lajawab: 'Lajawab!'
   };
 
   /** Spoken phrase text (short) for Web Speech API. */
@@ -278,28 +289,43 @@
     are_wah: 'are wah',
     jee_haan: 'jee haan',
     lelo: 'le lo',
-    box_mila: 'box mila'
+    box_mila: 'box mila',
+    // 3.14 extras
+    perfect_pass: 'perfect pass',
+    bilkul_center: 'bilkul center',
+    time_up: 'time up',
+    jaldi: 'jaldi jaldi',
+    dheere: 'dheere se',
+    practice_ok: 'practice karo',
+    full_paisa: 'full paisa',
+    double_tap: 'double tap',
+    oye_bhai: 'oye bhai',
+    chalo_jee: 'chalo jee',
+    zabardasti: 'zabardasti',
+    lajawab: 'lajawab'
   };
 
   /** Category pools for variety rotation (no "wah g wah" spam). */
   const VOICE_POOLS = {
-    praise: ['shabaash', 'zabardast', 'kya_baat', 'mast', 'bohot_ache', 'wah', 'wah_ji', 'irshad', 'kya_udaan', 'kamaal', 'are_wah', 'jee_haan'],
-    warn: ['bach_ke', 'oye_hoye', 'close_call'],
-    fail: ['haye_oye', 'oye_hoye'],
-    lucky: ['lucky', 'shabaash', 'mast', 'kamaal'],
-    gift: ['gift', 'mil_gaya', 'gift_box', 'lelo', 'box_mila'],
-    start: ['oye_hoye', 'irshad', 'kya_udaan', 'jee_haan']
+    praise: ['shabaash', 'zabardast', 'kya_baat', 'mast', 'bohot_ache', 'wah', 'wah_ji', 'irshad', 'kya_udaan', 'kamaal', 'are_wah', 'jee_haan', 'lajawab', 'chalo_jee', 'perfect_pass', 'bilkul_center'],
+    warn: ['bach_ke', 'oye_hoye', 'close_call', 'jaldi', 'oye_bhai', 'dheere'],
+    fail: ['haye_oye', 'oye_hoye', 'time_up'],
+    lucky: ['lucky', 'shabaash', 'mast', 'kamaal', 'full_paisa'],
+    gift: ['gift', 'mil_gaya', 'gift_box', 'lelo', 'box_mila', 'full_paisa'],
+    start: ['oye_hoye', 'irshad', 'kya_udaan', 'jee_haan', 'chalo_jee', 'practice_ok']
   };
 
   const ID_TO_POOL = {
-    oye_hoye: 'warn', bach_ke: 'warn', close_call: 'warn',
+    oye_hoye: 'warn', bach_ke: 'warn', close_call: 'warn', jaldi: 'warn', dheere: 'warn', oye_bhai: 'warn',
     wah_ji: 'praise', kya_udaan: 'praise', shabaash: 'praise',
     zabardast: 'praise', kya_baat: 'praise', mast: 'praise',
     bohot_ache: 'praise', irshad: 'praise', wah: 'praise',
-    haye_oye: 'fail', lucky: 'lucky',
+    haye_oye: 'fail', lucky: 'lucky', time_up: 'fail',
     gift: 'gift', mil_gaya: 'gift', gift_box: 'gift',
     kamaal: 'praise', are_wah: 'praise', jee_haan: 'praise',
-    lelo: 'gift', box_mila: 'gift'
+    lelo: 'gift', box_mila: 'gift',
+    perfect_pass: 'praise', bilkul_center: 'praise', practice_ok: 'start',
+    full_paisa: 'gift', double_tap: 'warn', chalo_jee: 'start', zabardasti: 'praise', lajawab: 'praise'
   };
 
   function speechAvailable() {
