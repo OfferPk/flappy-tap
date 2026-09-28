@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.5.2-urrjaa — collection depth: more birds/areas, offline seasonal packs, Guide update.
+ * Urr Jaa! v3.6.0-urrjaa — character art polish, juice/toast/Mystery/Guide feel; keeps ≤3.5.2 features.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -235,15 +235,19 @@
   let pendingSpinUnlockPopup = false;
   let spinUnlockShownThisUnlock = false;
 
-  function showToast(msg, ms) {
+  function showToast(msg, ms, kind) {
     if (!toastEl) return;
     toastEl.textContent = msg;
     toastEl.hidden = false;
-    toastEl.classList.remove('toast-pop');
+    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift');
+    if (kind === 'close' || kind === 'lucky' || kind === 'gift') toastEl.classList.add('toast-' + kind);
     void toastEl.offsetWidth;
     toastEl.classList.add('toast-pop');
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(function () { toastEl.hidden = true; }, ms || 1600);
+    showToast._t = setTimeout(function () {
+      toastEl.hidden = true;
+      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift');
+    }, ms || 1600);
   }
 
   function showBanner(text, ms) {
@@ -274,7 +278,7 @@
     var label = '';
     if (typeof FTAudio.voiceGift === 'function') label = FTAudio.voiceGift();
     else label = FTAudio.voice('gift', { priority: true });
-    if (label) showToast(label, 1000);
+    if (label) showToast(label, 1100, 'gift');
   }
 
   /** When gifts cross a multiple of 10, unlock a spin — one-time popup (not on menu reopen). */
@@ -1291,7 +1295,7 @@
     if (FTAudio.lucky) FTAudio.lucky();
     else FTAudio.nearmiss();
     showBanner('LUCKY!', 750);
-    showToast('LUCKY!', 900);
+    showToast('LUCKY!', 1000, 'lucky');
     voiceCue('lucky');
     haptic('nearmiss');
   }
@@ -1313,28 +1317,57 @@
     beginDeath();
   }
 
+  var MAX_PARTICLES = 72;
+
+  function trimParticles() {
+    if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
+  }
+
   function spawnNearMissSparks(x, y) {
-    var n = reduceMotion ? 2 : 14;
+    var n = reduceMotion ? 3 : 16;
     for (var i = 0; i < n; i++) {
-      var a = (Math.PI * 2 * i) / n + rng() * 0.3;
-      var sp = 50 + rng() * 110;
+      var a = (Math.PI * 2 * i) / n + rng() * 0.25;
+      var sp = 55 + rng() * 120;
       particles.push({
         x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-        life: 0.4, max: 0.65, color: i % 3 === 0 ? '#ff6b6b' : (i % 2 ? '#ffd93d' : '#fff'),
-        r: 2 + rng() * 2.5, kind: 'spark'
+        life: 0.42, max: 0.7, color: i % 3 === 0 ? '#ff6b6b' : (i % 2 ? '#ffd93d' : '#fff'),
+        r: 2.2 + rng() * 2.8, kind: 'spark'
       });
     }
+    // ring pop for clearer CLOSE feedback
+    if (!reduceMotion) {
+      particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.28, max: 0.28, color: 'rgba(255,217,61,.55)', r: 10, kind: 'ring', grow: 38 });
+    }
+    trimParticles();
   }
 
   function spawnCoinPop(x, y) {
-    var n = reduceMotion ? 3 : 12;
+    var n = reduceMotion ? 4 : 14;
     for (var i = 0; i < n; i++) {
-      var a = (Math.PI * 2 * i) / n;
+      var a = (Math.PI * 2 * i) / n + rng() * 0.2;
       particles.push({
-        x: x, y: y, vx: Math.cos(a) * (60 + rng() * 40), vy: Math.sin(a) * (60 + rng() * 40) - 40,
-        life: 0.45, max: 0.55, color: '#ffd93d', r: 2.5, kind: 'coin'
+        x: x, y: y, vx: Math.cos(a) * (70 + rng() * 45), vy: Math.sin(a) * (70 + rng() * 45) - 50,
+        life: 0.48, max: 0.6, color: i % 2 ? '#ffd93d' : '#fff3bf', r: 2.4 + rng() * 1.4, kind: 'coin'
       });
     }
+    trimParticles();
+  }
+
+  function spawnGiftPop(x, y) {
+    var n = reduceMotion ? 5 : 18;
+    var cols = ['#c084fc', '#ffd93d', '#ff6b6b', '#fff'];
+    for (var i = 0; i < n; i++) {
+      var a = (Math.PI * 2 * i) / n + rng() * 0.2;
+      var sp = 70 + rng() * 90;
+      particles.push({
+        x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
+        life: 0.55, max: 0.7, color: cols[i % cols.length], r: 2.6 + rng() * 2.2, kind: 'gift'
+      });
+    }
+    if (!reduceMotion) {
+      particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.32, max: 0.32, color: 'rgba(192,132,252,.5)', r: 8, kind: 'ring', grow: 34 });
+    }
+    trimParticles();
   }
 
   function spawnTrailParticle() {
@@ -1435,7 +1468,8 @@
     haptic('power');
     noteGiftAdd(1);
     voiceGiftCue();
-    showToast('📦 → Mystery Rewards', 1200);
+    if (bird) spawnGiftPop(bird.x, bird.y);
+    showToast('📦 → Mystery Rewards', 1300, 'gift');
     updateCoinHud();
     return { gifts: 1, text: '+1 Gift' };
   }
@@ -1448,17 +1482,35 @@
     haptic('coin');
     noteGiftAdd(1);
     voiceGiftCue();
-    showToast('📦 → Mystery Rewards', 1000);
-    popScore(1, box.x, box.y - 10);
+    spawnGiftPop(box.x, box.y);
+    showToast('📦 → Mystery Rewards', 1200, 'gift');
+    popScore('📦', box.x, box.y - 10);
   }
 
   function refreshGiftsUI() {
     var g = FTStorage.getGiftBoxes ? FTStorage.getGiftBoxes() : 0;
     var s = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
+    var per = (FTStorage.GIFTS_PER_SPIN || 10);
+    var toward = g % per;
     if (giftsCountEl) giftsCountEl.textContent = String(g);
     if (spinsCountEl) spinsCountEl.textContent = String(s);
+    var prog = document.getElementById('gift-progress');
+    var fill = document.getElementById('gift-progress-fill');
+    var ptxt = document.getElementById('gift-progress-text');
+    if (prog && fill && ptxt) {
+      var shown = s > 0 && toward === 0 ? per : toward;
+      var pct = Math.max(0, Math.min(100, (shown / per) * 100));
+      fill.style.width = pct + '%';
+      prog.setAttribute('aria-valuenow', String(shown));
+      ptxt.textContent = s > 0
+        ? (shown + ' / ' + per + ' · ' + s + ' spin' + (s === 1 ? '' : 's') + ' ready')
+        : (shown + ' / ' + per + ' to next spin');
+    }
     var busy = !!wheelSpinning || !!spinQueueActive;
-    if (btnSpinOnce) btnSpinOnce.disabled = busy || s < 1;
+    if (btnSpinOnce) {
+      btnSpinOnce.disabled = busy || s < 1;
+      btnSpinOnce.textContent = s < 1 ? ('Need ' + (per - toward) + ' more 🎁') : 'Spin once (10 🎁)';
+    }
     if (btnSpinAll) {
       btnSpinAll.disabled = busy || s < 1;
       btnSpinAll.textContent = s > 1 ? ('Spin all (' + s + ')') : 'Spin all';
@@ -1499,8 +1551,8 @@
     // Segment centers: idx 0 at 0° (top). Clockwise rotation brings idx under pointer.
     var desiredMod = (360 - idx * seg) % 360;
     var reduce = document.documentElement.classList.contains('reduce-motion');
-    var dur = reduce ? 80 : (durationMs || 2400);
-    var turns = reduce ? 1 : (durationMs && durationMs < 1500 ? 3 : 5);
+    var dur = reduce ? 80 : (durationMs || 2800);
+    var turns = reduce ? 1 : (durationMs && durationMs < 1500 ? 3 : 6);
     var currentMod = ((wheelAngle % 360) + 360) % 360;
     var delta = (desiredMod - currentMod + 360) % 360;
     var target = wheelAngle + turns * 360 + delta;
@@ -1513,7 +1565,7 @@
     spinWheelEl.style.transition = 'none';
     spinWheelEl.style.transform = 'rotate(' + wheelAngle + 'deg)';
     void spinWheelEl.offsetWidth;
-    spinWheelEl.style.transition = 'transform ' + (dur / 1000) + 's cubic-bezier(0.12, 0.75, 0.08, 1)';
+    spinWheelEl.style.transition = 'transform ' + (dur / 1000) + 's cubic-bezier(0.08, 0.82, 0.08, 1)';
     spinWheelEl.style.transform = 'rotate(' + target + 'deg)';
     wheelAngle = target;
     setTimeout(function () {
@@ -1546,7 +1598,7 @@
       updateCoinHud();
       setSpinButtonsBusy(false);
       voiceCue('wah_ji');
-    }, 2400);
+    }, 2800);
   }
 
   /** Queue rapid sequential spins with brief animation each (keeps visual wheel honest). */
@@ -1731,7 +1783,7 @@
       nearMissStreak += 1;
       runNearMisses += 1;
       p._wasNearMiss = true;
-      showToast('CLOSE!', 700);
+      showToast('CLOSE!', 850, 'close');
       showBanner('CLOSE!', 500);
       if (nearMissStreak === 1 && rng() < 0.45) voiceCue('bach_ke');
       if (nearMissStreak >= 3) {
@@ -1780,12 +1832,17 @@
     for (var i = particles.length - 1; i >= 0; i--) {
       var pt = particles[i];
       pt.life -= dt;
-      pt.x += pt.vx * dt;
-      pt.y += pt.vy * dt;
-      if (pt.kind !== 'trail') pt.vy += 140 * dt;
-      else pt.vx *= 0.98;
+      if (pt.kind === 'ring') {
+        pt.r += (pt.grow || 30) * dt;
+      } else {
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        if (pt.kind !== 'trail') pt.vy += 140 * dt;
+        else pt.vx *= 0.98;
+      }
       if (pt.life <= 0) particles.splice(i, 1);
     }
+    if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
 
     for (var si = scorePops.length - 1; si >= 0; si--) {
       var sp = scorePops[si];
@@ -2180,15 +2237,26 @@
   }
 
   function drawParticles() {
-    particles.forEach(function (pt) {
+    for (var pi = 0; pi < particles.length; pi++) {
+      var pt = particles[pi];
       var a = Math.max(0, pt.life / (pt.max || 0.5));
+      if (pt.kind === 'ring') {
+        ctx.globalAlpha = a * 0.85;
+        ctx.strokeStyle = pt.color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        continue;
+      }
       ctx.globalAlpha = a * (pt.kind === 'trail' ? 0.7 : 1);
       ctx.fillStyle = pt.color;
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, pt.r * a, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, Math.max(0.5, pt.r * (pt.kind === 'gift' ? (0.6 + 0.4 * a) : a)), 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-    });
+    }
   }
 
   function drawScorePops() {

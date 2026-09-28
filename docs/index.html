@@ -31,7 +31,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.5.2-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.6.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary" type="button">▶ Play</button>
@@ -42,14 +42,14 @@
           <button id="btn-collection" class="btn ghost btn-sm" type="button">📚 Album</button>
         </div>
         <div class="btn-row">
-          <button id="btn-gifts" class="btn ghost btn-sm" type="button">🎁 Mystery</button>
-        </div>
-        <div class="btn-row">
           <button id="btn-boards" class="btn ghost btn-sm" type="button">🏆 Boards</button>
           <button id="btn-streak" class="btn ghost btn-sm" type="button">🔥 Streak</button>
         </div>
-        <button id="btn-guide" class="btn ghost" type="button">📖 Guide</button>
-        <button id="btn-settings" class="btn ghost" type="button">⚙ Settings</button>
+        <div class="btn-row menu-tools" aria-label="Help and rewards">
+          <button id="btn-guide" class="btn ghost btn-sm menu-tool" type="button"><span>📖</span> Guide</button>
+          <button id="btn-gifts" class="btn ghost btn-sm menu-tool mystery-tool" type="button"><span>🎁</span> Mystery</button>
+          <button id="btn-settings" class="btn ghost btn-sm menu-tool" type="button"><span>⚙</span> Settings</button>
+        </div>
       </div>
       <p class="hint">Tap / Space · Coins in gaps · Esc pause · 2s to learn</p>
       <p class="runs-line">Runs: <span id="total-runs">0</span></p>
@@ -113,10 +113,13 @@
     <!-- Mystery Rewards + Spin Wheel (v3.4.1) -->
     <div id="screen-gifts" class="screen panel-screen scroll-screen" hidden>
       <h2>Mystery Rewards</h2>
-      <p class="hint">In-run 📦 go here. Every <strong>10 gifts = 1 spin</strong>. Wheel pays <strong>444–999</strong> 🪙 only.</p>
+      <p class="hint mystery-intro">Collect 📦 while flying. Every <strong>10 gifts unlocks 1 spin</strong> worth <strong>444–999</strong> 🪙.</p>
       <div class="mystery-stats" aria-live="polite">
         <div class="mstat"><span class="mstat-val" id="gifts-count">0</span><span class="mstat-lbl">🎁 Gifts</span></div>
         <div class="mstat highlight"><span class="mstat-val" id="spins-count">0</span><span class="mstat-lbl">🎰 Spins</span></div>
+      </div>
+      <div class="gift-progress" id="gift-progress" role="progressbar" aria-label="Progress to next spin" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0">
+        <span id="gift-progress-fill"></span><strong id="gift-progress-text">0 / 10 to next spin</strong>
       </div>
       <div class="wheel-wrap" id="wheel-wrap">
         <div class="wheel-pointer" aria-hidden="true"><i></i></div>
@@ -151,13 +154,13 @@
       </div>
       <p class="score-big">Score: <span id="final-score">0</span></p>
       <div id="run-summary" class="run-summary">
-        <div class="sum-row"><span>Best</span><strong id="best-death">0</strong></div>
-        <div class="sum-row"><span>Distance</span><strong><span id="run-distance">0</span> m</strong></div>
-        <div class="sum-row"><span>Coins</span><strong id="run-coins">0</strong></div>
-        <div class="sum-row"><span>Near Misses</span><strong id="run-nearmiss">0</strong></div>
-        <div class="sum-row"><span>Best Combo</span><strong id="run-combo">0</strong></div>
-        <div class="sum-row"><span>Perfect Passes</span><strong id="run-perfect">0</strong></div>
-        <div class="sum-row" id="run-gifts-row"><span>Gifts</span><strong id="run-gifts">0</strong></div>
+        <div class="sum-row"><span>🏆 Best</span><strong id="best-death">0</strong></div>
+        <div class="sum-row"><span>🛫 Distance</span><strong><span id="run-distance">0</span> m</strong></div>
+        <div class="sum-row"><span>🪙 Coins</span><strong id="run-coins">0</strong></div>
+        <div class="sum-row"><span>⚡ Near Misses</span><strong id="run-nearmiss">0</strong></div>
+        <div class="sum-row"><span>🔥 Best Combo</span><strong id="run-combo">0</strong></div>
+        <div class="sum-row"><span>✨ Perfect Passes</span><strong id="run-perfect">0</strong></div>
+        <div class="sum-row" id="run-gifts-row"><span>🎁 Gifts</span><strong id="run-gifts">0</strong></div>
         <div class="sum-row muted-row"><span id="mode-death-label">Mode</span><strong id="mode-death-value">Classic</strong></div>
       </div>
       <div class="btn-col">
@@ -259,6 +262,8 @@
           <li><strong>Power-ups:</strong> Shield, Turbo, Magnet, Slow-mo, Ghost (brief).</li>
           <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice &amp; more.</li>
           <li><strong>Mystery Rewards:</strong> every <strong>10 boxes = 1 spin</strong> (444–999 coins).</li>
+          <li><strong>Skill:</strong> edge pass = CLOSE; center pass = PERFECT.</li>
+          <li><strong>Feel:</strong> Classic is forgiving; Hard and One Life stay strict.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant packs unlock by local date windows or score milestones — no server seasons.</li>
@@ -273,6 +278,8 @@
           <li><strong>Power-ups:</strong> Shield, Turbo, Magnet, Slow-mo, Ghost (thori der).</li>
           <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice wagaira.</li>
           <li><strong>Mystery:</strong> har <strong>10 boxes = 1 spin</strong> (444–999 coins).</li>
+          <li><strong>Skill:</strong> edge ke paas CLOSE; gap ke center mein PERFECT.</li>
+          <li><strong>Feel:</strong> Classic narm hai; Hard aur One Life strict hain.</li>
           <li><strong>Settings:</strong> Sound mute se voice band nahi — Desi voice alag toggle.</li>
           <li><strong>Collection:</strong> naye birds (Mynah, Bulbul, Cheel, Mor…) aur areas (Hunza, Gwadar, Canal…) coins ya score se unlock.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant — local date window ya score milestone. Server seasons nahi.</li>
@@ -287,6 +294,8 @@
           <li><strong>پاور اپس:</strong> شیلڈ، ٹربو، میگنیٹ، سلو، گھوسٹ (مختصر)۔</li>
           <li><strong>موڈز:</strong> کلاسک، ہارڈ، ٹائم اٹیک، ڈیلی، پریکٹس وغیرہ۔</li>
           <li><strong>مسٹری:</strong> ہر <strong>۱۰ باکس = ۱ اسپن</strong> (۴۴۴–۹۹۹ سکے)۔</li>
+          <li><strong>مہارت:</strong> کنارے کے قریب CLOSE، درمیان سے گزریں تو PERFECT۔</li>
+          <li><strong>آسانی:</strong> کلاسک نرم ہے؛ ہارڈ اور ون لائف سخت ہیں۔</li>
           <li><strong>سیٹنگز:</strong> ساؤنڈ میوٹ سے آواز بند نہیں — دیسی وائس الگ۔</li>
           <li><strong>کلیکشن:</strong> نئے پرندے اور علاقے سکے یا اسکور سے کھلیں۔</li>
           <li><strong>سیزنل (آف لائن):</strong> آزادی / عید / سردی / بسنت — مقامی تاریخ یا اسکور۔ کوئی سرور سیزن نہیں۔</li>
@@ -300,8 +309,8 @@
       <div class="mystery-card spin-unlock-card">
         <div class="mystery-rarity rarity-legendary">🎰 Spin unlocked!</div>
         <p class="mystery-reward" id="spin-unlock-msg">
-          Open your Mystery Box and spin the wheel<br />
-          <span class="ru-line">Mystery Box kholo aur wheel spin karo · باکس کھولو</span>
+          10 gifts collected — your wheel spin is ready!<br />
+          <span class="ru-line">Wheel ghumao, 444–999 coins jeeto · وہیل گھمائیں</span>
         </p>
         <div class="btn-col">
           <button id="btn-spin-unlock-go" class="btn primary" type="button">Open Mystery Rewards</button>

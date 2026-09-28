@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.5.0-urrjaa — Web Audio SFX + Desi voice (speechSynthesis) + chirp fallback.
+ * Urr Jaa! v3.6.0-urrjaa — Web Audio SFX + Desi voice (speechSynthesis) + chirp fallback.
  * Mute (game SFX) and Desi voice are independent toggles.
  * Voice still works when game mute is ON (voiceOn only).
  * Cooldown + variety: same phrase ~12s, any voice ~6s, rotate pools.
@@ -231,7 +231,12 @@
     close_call: 'Close call!',
     gift: 'Gift!',
     mil_gaya: 'Mil gaya!',
-    gift_box: 'Box!'
+    gift_box: 'Box!',
+    kamaal: 'Kamaal!',
+    are_wah: 'Are wah!',
+    jee_haan: 'Jee haan!',
+    lelo: 'Le lo!',
+    box_mila: 'Box mila!'
   };
 
   /** Spoken phrase text (short) for Web Speech API. */
@@ -252,17 +257,22 @@
     close_call: 'close call',
     gift: 'gift',
     mil_gaya: 'mil gaya',
-    gift_box: 'box'
+    gift_box: 'box',
+    kamaal: 'kamaal',
+    are_wah: 'are wah',
+    jee_haan: 'jee haan',
+    lelo: 'le lo',
+    box_mila: 'box mila'
   };
 
   /** Category pools for variety rotation (no "wah g wah" spam). */
   const VOICE_POOLS = {
-    praise: ['shabaash', 'zabardast', 'kya_baat', 'mast', 'bohot_ache', 'wah', 'wah_ji', 'irshad', 'kya_udaan'],
+    praise: ['shabaash', 'zabardast', 'kya_baat', 'mast', 'bohot_ache', 'wah', 'wah_ji', 'irshad', 'kya_udaan', 'kamaal', 'are_wah', 'jee_haan'],
     warn: ['bach_ke', 'oye_hoye', 'close_call'],
     fail: ['haye_oye', 'oye_hoye'],
-    lucky: ['lucky', 'shabaash', 'mast'],
-    gift: ['gift', 'mil_gaya', 'gift_box'],
-    start: ['oye_hoye', 'irshad', 'kya_udaan']
+    lucky: ['lucky', 'shabaash', 'mast', 'kamaal'],
+    gift: ['gift', 'mil_gaya', 'gift_box', 'lelo', 'box_mila'],
+    start: ['oye_hoye', 'irshad', 'kya_udaan', 'jee_haan']
   };
 
   const ID_TO_POOL = {
@@ -271,7 +281,9 @@
     zabardast: 'praise', kya_baat: 'praise', mast: 'praise',
     bohot_ache: 'praise', irshad: 'praise', wah: 'praise',
     haye_oye: 'fail', lucky: 'lucky',
-    gift: 'gift', mil_gaya: 'gift', gift_box: 'gift'
+    gift: 'gift', mil_gaya: 'gift', gift_box: 'gift',
+    kamaal: 'praise', are_wah: 'praise', jee_haan: 'praise',
+    lelo: 'gift', box_mila: 'gift'
   };
 
   function speechAvailable() {
@@ -500,9 +512,10 @@
     },
     gift: function () {
       playChirpNotes([
-        { f: 660, d: 0.07, t: 'sine', g: 0.18, at: 0 },
-        { f: 880, d: 0.08, t: 'triangle', g: 0.17, at: 60 },
-        { f: 1175, d: 0.12, t: 'sine', g: 0.15, at: 130 }
+        { f: 660, d: 0.07, t: 'sine', g: 0.2, at: 0 },
+        { f: 880, d: 0.08, t: 'triangle', g: 0.19, at: 55 },
+        { f: 1175, d: 0.1, t: 'sine', g: 0.17, at: 120 },
+        { f: 1400, d: 0.12, t: 'triangle', g: 0.14, at: 200 }
       ]);
     },
     mil_gaya: function () {
@@ -518,6 +531,41 @@
         { f: 400, d: 0.07, t: 'square', g: 0.15, at: 0 },
         { f: 600, d: 0.08, t: 'triangle', g: 0.16, at: 60 },
         { f: 900, d: 0.12, t: 'sine', g: 0.15, at: 130 }
+      ]);
+    },
+    kamaal: function () {
+      playChirpNotes([
+        { f: 494, d: 0.08, t: 'sine', g: 0.18, at: 0 },
+        { f: 622, d: 0.09, t: 'triangle', g: 0.16, at: 80 },
+        { f: 830, d: 0.12, t: 'sine', g: 0.15, at: 170 }
+      ]);
+    },
+    are_wah: function () {
+      playChirpNotes([
+        { f: 392, d: 0.09, t: 'triangle', g: 0.17, at: 0 },
+        { f: 523, d: 0.1, t: 'sine', g: 0.16, at: 90 },
+        { f: 784, d: 0.12, t: 'triangle', g: 0.14, at: 190 }
+      ]);
+    },
+    jee_haan: function () {
+      playChirpNotes([
+        { f: 440, d: 0.08, t: 'sine', g: 0.17, at: 0 },
+        { f: 554, d: 0.1, t: 'sine', g: 0.15, at: 85 }
+      ]);
+    },
+    lelo: function () {
+      playChirpNotes([
+        { f: 700, d: 0.07, t: 'square', g: 0.16, at: 0 },
+        { f: 900, d: 0.08, t: 'triangle', g: 0.16, at: 60 },
+        { f: 1200, d: 0.11, t: 'sine', g: 0.14, at: 130 }
+      ]);
+    },
+    box_mila: function () {
+      playChirpNotes([
+        { f: 480, d: 0.07, t: 'triangle', g: 0.17, at: 0 },
+        { f: 640, d: 0.08, t: 'sine', g: 0.16, at: 70 },
+        { f: 860, d: 0.08, t: 'triangle', g: 0.15, at: 140 },
+        { f: 1100, d: 0.12, t: 'sine', g: 0.14, at: 210 }
       ]);
     }
   };
