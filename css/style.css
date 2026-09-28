@@ -3331,3 +3331,27 @@ html.reduce-motion .combo-meter-fill { transition: none !important; }
     animation: none !important;
   }
 }
+
+
+/* ——— v3.39: panel empty states, mission claim batch ——— */
+.panel-empty {
+  margin: 12px 0;
+  padding: 16px 14px;
+  text-align: center;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+}
+.panel-empty-ico { font-size: 1.7rem; margin-bottom: 4px; }
+.panel-empty-title { font-weight: 800; margin-bottom: 4px; color: var(--text); }
+.panel-empty[hidden] { display: none !important; }
+.missions-batch-row {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 4px;
+}
+.missions-claim-all {
+  min-width: min(240px, 90%);
+  font-weight: 800;
+}
+html.reduce-motion .missions-claim-all { animation: none !important; }

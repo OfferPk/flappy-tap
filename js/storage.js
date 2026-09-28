@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.37.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.39.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -905,6 +905,24 @@
     return result;
   }
 
+  /** 3.39: claim every done+unclaimed mission in one go. */
+  function claimMissionsBatch() {
+    const list = getMissions();
+    const claimedIds = [];
+    let coins = 0, fragments = 0, gifts = 0;
+    list.forEach(function (m) {
+      if (!m.done || m.claimed) return;
+      const r = claimMission(m.id);
+      if (!r) return;
+      claimedIds.push(m.id);
+      coins += r.coins || 0;
+      fragments += r.fragments || 0;
+      gifts += r.gifts || 0;
+    });
+    if (!claimedIds.length) return null;
+    return { ids: claimedIds, count: claimedIds.length, coins: coins, fragments: fragments, gifts: gifts };
+  }
+
   // Mystery box rarity roll COMMON→LEGENDARY
   const BOX_RARITIES = [
     { id: 'common', label: 'COMMON', weight: 50, coinsMin: 8, coinsMax: 18, fragDup: 1 },
@@ -1288,7 +1306,7 @@
     getUnlockedTrails, isTrailUnlocked, unlockTrail,
     getUnlockedSeasonals, isSeasonalUnlocked, unlockSeasonal, checkSeasonalUnlocks,
     getCollection, addToCollection, collectionCounts,
-    getMissions, bumpMission, setMissionMax, claimMission, getMissionDays, markMissionDay, MISSION_DEFS, MISSION_POOL,
+    getMissions, bumpMission, setMissionMax, claimMission, claimMissionsBatch, getMissionDays, markMissionDay, MISSION_DEFS, MISSION_POOL,
     getActiveMissionIds, getMetersBest, setMetersBest, checkEnvMilestones, checkThemeSkinMilestones,
     getStreak, claimStreak, STREAK_REWARDS, getStreakLog, markStreakClaimedDay,
     getTopRuns, recordTopRun, getConfettiIntensity, setConfettiIntensity,

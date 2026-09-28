@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.38.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.39.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -4117,6 +4117,12 @@ function updateComboMeter(visible) {
       if (b.taken) { boxes.splice(bi, 1); continue; }
       if (b.pipeRef) b.x = b.pipeRef.x + PIPE_W / 2;
       else b.x -= currentSpeed * sdt;
+      // 3.39 ribbon trail samples
+      if (!reduceMotion) {
+        if (!b.trail) b.trail = [];
+        b.trail.push({ x: b.x, y: b.y + (Math.sin(performance.now() / 220 + b.x * 0.08) * 5) });
+        if (b.trail.length > 10) b.trail.shift();
+      }
       if (b.x < -30) { boxes.splice(bi, 1); continue; }
       var bx = bird.x - b.x, by2 = bird.y - b.y;
       if (bx * bx + by2 * by2 < (20 + bird.w * 0.5) * (20 + bird.w * 0.5)) {
@@ -4135,14 +4141,20 @@ function updateComboMeter(visible) {
   }
 
 
-  /** 3.38: time-of-day sun flare (clear / sunset). Skip under reduce-motion. */
-  function drawSunFlare(sx, sy, sr, weather, pal) {
+  /** 3.38/3.39: celestial flare — day / dusk / night moon. Skip under reduce-motion. */
+  function drawSunFlare(sx, sy, sr, weather, pal, mode) {
     if (reduceMotion) return;
-    if (weather === 'storm' || weather === 'rain' || weather === 'night') return;
+    if (weather === 'storm' || weather === 'rain') return;
     var t = performance.now() / 1000;
-    var isSunset = weather === 'sunset';
-    var halo = ctx.createRadialGradient(sx, sy, sr * 0.4, sx, sy, sr * (isSunset ? 5.5 : 4.2));
-    if (isSunset) {
+    var isNight = mode === 'night' || weather === 'night' || (pal && pal.stars);
+    var isSunset = !isNight && (mode === 'dusk' || weather === 'sunset');
+    var haloR = sr * (isNight ? 4.8 : (isSunset ? 5.5 : 4.2));
+    var halo = ctx.createRadialGradient(sx, sy, sr * 0.35, sx, sy, haloR);
+    if (isNight) {
+      halo.addColorStop(0, 'rgba(220,230,255,0.55)');
+      halo.addColorStop(0.4, 'rgba(140,170,255,0.18)');
+      halo.addColorStop(1, 'rgba(80,100,200,0)');
+    } else if (isSunset) {
       halo.addColorStop(0, 'rgba(255,200,120,0.55)');
       halo.addColorStop(0.35, 'rgba(255,120,60,0.22)');
       halo.addColorStop(1, 'rgba(255,80,40,0)');
@@ -4153,30 +4165,56 @@ function updateComboMeter(visible) {
     }
     ctx.fillStyle = halo;
     ctx.beginPath();
-    ctx.arc(sx, sy, sr * (isSunset ? 5.5 : 4.2), 0, Math.PI * 2);
+    ctx.arc(sx, sy, haloR, 0, Math.PI * 2);
     ctx.fill();
-    // soft rays
-    var rays = isSunset ? 8 : 6;
+    var rays = isNight ? 5 : (isSunset ? 8 : 6);
     ctx.save();
     ctx.translate(sx, sy);
-    ctx.rotate(t * (isSunset ? 0.08 : 0.05));
+    ctx.rotate(t * (isNight ? 0.03 : (isSunset ? 0.08 : 0.05)));
     for (var r = 0; r < rays; r++) {
       ctx.rotate((Math.PI * 2) / rays);
-      var len = sr * (isSunset ? 3.2 : 2.6) + Math.sin(t * 2 + r) * 4;
+      var len = sr * (isNight ? 2.4 : (isSunset ? 3.2 : 2.6)) + Math.sin(t * 2 + r) * (isNight ? 2 : 4);
       var grd = ctx.createLinearGradient(0, 0, len, 0);
-      grd.addColorStop(0, isSunset ? 'rgba(255,180,80,0.35)' : 'rgba(255,255,220,0.28)');
+      if (isNight) grd.addColorStop(0, 'rgba(180,200,255,0.28)');
+      else grd.addColorStop(0, isSunset ? 'rgba(255,180,80,0.35)' : 'rgba(255,255,220,0.28)');
       grd.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = grd;
       ctx.beginPath();
-      ctx.moveTo(sr * 0.6, -2.5);
+      ctx.moveTo(sr * 0.55, -2);
       ctx.lineTo(len, 0);
-      ctx.lineTo(sr * 0.6, 2.5);
+      ctx.lineTo(sr * 0.55, 2);
       ctx.closePath();
       ctx.fill();
     }
     ctx.restore();
-    // lens ghost
-    if (!isSunset) {
+    if (isNight) {
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#0b1020';
+      ctx.beginPath();
+      ctx.arc(sx + sr * 0.35, sy - sr * 0.15, sr * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      for (var si = 0; si < 6; si++) {
+        var ang = t * 0.6 + si * 1.1;
+        var rad = sr * 2.2 + (si % 3) * 8;
+        ctx.globalAlpha = 0.35 + 0.35 * Math.sin(t * 3 + si);
+        ctx.fillStyle = '#e8eeff';
+        ctx.fillRect(sx + Math.cos(ang) * rad, sy + Math.sin(ang) * rad, 2, 2);
+      }
+      ctx.globalAlpha = 1;
+      var nWash = ctx.createLinearGradient(0, 0, 0, H * 0.4);
+      nWash.addColorStop(0, 'rgba(40,60,120,0.12)');
+      nWash.addColorStop(1, 'rgba(40,60,120,0)');
+      ctx.fillStyle = nWash;
+      ctx.fillRect(0, 0, W, H * 0.4);
+    } else if (isSunset) {
+      var wash = ctx.createLinearGradient(0, H * 0.45, 0, H - GROUND_H);
+      wash.addColorStop(0, 'rgba(255,100,40,0)');
+      wash.addColorStop(0.6, 'rgba(255,90,40,0.12)');
+      wash.addColorStop(1, 'rgba(255,60,30,0.18)');
+      ctx.fillStyle = wash;
+      ctx.fillRect(0, H * 0.45, W, H - GROUND_H - H * 0.45);
+    } else {
       var gx = W * 0.35 + Math.sin(t * 0.7) * 6;
       var gy = H * 0.45;
       ctx.globalAlpha = 0.12;
@@ -4189,14 +4227,6 @@ function updateComboMeter(visible) {
       ctx.arc(gx * 0.7 + 40, gy + 30, 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-    } else {
-      // sunset warm wash near horizon
-      var wash = ctx.createLinearGradient(0, H * 0.45, 0, H - GROUND_H);
-      wash.addColorStop(0, 'rgba(255,100,40,0)');
-      wash.addColorStop(0.6, 'rgba(255,90,40,0.12)');
-      wash.addColorStop(1, 'rgba(255,60,30,0.18)');
-      ctx.fillStyle = wash;
-      ctx.fillRect(0, H * 0.45, W, H - GROUND_H - H * 0.45);
     }
   }
 
@@ -4227,9 +4257,11 @@ function updateComboMeter(visible) {
 
     ctx.fillStyle = pal.sun;
     ctx.beginPath();
-    if (pal.stars || area === 'night' || area === 'quetta') {
-      ctx.arc(W - 70, 80, 22, 0, Math.PI * 2);
+    if (pal.stars || area === 'night' || area === 'quetta' || weather === 'night') {
+      var moonX = W - 70, moonY = 80, moonR = 22;
+      ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
       ctx.fill();
+      drawSunFlare(moonX, moonY, moonR, weather, pal, 'night');
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
       for (var i = 0; i < 18; i++) {
         ctx.fillRect((i * 97 + 40) % W, (i * 53 + 20) % 220, 2, 2);
@@ -4259,7 +4291,7 @@ function updateComboMeter(visible) {
       else if (weather === 'clear' || weather === 'fog') { sunY = 62; }
       ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
       ctx.fill();
-      drawSunFlare(sunX, sunY, sunR, weather, pal);
+      drawSunFlare(sunX, sunY, sunR, weather, pal, weather === 'sunset' ? 'dusk' : 'day');
     }
 
     ctx.fillStyle = 'rgba(0,0,0,0.12)';
@@ -4541,6 +4573,24 @@ function updateComboMeter(visible) {
     ctx.textBaseline = 'middle';
     ctx.fillText('?', 0, 1);
     ctx.restore();
+    // 3.39: ribbon trail (world-space)
+    if (!reduceMotion && b.trail && b.trail.length > 1) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      for (var ti = 1; ti < b.trail.length; ti++) {
+        var p0 = b.trail[ti - 1], p1 = b.trail[ti];
+        var a = ti / b.trail.length;
+        ctx.globalAlpha = 0.12 + a * 0.5;
+        ctx.strokeStyle = ti % 2 ? '#ffd93d' : '#c084fc';
+        ctx.lineWidth = 1.5 + 2 * a;
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
   }
 
   function drawParticles() {
@@ -5873,6 +5923,24 @@ function updateComboMeter(visible) {
       row.querySelectorAll('.skin-card').forEach(function (c) { if (!c.hidden) any = true; });
       row.classList.toggle('filter-empty', !any);
     });
+    var gEmpty = document.getElementById('garage-empty');
+    if (!gEmpty) {
+      gEmpty = document.createElement('div');
+      gEmpty.id = 'garage-empty';
+      gEmpty.className = 'panel-empty';
+      gEmpty.setAttribute('role', 'status');
+      var host = document.getElementById('screen-garage');
+      if (host) host.appendChild(gEmpty);
+    }
+    var anyVisible = !!document.querySelector('#screen-garage .skin-card:not([hidden])');
+    if (gEmpty) {
+      gEmpty.hidden = anyVisible;
+      if (!anyVisible) {
+        gEmpty.innerHTML = '<div class="panel-empty-ico" aria-hidden="true">🧺</div>' +
+          '<p class="panel-empty-title">Nothing in this filter</p>' +
+          '<p class="hint">Try All / Theme / Seasonal — or unlock more in a run.</p>';
+      }
+    }
   }
 
 
@@ -6091,6 +6159,32 @@ function updateComboMeter(visible) {
     calWrap.innerHTML = buildMissionCalendarHtml();
     while (calWrap.firstChild) missionsList.appendChild(calWrap.firstChild);
     var missions = FTStorage.getMissions ? FTStorage.getMissions() : [];
+    var claimable = missions.filter(function (m) { return m.done && !m.claimed; });
+    if (claimable.length >= 2) {
+      var batchRow = document.createElement('div');
+      batchRow.className = 'missions-batch-row';
+      var batchBtn = document.createElement('button');
+      batchBtn.type = 'button';
+      batchBtn.className = 'btn reward btn-sm missions-claim-all';
+      batchBtn.textContent = 'Claim all (' + claimable.length + ')';
+      batchBtn.addEventListener('click', function () {
+        var r = FTStorage.claimMissionsBatch && FTStorage.claimMissionsBatch();
+        if (!r) return;
+        haptic('gift');
+        if (!reduceMotion) spawnConfettiBurst(W * 0.5, H * 0.35, 18);
+        if (FTAudio.combo) FTAudio.combo();
+        var bits = [];
+        if (r.coins) bits.push('+' + r.coins + '🪙');
+        if (r.fragments) bits.push('+' + r.fragments + '✦');
+        if (r.gifts) bits.push('+' + r.gifts + '🎁');
+        showToast('Claimed ' + r.count + ': ' + (bits.join(' · ') || 'done!'), 2000, 'medal');
+        if (r.gifts) detectSpinUnlockFromDelta(r.gifts);
+        voiceCue('shabaash');
+        refreshMissions(); updateCoinHud();
+      });
+      batchRow.appendChild(batchBtn);
+      missionsList.appendChild(batchRow);
+    }
     if (!missions.length) {
       var empty = document.createElement('div');
       empty.className = 'missions-empty';
@@ -6299,8 +6393,14 @@ function updateComboMeter(visible) {
       });
       if (!shown) {
         var empty = document.createElement('p');
-        empty.className = 'hint collect-filter-empty';
-        empty.textContent = collectionFilter === 'owned' ? 'No owned items here yet.' : 'None locked — nice!';
+        empty.className = 'panel-empty collect-filter-empty';
+        empty.innerHTML = '<div class="panel-empty-ico" aria-hidden="true">' +
+          (collectionFilter === 'owned' ? '📦' : '✨') + '</div>' +
+          '<p class="panel-empty-title">' +
+          (collectionFilter === 'owned' ? 'No owned items here yet' : 'None locked — nice!') +
+          '</p><p class="hint">' +
+          (collectionFilter === 'owned' ? 'Unlock skins in Garage or Mystery Rewards.' : "You've collected this whole section.") +
+          '</p>';
         collectionList.appendChild(empty);
       } else {
         collectionList.appendChild(row);
@@ -6393,7 +6493,14 @@ function updateComboMeter(visible) {
       }
     }
     topHtml += '</div>';
-    boardsList.innerHTML = '<h3 class="section-title">Medal Gallery</h3>' + gallery + topHtml +
+    var emptyBoard = '';
+    if (!(best > 0)) {
+      emptyBoard = '<div class="panel-empty" role="status">' +
+        '<div class="panel-empty-ico" aria-hidden="true">🏆</div>' +
+        '<p class="panel-empty-title">No scores yet</p>' +
+        '<p class="hint">Finish a Classic run — your best lands here with medals.</p></div>';
+    }
+    boardsList.innerHTML = emptyBoard + '<h3 class="section-title">Medal Gallery</h3>' + gallery + topHtml +
       '<h3 class="section-title">Scores</h3>' +
       rows.map(function (r) {
         return '<div class="board-row"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';

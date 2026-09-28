@@ -1,19 +1,19 @@
 # Urr Jaa! STATUS
 
-## Current: **3.38.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.39.0-urrjaa** (2026-09-28 PKT)
 
-### This pack (NEW vs 3.11–3.37)
-- **Sun flare time-of-day** — halo + rays (+ sunset wash); skipped under reduce-motion
-- **Better reduce-motion coverage** — CSS sweep + cloud bob/sort/flare gated in JS
-- **Gift box bob anim** — richer in-world bob/tilt/ribbon + UI 🎁 bob
-- **Missions empty state** — empty list + all-claimed banner
-- Bugfixes: refreshMissions bracing; cloud sort skipped when reduce-motion
-- KEEP ALL ≤3.37 incl. **15s Mystery Spin once**, Close (X), …
+### This pack (NEW vs 3.11–3.38)
+- **Dusk/night flare** — moon halo + cool rays at night; dusk mode for sunset
+- **Better empty states** — Garage filter, Boards (no scores), Collection filter polish
+- **Ribbon trail on gifts** — gold/purple trail samples behind flying boxes
+- **Mission claim batch** — Claim all when 2+ missions ready
+- Bugfixes: night no longer skips celestial flare; claimMissionsBatch export
+- KEEP ALL ≤3.38 incl. **15s Mystery Spin once**, Close (X), …
 
-SW cache: `urrjaa-v47-20260928`
+SW cache: `urrjaa-v48-20260928`
 
-**Ship commit:** `7f94b8b` · tag `v3.38.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.38.0-urrjaa  
+**Ship commit:** (pending) · tag `v3.39.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.39.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/
 
 
