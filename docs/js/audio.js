@@ -273,6 +273,14 @@
     setTimeout(function () { tone(880, 0.05, 'triangle', 0.048 * quietMul); }, 45);
     setTimeout(function () { tone(1175, 0.07, 'sine', 0.04 * quietMul); }, 95);
   }
+  /** 3.51: soft pipe-clear blip (lighter than score / perfect). */
+  function pipeClear() {
+    if (muted) return;
+    var j = (Math.random() - 0.5) * 28;
+    var g = 0.038 * quietMul;
+    tone(740 + j, 0.04, 'sine', g);
+    setTimeout(function () { tone(990 + j * 0.5, 0.055, 'triangle', g * 0.85); }, 38);
+  }
   /** 3.45/3.46: soft night cricket / owl ambience blip · volume gated */
   function setNightAmbienceVolume(level) {
     // off | low | normal | high → gain mul
@@ -1018,7 +1026,7 @@
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     tick: tick, startSpinWhoosh: startSpinWhoosh, stopSpinWhoosh: stopSpinWhoosh, spinLand: spinLand,
-    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, nightAmbienceTick: nightAmbienceTick, setNightAmbienceVolume: setNightAmbienceVolume, getNightAmbienceVolumeMul: getNightAmbienceVolumeMul, previewNightAmbience: previewNightAmbience, duckAmbienceForVoice: duckAmbienceForVoice, ambienceEffectiveMul: ambienceEffectiveMul,
+    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, pipeClear: pipeClear, nightAmbienceTick: nightAmbienceTick, setNightAmbienceVolume: setNightAmbienceVolume, getNightAmbienceVolumeMul: getNightAmbienceVolumeMul, previewNightAmbience: previewNightAmbience, duckAmbienceForVoice: duckAmbienceForVoice, ambienceEffectiveMul: ambienceEffectiveMul,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
     playMenuMusic: playMenuMusic, stopMenuMusic: stopMenuMusic,
     setAreaMusicEnabled: setAreaMusicEnabled, isAreaMusicEnabled: isAreaMusicEnabled,

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.50.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.51.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -1835,6 +1835,7 @@ function updateComboMeter(visible) {
     refreshSeasonalHint();
     updateLivesHud();
     refreshMenuTip();
+    maybePlayShimmer(); // 3.51 once/day Play shimmer
     if (FTAudio && FTAudio.setQuietMode) FTAudio.setQuietMode(false);
     drawFrame(true);
   }
@@ -1886,18 +1887,33 @@ function updateComboMeter(visible) {
     return TUTORIAL_TIPS[i];
   }
 
-  var _milestone350TipShown = false;
-  var _milestone350SplashDone = false;
+  // 3.51: Play shimmer once per calendar day (not forever / not every menu)
+  var PLAY_SPLASH_DAY_KEY = 'flappy-tap:play-splash-day';
+  var _playSplashSessionFallback = false;
 
-  function maybeMilestonePlaySplash() {
-    if (_milestone350SplashDone || reduceMotion) return;
-    _milestone350SplashDone = true;
+  function playSplashTodayKey() {
+    var d = new Date();
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+  }
+
+  function maybePlayShimmer() {
+    if (reduceMotion) return;
+    var today = playSplashTodayKey();
+    try {
+      if (localStorage.getItem(PLAY_SPLASH_DAY_KEY) === today) return;
+      localStorage.setItem(PLAY_SPLASH_DAY_KEY, today);
+    } catch (_) {
+      if (_playSplashSessionFallback) return;
+      _playSplashSessionFallback = true;
+    }
     if (btnPlay) {
       btnPlay.classList.remove('btn-play-milestone');
       void btnPlay.offsetWidth;
       btnPlay.classList.add('btn-play-milestone');
-      clearTimeout(maybeMilestonePlaySplash._t);
-      maybeMilestonePlaySplash._t = setTimeout(function () {
+      clearTimeout(maybePlayShimmer._t);
+      maybePlayShimmer._t = setTimeout(function () {
         if (btnPlay) btnPlay.classList.remove('btn-play-milestone');
       }, 1400);
     }
@@ -1909,13 +1925,6 @@ function updateComboMeter(visible) {
   function refreshMenuTip() {
     var el = document.getElementById('menu-tip');
     if (!el) return;
-    if (!_milestone350TipShown) {
-      _milestone350TipShown = true;
-      el.textContent = '💡 3.50 milestone — snappier feel · Garage Undo/Clear · night ducks for voice · Spin once still 15s';
-      el.hidden = false;
-      maybeMilestonePlaySplash();
-      return;
-    }
     el.textContent = '💡 ' + pickTutorialTip(Date.now() / 8000);
     el.hidden = false;
   }
@@ -3696,7 +3705,7 @@ function updateComboMeter(visible) {
   }
 
   function spawnPipeClearJuice(x, y) {
-    // 3.50 milestone feel splash — soft gold clear ring (one juice, not bloat)
+    // 3.50/3.51 soft gold pipe-clear ring (+ soft SFX in addPipeScore)
     if (reduceMotion || !bird) return;
     if (particles.length > particleBudget() * 0.9) return;
     particles.push({
@@ -3714,9 +3723,6 @@ function updateComboMeter(visible) {
   function addPipeScore(p) {
     combo += 1;
     maybeComboMilestone(combo);
-    if (!reduceMotion) {
-      spawnPipeClearJuice(bird.x + 8, bird.y);
-    }
     runBestCombo = Math.max(runBestCombo, combo, coinCombo, nearMissStreak);
     var mult = pipeComboMult();
     // Perfect Pass: near gap center → +3 base (tune with existing mult)
@@ -3759,7 +3765,15 @@ function updateComboMeter(visible) {
     }
     var gained = basePts * mult;
     setScore(score + gained);
-    FTAudio.score();
+    // 3.51: soft pipe-clear SFX; skip stacked score blip on PERFECT (already has perfect())
+    if (!reduceMotion) spawnPipeClearJuice(bird.x + 8, bird.y);
+    if (tag === 'PERFECT!') {
+      /* perfect() already played */
+    } else if (FTAudio && FTAudio.pipeClear) {
+      FTAudio.pipeClear();
+    } else if (FTAudio && FTAudio.score) {
+      FTAudio.score();
+    }
     popScore(gained, bird.x + 20, bird.y - 30);
     if (tag && basePts >= 3) {
       popScore(tag, bird.x, bird.y - 48);
