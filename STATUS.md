@@ -1,5 +1,23 @@
 # Urr Jaa! STATUS
 
+## Current: **3.22.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.21)
+- **Double-tap zoom prevent** — viewport harden + gesture/dblclick/touchend guards
+- **Better loading progress** — determinate splash bar + % + staged labels
+- **Seasonal auto-theme hint** — menu banner when a seasonal window is open
+- **Larger buttons** — Settings a11y toggle for bigger tap targets
+- KEEP ALL ≤3.21 incl. **15s Mystery Spin once**, Close (X), pause blur, coin rain, …
+
+SW cache: `urrjaa-v31-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.22.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.22.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.21.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.20)

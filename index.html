@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#4ecdc4" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#1a1a2e" />
@@ -23,7 +23,10 @@
     <div class="splash-inner">
       <div class="splash-logo">Urr Jaa!</div>
       <div class="splash-ur">اڑ جا!</div>
-      <div class="splash-bar" aria-hidden="true"><span></span></div>
+      <div class="splash-bar splash-bar-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading">
+        <span id="splash-progress-fill"></span>
+      </div>
+      <p id="splash-progress-pct" class="splash-pct">0%</p>
       <p class="splash-hint">Loading offline arcade…</p>
     </div>
   </div>
@@ -48,8 +51,9 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.21.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.22.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
+      <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary btn-play-pulse" type="button">▶ Play</button>
@@ -298,6 +302,11 @@
           <input id="reduce-motion" type="checkbox" />
         </label>
         <p class="setting-hint">Less shake, no trail, fewer particles · better on low-end phones</p>
+        <label class="setting-row check-row" for="large-buttons-toggle">
+          <span>Larger buttons</span>
+          <input id="large-buttons-toggle" type="checkbox" />
+        </label>
+        <p class="setting-hint">Accessibility — bigger tap targets on menus &amp; panels</p>
         <label class="setting-row" for="confetti-intensity">
           <span>Confetti intensity</span>
         </label>
@@ -368,6 +377,7 @@
           <li><strong>Settings · Confetti intensity:</strong> Off / Low / Normal / High for celebrations.</li>
           <li><strong>3.20:</strong> mission calendar · unlock fanfare · storm thunder rumble · smoother perf.</li>
           <li><strong>3.21:</strong> pause blur · coin rain on records · one-life heart break · clear spin history · iOS PWA status bar.</li>
+          <li><strong>3.22:</strong> no double-tap zoom · boot progress % · seasonal window hint · Larger buttons (a11y).</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>

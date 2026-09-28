@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.21.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.22.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,10 +29,10 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.21.0-urrjaa)
+## Features (v3.22.0-urrjaa)
 
-- **Pause blur** · **coin rain** celebrations · **one-life heart break** · **clear spin history**
-- **iOS PWA** translucent status bar + theme-color / safe fill
+- **No double-tap zoom** · **boot progress %** · **seasonal window hint** · **Larger buttons** a11y
+- Pause blur · coin rain · one-life heart break · clear spin history · iOS PWA status bar
 - Mission calendar · unlock fanfare · thunder · quiet night · confetti · Top 5 · streak calendar
 - **Mystery wheel 15s** Spin once (KEEP) · Close (X) · tips · fireworks · pipes · safe-area
 - Power VFX clarity (Slow-mo / Ghost / Turbo) · Challenge stage picker · One Life heart HUD

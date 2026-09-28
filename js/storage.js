@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.20.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.22.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -28,6 +28,7 @@
     dailyDate: PREFIX + 'daily-date',
     sensitivity: PREFIX + 'sensitivity',
     reduceMotion: PREFIX + 'reduce-motion',
+    largeButtons: PREFIX + 'large-buttons',
     haptics: PREFIX + 'haptics',
     unlockedSkins: PREFIX + 'unlocked-skins',
     coins: PREFIX + 'coins',
@@ -932,6 +933,9 @@
   }
   function getReduceMotion() { return get(KEYS.reduceMotion, '0') === '1'; }
   function setReduceMotion(on) { set(KEYS.reduceMotion, on ? '1' : '0'); }
+  /** 3.22 a11y: larger tap targets. */
+  function isLargeButtons() { return get(KEYS.largeButtons, '0') === '1'; }
+  function setLargeButtons(on) { set(KEYS.largeButtons, on ? '1' : '0'); }
   function getHaptics() { return get(KEYS.haptics, '1') === '1'; }
   function setHaptics(on) { set(KEYS.haptics, on ? '1' : '0'); }
   function getVoicePack() { return get(KEYS.voicePack, '1') === '1'; }
@@ -1176,7 +1180,7 @@
     getSkin, setSkin, getBird, setBird, getVehicle, setVehicle,
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
     isMuted, setMuted, isQuietNight, setQuietNight, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
-    getSensitivity, setSensitivity, getReduceMotion, setReduceMotion,
+    getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
     getHaptics, setHaptics, getVoicePack, setVoicePack,
     getUnlockedSkins, isSkinUnlocked, unlockSkin,
     getCoins, setCoins, addCoins, spendCoins,

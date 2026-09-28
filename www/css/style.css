@@ -28,7 +28,9 @@ html, body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  -ms-touch-action: manipulation;
   user-select: none;
+  -webkit-user-select: none;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
 }
@@ -1782,15 +1784,22 @@ html.reduce-motion .btn.continue-ready {
 .splash-bar > span {
   display: block;
   height: 100%;
-  width: 40%;
+  width: 0%;
   border-radius: 999px;
   background: linear-gradient(90deg, #4ecdc4, #ffd93d);
-  animation: splash-load 1.1s ease-in-out infinite;
+  transition: width 0.22s ease;
 }
-@keyframes splash-load {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(320%); }
+.splash-bar-progress > span {
+  animation: none;
 }
+.splash-pct {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ffe082;
+  margin: 0 0 6px;
+  letter-spacing: 0.04em;
+}
+html.reduce-motion .splash-bar > span { transition: none; }
 .splash-hint { font-size: 0.78rem; color: rgba(255,255,255,.7); margin: 0; }
 
 .offline-banner {
@@ -1853,7 +1862,7 @@ html.reduce-motion .btn.continue-ready {
 html.reduce-motion #timer-hud.timer-low,
 html.reduce-motion .splash-bar > span,
 html.reduce-motion .boot-splash { animation: none !important; }
-html.reduce-motion .splash-bar > span { width: 70%; }
+html.reduce-motion .splash-bar > span { /* determinate width set inline */ }
 
 
 /* ——— v3.15: panel close, power VFX chips, challenge select, lives, teaser, landscape ——— */
@@ -2305,4 +2314,66 @@ html.reduce-motion .lives-hud.life-loss-pop .life-label { animation: none; }
   #app {
     padding-top: 0;
   }
+}
+
+
+/* ——— v3.22: boot progress, seasonal hint, large buttons, zoom harden ——— */
+.seasonal-hint {
+  margin: 4px 12px 6px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  color: #ffe8a3;
+  background: rgba(92, 61, 12, 0.5);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 10px;
+  max-width: min(360px, calc(100% - 24px));
+  text-align: center;
+  line-height: 1.35;
+}
+.seasonal-hint[hidden] { display: none !important; }
+
+html.large-buttons .btn {
+  min-height: 52px;
+  padding: 14px 18px;
+  font-size: 1.05rem;
+}
+html.large-buttons .btn-sm,
+html.large-buttons .btn.tiny {
+  min-height: 40px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+}
+html.large-buttons .icon-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 1.25rem;
+}
+html.large-buttons .panel-close {
+  width: 40px;
+  height: 40px;
+  font-size: 1.05rem;
+}
+html.large-buttons .skin-card {
+  min-width: 88px;
+  padding: 10px 8px;
+}
+html.large-buttons .skin-card canvas {
+  width: 56px;
+  height: 56px;
+}
+html.large-buttons .setting-row,
+html.large-buttons .check-row {
+  min-height: 48px;
+  font-size: 1.02rem;
+}
+html.large-buttons .garage-filter,
+html.large-buttons .guide-tab,
+html.large-buttons .chip {
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+}
+
+#game, canvas {
+  touch-action: none;
 }

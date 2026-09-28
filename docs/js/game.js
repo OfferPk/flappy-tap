@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.21.0-urrjaa — Pause blur polish, coin rain celebration, one-life heart loss anim,
- * mystery history clear button, iOS PWA status bar, bugfixes.
- * KEEP ALL ≤3.20 incl. 15s Mystery Spin once + Close (X) + fanfare + thunder + calendars.
+ * Urr Jaa! v3.22.0-urrjaa — Double-tap zoom prevent, better boot progress, seasonal theme hint,
+ * accessibility larger buttons, bugfixes.
+ * KEEP ALL ≤3.21 incl. 15s Mystery Spin once + Close (X) + pause blur + coin rain + history clear.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  */
 (function () {
@@ -214,6 +214,7 @@
   const voiceToggleChk = document.getElementById('voice-toggle');
   const quietNightChk = document.getElementById('quiet-night-toggle');
   const confettiIntensitySel = document.getElementById('confetti-intensity');
+  const largeButtonsChk = document.getElementById('large-buttons-toggle');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -809,6 +810,42 @@
     return bestCand;
   }
 
+
+  function applyLargeButtons(on) {
+    document.documentElement.classList.toggle('large-buttons', !!on);
+  }
+
+  /** 3.22: hint when a seasonal pack window is active (auto-theme / unlock nudge). */
+  function refreshSeasonalHint() {
+    var el = document.getElementById('seasonal-hint');
+    if (!el || !FTSkins || !FTSkins.SEASONAL_PACKS) return;
+    var best = FTStorage.getBest ? FTStorage.getBest() : 0;
+    var now = new Date();
+    var active = null;
+    for (var i = 0; i < FTSkins.SEASONAL_PACKS.length; i++) {
+      var p = FTSkins.SEASONAL_PACKS[i];
+      if (!p) continue;
+      var inWin = FTSkins.seasonalInWindow ? FTSkins.seasonalInWindow(p, now) : false;
+      if (!inWin) continue;
+      var unlocked = FTStorage.isSeasonalUnlocked && FTStorage.isSeasonalUnlocked(p.id);
+      active = { pack: p, unlocked: !!unlocked };
+      break;
+    }
+    if (!active) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    var emoji = active.pack.emoji || '📅';
+    if (active.unlocked) {
+      el.textContent = emoji + ' ' + active.pack.label + ' is live — equip in Garage → Seasonals';
+    } else {
+      var need = active.pack.milestoneScore || '?';
+      el.textContent = emoji + ' ' + active.pack.label + ' window open — unlock in Garage (or best ' + need + '+)';
+    }
+    el.hidden = false;
+  }
+
   function updateUnlockTeaser() {
     if (!unlockTeaserEl) return;
     var t = nextBirdUnlockTeaser();
@@ -1283,6 +1320,7 @@
     updateBestUI();
     updateA2hsTip();
     updateUnlockTeaser();
+    refreshSeasonalHint();
     updateLivesHud();
     refreshMenuTip();
     if (FTAudio && FTAudio.setQuietMode) FTAudio.setQuietMode(false);
@@ -3764,6 +3802,30 @@
     document.addEventListener('keydown', once, true);
   })();
 
+
+  // 3.22: prevent iOS/Android double-tap zoom (viewport + gesture + dblclick)
+  (function preventDoubleTapZoom() {
+    try {
+      document.addEventListener('gesturestart', function (e) {
+        if (e.cancelable) e.preventDefault();
+      }, { passive: false });
+      document.addEventListener('gesturechange', function (e) {
+        if (e.cancelable) e.preventDefault();
+      }, { passive: false });
+      var lastTouchEnd = 0;
+      document.addEventListener('touchend', function (e) {
+        var now = Date.now();
+        if (now - lastTouchEnd <= 320) {
+          if (e.cancelable) e.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, { passive: false });
+      document.addEventListener('dblclick', function (e) {
+        if (e.cancelable) e.preventDefault();
+      }, { passive: false });
+    } catch (errZ) { /* ignore */ }
+  })();
+
   canvas.style.touchAction = 'none';
   // 3.18: touchstart before pointerdown → lower mobile tap latency
   canvas.addEventListener('touchstart', function (e) {
@@ -3964,6 +4026,7 @@
     if (confettiIntensitySel && FTStorage.getConfettiIntensity) {
       confettiIntensitySel.value = FTStorage.getConfettiIntensity();
     }
+    if (largeButtonsChk) largeButtonsChk.checked = !!(FTStorage.isLargeButtons && FTStorage.isLargeButtons());
   });
   if (btnSettingsClose) btnSettingsClose.addEventListener('click', function () { screenSettings.hidden = true; });
   var btnHapticPreview = document.getElementById('btn-haptic-preview');
@@ -4000,6 +4063,12 @@
     var v = FTStorage.setConfettiIntensity ? FTStorage.setConfettiIntensity(confettiIntensitySel.value) : confettiIntensitySel.value;
     showToast('Confetti: ' + v, 900);
     if (v !== 'off' && !reduceMotion) spawnConfettiBurst(W * 0.5, H * 0.4, 12);
+  });
+  if (largeButtonsChk) largeButtonsChk.addEventListener('change', function () {
+    var on = !!largeButtonsChk.checked;
+    if (FTStorage.setLargeButtons) FTStorage.setLargeButtons(on);
+    applyLargeButtons(on);
+    showToast(on ? 'Larger buttons ON' : 'Larger buttons OFF', 1000);
   });
   if (voiceToggleChk) voiceToggleChk.addEventListener('change', function () {
     var on = !!voiceToggleChk.checked;
@@ -4751,6 +4820,7 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   sensitivity = FTStorage.getSensitivity();
   reduceMotion = FTStorage.getReduceMotion();
   hapticsOn = FTStorage.getHaptics();
+  applyLargeButtons(FTStorage.isLargeButtons && FTStorage.isLargeButtons());
   FTAudio.setVoicePack(FTStorage.getVoicePack());
   applyReduceMotionClass();
   best = FTStorage.getBest();
@@ -4774,19 +4844,42 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
     if (offline) el.classList.add('offline-show');
     else el.classList.remove('offline-show');
   }
+  function setBootProgress(pct, label) {
+    var fill = document.getElementById('splash-progress-fill');
+    var pctEl = document.getElementById('splash-progress-pct');
+    var hint = document.querySelector('.splash-hint');
+    pct = Math.max(0, Math.min(100, pct | 0));
+    if (fill) fill.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (hint && label) hint.textContent = label;
+  }
   function hideBootSplash() {
     var splash = document.getElementById('boot-splash');
     if (!splash || splash.hidden) return;
+    setBootProgress(100, 'Ready — Urr Jao!');
     splash.classList.add('splash-hide');
     setTimeout(function () {
       splash.hidden = true;
       splash.setAttribute('aria-hidden', 'true');
     }, 450);
   }
+  function runBootSequence() {
+    setBootProgress(12, 'Warming engines…');
+    setTimeout(function () { setBootProgress(38, 'Loading skins…'); }, 90);
+    setTimeout(function () { setBootProgress(62, 'Tuning audio…'); }, 180);
+    setTimeout(function () {
+      setBootProgress(85, 'Almost ready…');
+      try { if (FTAudio && FTAudio.unlock) { /* wait for gesture */ } } catch (e) {}
+    }, 280);
+    setTimeout(function () {
+      setBootProgress(100, 'Ready — Urr Jao!');
+      hideBootSplash();
+    }, 420);
+  }
   window.addEventListener('online', updateOfflineBanner);
   window.addEventListener('offline', updateOfflineBanner);
   updateOfflineBanner();
   showMenu();
   loop(performance.now());
-  requestAnimationFrame(function () { requestAnimationFrame(hideBootSplash); });
+  runBootSequence();
 })();
