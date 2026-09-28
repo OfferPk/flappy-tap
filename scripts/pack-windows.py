@@ -29,12 +29,13 @@ copytree(root / 'icons', staging / 'icons')
     b'@echo off\r\ncd /d "%~dp0"\r\nstart "" "index.html"\r\n'
 )
 (staging / 'README-PLAY.txt').write_text(
-    'Urr Jaa! — offline web build (v3.4.0-urrjaa)\r\n'
+    'Urr Jaa! — offline web build (v3.4.1-urrjaa)\r\n'
     'Windows: double-click PLAY-WINDOWS.bat (or open index.html in Chrome/Edge)\r\n'
     'Android: open the GitHub Pages link in Chrome (Add to Home Screen for PWA)\r\n'
     'Controls: tap / click / Space to flap — NO countdown\r\n'
     'Modes: Classic / Time Attack / Hard / No Coin / Challenge Stages / One Life\r\n'
     'Garage: birds, vehicles, accessories, trails, areas · streak · boards · juice\r\n'
+    'Mystery Rewards: 10 gifts = 1 spin · wheel 444–999 coins\r\n'
     'Repo folder: flappy-tap (OfferPk/flappy-tap) · title Urr Jaa!\r\n',
     encoding='utf-8',
 )

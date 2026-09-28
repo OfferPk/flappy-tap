@@ -733,21 +733,121 @@ html.reduce-motion #score-display.score-bump { animation: none; }
 html.reduce-motion .mystery-overlay.mystery-pop .mystery-card,
 html.reduce-motion .new-record-banner { animation: none; }
 
-/* Gift Collection spin wheel (v3.4) */
+/* Mystery Rewards spin wheel (v3.4.1) */
+.mystery-stats {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 8px 12px 4px;
+}
+.mstat {
+  flex: 1;
+  max-width: 140px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 10px 8px;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.mstat.highlight {
+  border-color: rgba(255, 215, 64, 0.45);
+  background: linear-gradient(160deg, rgba(255, 200, 60, 0.18), rgba(15, 23, 42, 0.55));
+}
+.mstat-val {
+  display: block;
+  font-size: 1.55rem;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.mstat-lbl {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+}
 .wheel-wrap {
   position: relative;
-  width: 220px;
-  height: 220px;
-  margin: 12px auto 8px;
+  width: 260px;
+  height: 290px;
+  margin: 10px auto 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.wheel-pointer {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 28px;
+  height: 34px;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.55));
+}
+.wheel-pointer i {
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 28px solid #ffd54a;
+  margin: 0 auto;
+  position: relative;
+}
+.wheel-pointer i::after {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: -28px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 16px solid #fff3bf;
+}
+.wheel-rim {
+  position: relative;
+  width: 248px;
+  height: 248px;
+  margin-top: 18px;
+  border-radius: 50%;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 40%),
+    conic-gradient(#ffe082, #ffb300, #ff8f00, #ffd54a, #fff59d, #ffb300, #ffe082);
+  box-shadow:
+    0 12px 32px rgba(0,0,0,.45),
+    0 0 0 3px rgba(255, 193, 7, 0.35),
+    inset 0 2px 6px rgba(255,255,255,.35);
+}
+.wheel-wrap.wheel-spinning .wheel-rim {
+  animation: rim-pulse 0.55s ease-in-out infinite;
+}
+.wheel-wrap.wheel-win .wheel-rim {
+  animation: rim-win 0.7s ease-out;
+}
+@keyframes rim-pulse {
+  0%, 100% { box-shadow: 0 12px 32px rgba(0,0,0,.45), 0 0 0 3px rgba(255,193,7,.35), 0 0 18px rgba(255,215,64,.25); }
+  50% { box-shadow: 0 12px 32px rgba(0,0,0,.45), 0 0 0 5px rgba(255,215,64,.7), 0 0 36px rgba(255,215,64,.55); }
+}
+@keyframes rim-win {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.04); box-shadow: 0 0 40px rgba(255,215,64,.85), 0 0 0 6px rgba(255,255,255,.5); }
+  100% { transform: scale(1); }
 }
 .spin-wheel {
-  width: 220px;
-  height: 220px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   position: relative;
   overflow: hidden;
-  border: 4px solid var(--gold);
-  box-shadow: 0 8px 28px rgba(0,0,0,.4), inset 0 0 20px rgba(0,0,0,.25);
+  border: 3px solid rgba(15, 23, 42, 0.55);
+  box-shadow: inset 0 0 24px rgba(0,0,0,.28);
   background: conic-gradient(
     from -30deg,
     #ff6b6b 0deg 60deg,
@@ -757,6 +857,29 @@ html.reduce-motion .new-record-banner { animation: none; }
     #c084fc 240deg 300deg,
     #f472b6 300deg 360deg
   );
+  will-change: transform;
+}
+.spin-wheel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from -30deg,
+    transparent 0deg 58deg,
+    rgba(15,23,42,.28) 58deg 60deg
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+.spin-wheel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, rgba(255,255,255,.22), transparent 55%);
+  pointer-events: none;
+  z-index: 2;
 }
 .wheel-seg {
   position: absolute;
@@ -766,15 +889,17 @@ html.reduce-motion .new-record-banner { animation: none; }
   height: 50%;
   transform-origin: 0 0;
   pointer-events: none;
+  z-index: 3;
 }
 .wheel-seg span {
   position: absolute;
-  left: 28%;
-  top: 18%;
+  left: 26%;
+  top: 14%;
   font-weight: 900;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
   color: #0f172a;
-  text-shadow: 0 1px 0 rgba(255,255,255,.35);
+  text-shadow: 0 1px 0 rgba(255,255,255,.45), 0 2px 4px rgba(0,0,0,.15);
   transform: rotate(30deg);
 }
 .wheel-seg[data-i="0"] { transform: rotate(0deg); }
@@ -783,16 +908,51 @@ html.reduce-motion .new-record-banner { animation: none; }
 .wheel-seg[data-i="3"] { transform: rotate(180deg); }
 .wheel-seg[data-i="4"] { transform: rotate(240deg); }
 .wheel-seg[data-i="5"] { transform: rotate(300deg); }
-.wheel-pointer {
+.wheel-hub {
   position: absolute;
-  top: -6px;
   left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.4rem;
-  color: var(--gold);
-  z-index: 2;
-  text-shadow: 0 2px 4px rgba(0,0,0,.5);
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
+  border-radius: 50%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 35% 30%, #fff8e1, #ffc107 55%, #ff8f00);
+  border: 3px solid #fff3bf;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,.4),
+    inset 0 2px 4px rgba(255,255,255,.55);
+  font-size: 1.35rem;
 }
-.spin-result { text-align: center; margin: 6px 8px 10px; min-height: 2.4em; }
+.wheel-stand {
+  width: 90px;
+  height: 18px;
+  margin-top: -4px;
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(180deg, #ffb300, #f57c00);
+  box-shadow: 0 6px 12px rgba(0,0,0,.35);
+}
+.spin-result {
+  text-align: center;
+  margin: 8px 10px 12px;
+  min-height: 2.6em;
+  font-weight: 700;
+}
+.spin-result.win-flash {
+  color: #ffe082;
+  text-shadow: 0 0 12px rgba(255, 215, 64, 0.7);
+  animation: result-pop 0.45s ease-out;
+}
+@keyframes result-pop {
+  0% { transform: scale(0.85); opacity: 0.4; }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); opacity: 1; }
+}
 #btn-collection-gifts { margin-bottom: 10px; width: 100%; }
 html.reduce-motion .spin-wheel { transition: none !important; }
+html.reduce-motion .wheel-wrap.wheel-spinning .wheel-rim,
+html.reduce-motion .wheel-wrap.wheel-win .wheel-rim,
+html.reduce-motion .spin-result.win-flash { animation: none !important; }

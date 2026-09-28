@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.4.0-urrjaa — gift collection inventory + coin spin wheel; no post-run rarity popup.
+ * Urr Jaa! v3.4.1-urrjaa — Mystery Rewards visual spin wheel; gift inventory kept; no post-run rarity popup.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -1283,7 +1283,7 @@
     if (FTAudio.mystery) FTAudio.mystery();
     haptic('power');
     FTStorage.addGiftBoxes(1);
-    showToast('+1 Gift 🎁', 1200);
+    showToast('📦 → Mystery Rewards', 1200);
     updateCoinHud();
     return { gifts: 1, text: '+1 Gift' };
   }
@@ -1295,7 +1295,7 @@
     if (FTAudio.mystery) FTAudio.mystery();
     haptic('coin');
     FTStorage.addGiftBoxes(1);
-    showToast('+1 Gift 🎁', 900);
+    showToast('📦 → Mystery Rewards', 1000);
     popScore(1, box.x, box.y - 10);
   }
 
@@ -1304,9 +1304,10 @@
     var s = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
     if (giftsCountEl) giftsCountEl.textContent = String(g);
     if (spinsCountEl) spinsCountEl.textContent = String(s);
-    if (btnSpinOnce) btnSpinOnce.disabled = s < 1;
+    var busy = !!wheelSpinning || !!spinQueueActive;
+    if (btnSpinOnce) btnSpinOnce.disabled = busy || s < 1;
     if (btnSpinAll) {
-      btnSpinAll.disabled = s < 1;
+      btnSpinAll.disabled = busy || s < 1;
       btnSpinAll.textContent = s > 1 ? ('Spin all (' + s + ')') : 'Spin all';
     }
   }
@@ -1315,29 +1316,69 @@
     hideAllScreens();
     if (screenGifts) screenGifts.hidden = false;
     refreshGiftsUI();
-    if (spinResultEl) spinResultEl.textContent = 'Spin for 444 · 555 · 666 · 777 · 888 · 999 🪙';
+    if (spinResultEl) {
+      spinResultEl.classList.remove('win-flash');
+      spinResultEl.textContent = 'Tap Spin — land on 444 · 555 · 666 · 777 · 888 · 999';
+    }
+    var wrap = document.getElementById('wheel-wrap');
+    if (wrap) { wrap.classList.remove('wheel-spinning', 'wheel-win'); }
   }
 
   var wheelSpinning = false;
-  function animateWheelTo(coins, done) {
+  var spinQueueActive = false;
+  var wheelAngle = 0;
+  var wheelWrapEl = document.getElementById('wheel-wrap');
+
+  function setSpinButtonsBusy(busy) {
+    var s = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
+    var lock = busy || !!wheelSpinning || !!spinQueueActive;
+    if (btnSpinOnce) btnSpinOnce.disabled = lock || s < 1;
+    if (btnSpinAll) btnSpinAll.disabled = lock || s < 1;
+  }
+
+  /** Animate wheel so `coins` segment lands under the top pointer. */
+  function animateWheelTo(coins, done, durationMs) {
     if (!spinWheelEl) { if (done) done(); return; }
     var rewards = (FTStorage.WHEEL_REWARDS || [444, 555, 666, 777, 888, 999]);
     var idx = rewards.indexOf(coins);
     if (idx < 0) idx = 0;
-    // 6 equal segments; pointer at top; rotate so chosen segment lands under pointer
     var seg = 360 / rewards.length;
-    // At rest, reward 0 sits under the top pointer; clockwise brings idx under pointer.
-    var target = 360 * 4 + ((360 - idx * seg) % 360);
+    // Segment centers: idx 0 at 0° (top). Clockwise rotation brings idx under pointer.
+    var desiredMod = (360 - idx * seg) % 360;
+    var reduce = document.documentElement.classList.contains('reduce-motion');
+    var dur = reduce ? 80 : (durationMs || 2400);
+    var turns = reduce ? 1 : (durationMs && durationMs < 1500 ? 3 : 5);
+    var currentMod = ((wheelAngle % 360) + 360) % 360;
+    var delta = (desiredMod - currentMod + 360) % 360;
+    var target = wheelAngle + turns * 360 + delta;
     wheelSpinning = true;
+    setSpinButtonsBusy(true);
+    if (wheelWrapEl) {
+      wheelWrapEl.classList.remove('wheel-win');
+      wheelWrapEl.classList.add('wheel-spinning');
+    }
     spinWheelEl.style.transition = 'none';
-    spinWheelEl.style.transform = 'rotate(0deg)';
+    spinWheelEl.style.transform = 'rotate(' + wheelAngle + 'deg)';
     void spinWheelEl.offsetWidth;
-    spinWheelEl.style.transition = 'transform 2.2s cubic-bezier(0.15, 0.85, 0.2, 1)';
+    spinWheelEl.style.transition = 'transform ' + (dur / 1000) + 's cubic-bezier(0.12, 0.75, 0.08, 1)';
     spinWheelEl.style.transform = 'rotate(' + target + 'deg)';
+    wheelAngle = target;
     setTimeout(function () {
       wheelSpinning = false;
+      if (wheelWrapEl) {
+        wheelWrapEl.classList.remove('wheel-spinning');
+        wheelWrapEl.classList.add('wheel-win');
+      }
       if (done) done();
-    }, 2300);
+    }, dur + 40);
+  }
+
+  function flashSpinResult(text) {
+    if (!spinResultEl) return;
+    spinResultEl.classList.remove('win-flash');
+    void spinResultEl.offsetWidth;
+    spinResultEl.textContent = text;
+    spinResultEl.classList.add('win-flash');
   }
 
   function doSpinOnce() {
@@ -1347,29 +1388,66 @@
     if (FTAudio.mystery) FTAudio.mystery();
     animateWheelTo(r.coins, function () {
       showMysteryResult('SPIN!', '+' + r.coins + ' coins');
-      if (spinResultEl) spinResultEl.textContent = 'You won +' + r.coins + ' 🪙 · ' + r.giftsLeft + ' gifts left';
+      flashSpinResult('You won +' + r.coins + ' 🪙 · ' + r.giftsLeft + ' gifts left');
       refreshGiftsUI();
       updateCoinHud();
+      setSpinButtonsBusy(false);
       voiceCue('wah_ji');
-    });
+    }, 2400);
   }
 
+  /** Queue rapid sequential spins with brief animation each (keeps visual wheel honest). */
   function doSpinAll() {
     if (wheelSpinning) return;
     var charges = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
     if (charges < 1) { showToast('Need 10 gifts for a spin'); return; }
-    var r = FTStorage.spinWheelAll ? FTStorage.spinWheelAll(Math.random) : null;
-    if (!r) { showToast('Need 10 gifts for a spin'); refreshGiftsUI(); return; }
+    var results = [];
+    var total = 0;
+    var planned = charges;
+    spinQueueActive = true;
     if (FTAudio.mystery) FTAudio.mystery();
-    var last = r.results[r.results.length - 1];
-    animateWheelTo(last, function () {
-      var detail = r.results.map(function (c) { return '+' + c; }).join(' · ');
-      showMysteryResult('SPIN ×' + r.count, '+' + r.totalCoins + ' coins total');
-      if (spinResultEl) spinResultEl.textContent = detail + ' = +' + r.totalCoins + ' 🪙';
+    flashSpinResult('Spinning ×' + planned + '…');
+    setSpinButtonsBusy(true);
+
+    function finishAll() {
+      spinQueueActive = false;
+      if (!results.length) {
+        showToast('Need 10 gifts for a spin');
+        refreshGiftsUI();
+        setSpinButtonsBusy(false);
+        return;
+      }
+      var detail = results.map(function (c) { return '+' + c; }).join(' · ');
+      showMysteryResult('SPIN ×' + results.length, '+' + total + ' coins total');
+      flashSpinResult(detail + ' = +' + total + ' 🪙');
       refreshGiftsUI();
       updateCoinHud();
+      setSpinButtonsBusy(false);
       voiceCue('shabaash');
-    });
+    }
+
+    function nextSpin() {
+      if ((FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0) < 1) {
+        finishAll();
+        return;
+      }
+      var r = FTStorage.spinWheelOnce ? FTStorage.spinWheelOnce(Math.random) : null;
+      if (!r) { finishAll(); return; }
+      results.push(r.coins);
+      total += r.coins;
+      var brief = results.length < planned ? 900 : 1400;
+      animateWheelTo(r.coins, function () {
+        flashSpinResult('+' + r.coins + ' 🪙  (' + results.length + '/' + planned + ')');
+        refreshGiftsUI();
+        updateCoinHud();
+        if (results.length >= planned) {
+          setTimeout(finishAll, 220);
+        } else {
+          setTimeout(nextSpin, 180);
+        }
+      }, brief);
+    }
+    nextSpin();
   }
 
   function beginDeath() {

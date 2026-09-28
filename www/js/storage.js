@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.4.0-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album, gift boxes, spin wheel.
+ * Urr Jaa! v3.4.1-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album, gift boxes, Mystery Rewards spin wheel.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -825,7 +825,7 @@
 
 
 
-  // --- Gift Collection + Spin Wheel (v3.4) ---
+  // --- Mystery Rewards + Spin Wheel (v3.4 / 3.4.1) ---
   // Collecting 📦/🎁 during play adds inventory; every 10 boxes = 1 spin.
   // Wheel rewards ONLY coins: 444 / 555 / 666 / 777 / 888 / 999
   const GIFTS_PER_SPIN = 10;
