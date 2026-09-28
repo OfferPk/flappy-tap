@@ -12,6 +12,7 @@
   let ctx = null;
   let muted = false;
   let quietMul = 1; // 3.18 night quiet duck (1 = full)
+  let nightAmbVolMul = 1; // 3.46 night ambience volume scale
   let voiceOn = true;
   let speechUnlocked = false;
   let cachedVoice = null;
@@ -270,20 +271,29 @@
     setTimeout(function () { tone(880, 0.05, 'triangle', 0.048 * quietMul); }, 45);
     setTimeout(function () { tone(1175, 0.07, 'sine', 0.04 * quietMul); }, 95);
   }
-  /** 3.45: soft night cricket / owl ambience blip */
+  /** 3.45/3.46: soft night cricket / owl ambience blip · volume gated */
+  function setNightAmbienceVolume(level) {
+    // off | low | normal | high → gain mul
+    if (level === 'off') nightAmbVolMul = 0;
+    else if (level === 'low') nightAmbVolMul = 0.45;
+    else if (level === 'high') nightAmbVolMul = 1.55;
+    else nightAmbVolMul = 1;
+    return nightAmbVolMul;
+  }
+  function getNightAmbienceVolumeMul() { return nightAmbVolMul; }
   function nightAmbienceTick() {
-    if (muted) return;
-    var base = 0.007 * quietMul;
+    if (muted || nightAmbVolMul <= 0.001) return;
+    var vol = quietMul * nightAmbVolMul;
+    var base = 0.007 * vol;
     var f = 1650 + Math.random() * 520;
     tone(f, 0.028, 'sine', base);
     if (Math.random() < 0.35) {
       setTimeout(function () { tone(f * 0.82, 0.022, 'triangle', base * 0.85); }, 35 + Math.random() * 40);
     }
     if (Math.random() < 0.12) {
-      // rare soft owl-ish low hoot
       setTimeout(function () {
-        tone(220 + Math.random() * 40, 0.09, 'sine', 0.012 * quietMul);
-        setTimeout(function () { tone(196, 0.07, 'triangle', 0.01 * quietMul); }, 70);
+        tone(220 + Math.random() * 40, 0.09, 'sine', 0.012 * vol);
+        setTimeout(function () { tone(196, 0.07, 'triangle', 0.01 * vol); }, 70);
       }, 80);
     }
   }
@@ -938,7 +948,7 @@
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     tick: tick, startSpinWhoosh: startSpinWhoosh, stopSpinWhoosh: stopSpinWhoosh, spinLand: spinLand,
-    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, nightAmbienceTick: nightAmbienceTick,
+    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, nightAmbienceTick: nightAmbienceTick, setNightAmbienceVolume: setNightAmbienceVolume, getNightAmbienceVolumeMul: getNightAmbienceVolumeMul,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
     playMenuMusic: playMenuMusic, stopMenuMusic: stopMenuMusic,
     setAreaMusicEnabled: setAreaMusicEnabled, isAreaMusicEnabled: isAreaMusicEnabled,

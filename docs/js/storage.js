@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.42.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.46.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -19,6 +19,7 @@
     mute: PREFIX + 'mute',
     quietNight: PREFIX + 'quiet-night',
     areaMusic: PREFIX + 'area-music',
+    nightAmbVol: PREFIX + 'night-amb-vol',
     swipeDismiss: PREFIX + 'swipe-dismiss',
     resumeCountdown: PREFIX + 'resume-countdown',
     guideLang: PREFIX + 'guide-lang',
@@ -952,6 +953,16 @@
   /** 3.31: area/menu music stub (default ON). */
   function isAreaMusic() { return get(KEYS.areaMusic, '1') === '1'; }
   function setAreaMusic(on) { set(KEYS.areaMusic, on ? '1' : '0'); }
+  /** 3.46: night ambience volume — off | low | normal | high */
+  function getNightAmbVol() {
+    const v = get(KEYS.nightAmbVol, 'normal');
+    return (v === 'off' || v === 'low' || v === 'normal' || v === 'high') ? v : 'normal';
+  }
+  function setNightAmbVol(v) {
+    if (v !== 'off' && v !== 'low' && v !== 'normal' && v !== 'high') v = 'normal';
+    set(KEYS.nightAmbVol, v);
+    return v;
+  }
   function isSwipeDismiss() { return get(KEYS.swipeDismiss, '1') === '1'; }
   function setSwipeDismiss(on) { set(KEYS.swipeDismiss, on ? '1' : '0'); }
   function isResumeCountdown() { return get(KEYS.resumeCountdown, '1') === '1'; }
@@ -1307,6 +1318,7 @@
     set(KEYS.garageSort, 'owned');
     set(KEYS.mute, '0');
     set(KEYS.areaMusic, '1');
+    set(KEYS.nightAmbVol, 'normal');
     set(KEYS.swipeDismiss, '1');
     set(KEYS.resumeCountdown, '1');
     // keep voice Pack default on
@@ -1319,7 +1331,7 @@
     getBestCombo, setBestCombo, getLeaderboards,
     getSkin, setSkin, getBird, setBird, getVehicle, setVehicle,
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
-    isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, isSwipeDismiss, setSwipeDismiss, isResumeCountdown, setResumeCountdown, getGuideLang, setGuideLang, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
+    isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, getNightAmbVol, setNightAmbVol, isSwipeDismiss, setSwipeDismiss, isResumeCountdown, setResumeCountdown, getGuideLang, setGuideLang, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
     msUntilDailyReset, formatDailyCountdown, resetPreferences,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,

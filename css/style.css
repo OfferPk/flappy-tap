@@ -3552,3 +3552,31 @@ html.reduce-motion #coin-hud.coin-hud-star-ping {
   100% { transform: scale(1); }
 }
 html.reduce-motion .skin-card.equip-flash { animation: none; }
+
+/* ——— v3.46: equip undo toast, night amb polish ——— */
+.toast.toast-undo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  color: #fff8d6;
+  border-color: rgba(125,211,252,.55);
+  background: linear-gradient(135deg, rgba(30,58,92,.96), rgba(15,23,42,.95));
+  font-weight: 800;
+  max-width: min(360px, 94vw);
+}
+.toast-undo-msg { flex: 1 1 auto; text-align: left; }
+.toast-undo-btn {
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,217,61,.55);
+  background: rgba(255,217,61,.18);
+  color: #ffe566;
+  font-weight: 800;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.toast-undo-btn:hover { background: rgba(255,217,61,.32); }
+.toast.toast-undo.toast-pop { animation: toast-impact .32s cubic-bezier(.2,.8,.2,1); }

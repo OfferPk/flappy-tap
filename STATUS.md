@@ -1,5 +1,21 @@
 # Urr Jaa! STATUS
 
+## Current: **3.46.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.45)
+- **Night ambience volume** — Off / Low / Normal / High (Settings · Audio)
+- **Equip Undo toast** — Equipped toast with Undo (~4.2s) after garage equip
+- Polish / bugfixes — undo restores prior skin; night vol respects Quiet-at-night
+- KEEP ALL ≤3.45 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v55-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.46.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.46.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.45.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.44)

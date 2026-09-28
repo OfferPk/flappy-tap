@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.45.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.46.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -248,6 +248,7 @@
   const voiceToggleChk = document.getElementById('voice-toggle');
   const quietNightChk = document.getElementById('quiet-night-toggle');
   const areaMusicChk = document.getElementById('area-music-toggle');
+  const nightAmbVolSel = document.getElementById('night-amb-vol');
   const swipeDismissChk = document.getElementById('swipe-dismiss-toggle');
   const confettiIntensitySel = document.getElementById('confetti-intensity');
   const largeButtonsChk = document.getElementById('large-buttons-toggle');
@@ -318,18 +319,40 @@
 
   function showToast(msg, ms, kind) {
     if (!toastEl) return;
-    toastEl.textContent = msg;
     toastEl.hidden = false;
-    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync');
-    if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal' || kind === 'claim' || kind === 'sync') {
-      toastEl.classList.add('toast-' + kind);
+    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync', 'toast-undo');
+    if (kind === 'undo') {
+      toastEl.textContent = '';
+      var span = document.createElement('span');
+      span.className = 'toast-undo-msg';
+      span.textContent = msg;
+      toastEl.appendChild(span);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'toast-undo-btn';
+      btn.id = 'toast-undo-btn';
+      btn.textContent = 'Undo';
+      btn.setAttribute('aria-label', 'Undo equip');
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        undoLastEquip();
+      });
+      toastEl.appendChild(btn);
+      toastEl.classList.add('toast-undo');
+    } else {
+      toastEl.textContent = msg;
+      if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal' || kind === 'claim' || kind === 'sync') {
+        toastEl.classList.add('toast-' + kind);
+      }
     }
     void toastEl.offsetWidth;
     toastEl.classList.add('toast-pop');
     clearTimeout(showToast._t);
     showToast._t = setTimeout(function () {
       toastEl.hidden = true;
-      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync');
+      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync', 'toast-undo');
+      if (kind === 'undo') toastEl.textContent = '';
     }, ms || 1600);
   }
 
@@ -801,6 +824,11 @@ function updateComboMeter(visible) {
     if (!FTAudio || !FTAudio.setQuietMode) return;
     var want = !!(FTStorage.isQuietNight && FTStorage.isQuietNight()) && isNightAmbience() && state === 'playing';
     FTAudio.setQuietMode(want);
+  }
+  function syncNightAmbVol() {
+    var lvl = (FTStorage.getNightAmbVol && FTStorage.getNightAmbVol()) || 'normal';
+    if (FTAudio && FTAudio.setNightAmbienceVolume) FTAudio.setNightAmbienceVolume(lvl);
+    return lvl;
   }
 
   function maybeComboMilestone(c) {
@@ -3726,8 +3754,8 @@ function updateComboMeter(visible) {
     var sdt = dt * timeScale;
     var scroll = currentSpeed * sdt * (state === 'playing' ? 1 : 0.35);
 
-    // 3.45 soft night ambience ticks while flying at night
-    if (state === 'playing' && isNightAmbience()) {
+    // 3.45/3.46 soft night ambience ticks while flying at night (volume-gated)
+    if (state === 'playing' && isNightAmbience() && !(FTAudio && FTAudio.getNightAmbienceVolumeMul && FTAudio.getNightAmbienceVolumeMul() <= 0.001)) {
       nightAmbAcc += dt;
       if (nightAmbAcc > 1.8 + Math.random() * 1.4) {
         nightAmbAcc = 0;
@@ -5803,6 +5831,8 @@ function updateComboMeter(visible) {
     }
     if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
     if (areaMusicChk) areaMusicChk.checked = !!(FTStorage.isAreaMusic && FTStorage.isAreaMusic());
+    if (nightAmbVolSel && FTStorage.getNightAmbVol) nightAmbVolSel.value = FTStorage.getNightAmbVol();
+    syncNightAmbVol();
     if (swipeDismissChk) swipeDismissChk.checked = !(FTStorage.isSwipeDismiss) || !!FTStorage.isSwipeDismiss();
     if (resumeCountdownChk) resumeCountdownChk.checked = !(FTStorage.isResumeCountdown) || !!FTStorage.isResumeCountdown();
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
@@ -5909,6 +5939,14 @@ function updateComboMeter(visible) {
     showToast(on ? 'Area / menu music ON' : 'Area / menu music OFF', 1000);
     if (on && state === 'menu' && FTAudio.playMenuMusic) FTAudio.playMenuMusic();
   });
+
+  if (nightAmbVolSel) {
+    nightAmbVolSel.addEventListener('change', function () {
+      var lvl = FTStorage.setNightAmbVol ? FTStorage.setNightAmbVol(nightAmbVolSel.value) : nightAmbVolSel.value;
+      syncNightAmbVol();
+      showToast('Night ambience: ' + lvl, 1000);
+    });
+  }
   if (swipeDismissChk) swipeDismissChk.addEventListener('change', function () {
     var on = !!swipeDismissChk.checked;
     if (FTStorage.setSwipeDismiss) FTStorage.setSwipeDismiss(on);
@@ -6054,11 +6092,56 @@ function updateComboMeter(visible) {
     refreshCollection();
   }
 
-  function onPickCosmetic(id, kind) {
+  function currentCosmeticId(kind) {
+    if (kind === 'bird') return birdId;
+    if (kind === 'vehicle') return vehicleId;
+    if (kind === 'env') return envId;
+    if (kind === 'hat') return hatId;
+    if (kind === 'trail') return trailId;
+    return null;
+  }
+
+  var lastEquipUndo = null; // { kind, prevId, newId, until }
+
+  function armEquipUndo(kind, prevId, newId, label) {
+    if (!kind || prevId == null || prevId === newId) return;
+    lastEquipUndo = {
+      kind: kind,
+      prevId: prevId,
+      newId: newId,
+      label: label || newId,
+      until: performance.now() + 4200
+    };
+    showToast('Equipped · ' + (label || newId), 4200, 'undo');
+  }
+
+  function undoLastEquip() {
+    if (!lastEquipUndo) return;
+    if (performance.now() > lastEquipUndo.until) { lastEquipUndo = null; return; }
+    var u = lastEquipUndo;
+    lastEquipUndo = null;
+    onPickCosmetic(u.prevId, u.kind, { skipUndo: true, skipPassToast: true });
+    document.querySelectorAll('#screen-garage .skin-card').forEach(function (el) {
+      var rowKind = el.closest('#garage-birds') ? 'bird' :
+        el.closest('#garage-vehicles') ? 'vehicle' :
+        el.closest('#garage-envs') ? 'env' :
+        el.closest('#garage-hats') ? 'hat' :
+        el.closest('#garage-trails') ? 'trail' : '';
+      if (rowKind !== u.kind) return;
+      el.classList.toggle('selected', el.dataset.id === u.prevId && !el.classList.contains('locked'));
+    });
+    showToast('Undid equip · restored', 1400, 'sync');
+    if (typeof haptic === 'function') haptic('power');
+    drawFrame(true);
+  }
+
+  function onPickCosmetic(id, kind, opts) {
+    opts = opts || {};
+    var prev = currentCosmeticId(kind);
     if (kind === 'bird') {
       birdId = id; FTStorage.setBird(id);
       var p = birdPass();
-      if (p && p.label) showToast(p.label, 1400);
+      if (p && p.label && !opts.skipPassToast && !opts.offerUndo) showToast(p.label, 1400);
     }
     else if (kind === 'vehicle') { vehicleId = id; FTStorage.setVehicle(id); }
     else if (kind === 'env') { envId = id; FTStorage.setEnv(id); }
@@ -6069,6 +6152,9 @@ function updateComboMeter(visible) {
       bird.w = hb.w; bird.h = hb.h;
     }
     drawFrame(true);
+    if (opts.offerUndo && !opts.skipUndo) {
+      armEquipUndo(kind, prev, id, opts.label || id);
+    }
   }
 
   var garageFilter = 'all'; // all | theme | seasonal | fav
@@ -6212,11 +6298,26 @@ function updateComboMeter(visible) {
       garageSortMode = FTStorage.getGarageSort();
       garageSortSel.value = garageSortMode;
     }
-    if (garageBirds) FTSkins.renderPicker(garageBirds, birdId, onPickCosmetic, tryUnlock, 'bird');
-    if (garageVehicles) FTSkins.renderPicker(garageVehicles, vehicleId, onPickCosmetic, tryUnlock, 'vehicle');
-    if (garageEnvs) FTSkins.renderPicker(garageEnvs, envId, onPickCosmetic, tryUnlock, 'env');
-    if (garageHats) FTSkins.renderPicker(garageHats, hatId, onPickCosmetic, tryUnlock, 'hat');
-    if (garageTrails) FTSkins.renderPicker(garageTrails, trailId, onPickCosmetic, tryUnlock, 'trail');
+    function garagePickWithUndo(id, kind) {
+      var prev = currentCosmeticId(kind);
+      var label = id;
+      document.querySelectorAll('#screen-garage .skin-card').forEach(function (el) {
+        if (el.dataset.id !== id) return;
+        var rowKind = el.closest('#garage-birds') ? 'bird' :
+          el.closest('#garage-vehicles') ? 'vehicle' :
+          el.closest('#garage-envs') ? 'env' :
+          el.closest('#garage-hats') ? 'hat' :
+          el.closest('#garage-trails') ? 'trail' : '';
+        if (rowKind === kind) label = el.dataset.label || id;
+      });
+      onPickCosmetic(id, kind, { skipPassToast: true });
+      armEquipUndo(kind, prev, id, label);
+    }
+    if (garageBirds) FTSkins.renderPicker(garageBirds, birdId, garagePickWithUndo, tryUnlock, 'bird');
+    if (garageVehicles) FTSkins.renderPicker(garageVehicles, vehicleId, garagePickWithUndo, tryUnlock, 'vehicle');
+    if (garageEnvs) FTSkins.renderPicker(garageEnvs, envId, garagePickWithUndo, tryUnlock, 'env');
+    if (garageHats) FTSkins.renderPicker(garageHats, hatId, garagePickWithUndo, tryUnlock, 'hat');
+    if (garageTrails) FTSkins.renderPicker(garageTrails, trailId, garagePickWithUndo, tryUnlock, 'trail');
     if (weatherRow) {
       weatherRow.innerHTML = '';
       FTSkins.WEATHERS.forEach(function (w) {
@@ -6347,9 +6448,8 @@ function updateComboMeter(visible) {
       if (typeof haptic === 'function') haptic('power');
       return;
     }
-    onPickCosmetic(garageLpId, garageLpKind);
     var label = (garageLpCard && (garageLpCard.dataset.label || garageLpId)) || garageLpId;
-    // refresh selected chrome without full rebuild when possible
+    onPickCosmetic(garageLpId, garageLpKind, { offerUndo: true, skipPassToast: true, label: label });
     document.querySelectorAll('#screen-garage .skin-card').forEach(function (el) {
       var rowKind = el.closest('#garage-birds') ? 'bird' :
         el.closest('#garage-vehicles') ? 'vehicle' :
@@ -6364,7 +6464,6 @@ function updateComboMeter(visible) {
       garageLpCard.classList.add('equip-flash');
       setTimeout(function () { if (garageLpCard) garageLpCard.classList.remove('equip-flash'); }, 480);
     }
-    showToast('Equipped · ' + label, 1200, 'medal');
     if (typeof haptic === 'function') haptic('gift');
     closeGarageLongPreview();
   }
@@ -6522,7 +6621,12 @@ function updateComboMeter(visible) {
   // 3.45: double-tap skin card → light fanfare + toast
   global.onGarageDoubleEquip = function (kind, id, label) {
     playEquipFanfareLight();
-    showToast('Equipped · ' + (label || id), 1100, 'medal');
+    if (lastEquipUndo && lastEquipUndo.kind === kind && lastEquipUndo.newId === id) {
+      lastEquipUndo.until = performance.now() + 4200;
+      showToast('Equipped · ' + (label || id), 4200, 'undo');
+    } else {
+      showToast('Equipped · ' + (label || id), 1200, 'medal');
+    }
     if (typeof haptic === 'function') haptic('gift');
   };
 
