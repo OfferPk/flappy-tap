@@ -1,19 +1,19 @@
 # Urr Jaa! STATUS
 
-## Current: **3.36.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.37.0-urrjaa** (2026-09-28 PKT)
 
-### This pack (NEW vs 3.11–3.35)
-- **Portrait notch polish** — `--hud-top` / notch pad so score & icons clear Dynamic Island
-- **Combo meter bar** — fill toward next milestone under combo HUD
-- **Soft ground bounce juice** — ring + flecks + squash + micro dampen on skim
-- **Settings section collapse** — Audio / Feel / Data details; open state remembered
-- Bugfixes: COMBO_MILESTONES order; settings section persistence
-- KEEP ALL ≤3.35 incl. **15s Mystery Spin once**, Close (X), …
+### This pack (NEW vs 3.11–3.36)
+- **Resume countdown** — 3·2·1·GO after Pause (Settings toggle to turn off)
+- **Cloud parallax** — far/mid/near layers with depth speed + bob
+- **Coin magnet HUD icon** — pulsing 🧲 timer near coins when active
+- Leftover polish: coin HUD magnet glow; Escape cancels resume countdown
+- Bugfixes: resume pref in resetPreferences; countdown doesn't run physics early
+- KEEP ALL ≤3.36 incl. **15s Mystery Spin once**, Close (X), …
 
-SW cache: `urrjaa-v45-20260928`
+SW cache: `urrjaa-v46-20260928`
 
-**Ship commit:** `0554098` · tag `v3.36.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.36.0-urrjaa  
+**Ship commit:** (pending) · tag `v3.37.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.37.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/
 
 

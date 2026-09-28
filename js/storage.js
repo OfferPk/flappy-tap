@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.34.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.37.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -20,6 +20,7 @@
     quietNight: PREFIX + 'quiet-night',
     areaMusic: PREFIX + 'area-music',
     swipeDismiss: PREFIX + 'swipe-dismiss',
+    resumeCountdown: PREFIX + 'resume-countdown',
     guideLang: PREFIX + 'guide-lang',
     topRuns: PREFIX + 'top-runs',
     streakLog: PREFIX + 'streak-log',
@@ -934,6 +935,8 @@
   function setAreaMusic(on) { set(KEYS.areaMusic, on ? '1' : '0'); }
   function isSwipeDismiss() { return get(KEYS.swipeDismiss, '1') === '1'; }
   function setSwipeDismiss(on) { set(KEYS.swipeDismiss, on ? '1' : '0'); }
+  function isResumeCountdown() { return get(KEYS.resumeCountdown, '1') === '1'; }
+  function setResumeCountdown(on) { set(KEYS.resumeCountdown, on ? '1' : '0'); }
   function getGuideLang() {
     var v = get(KEYS.guideLang, 'en');
     return (v === 'ru' || v === 'ur' || v === 'en') ? v : 'en';
@@ -1259,6 +1262,7 @@
     set(KEYS.mute, '0');
     set(KEYS.areaMusic, '1');
     set(KEYS.swipeDismiss, '1');
+    set(KEYS.resumeCountdown, '1');
     // keep voice Pack default on
     set(KEYS.voicePack, '1');
     return true;
@@ -1269,7 +1273,7 @@
     getBestCombo, setBestCombo, getLeaderboards,
     getSkin, setSkin, getBird, setBird, getVehicle, setVehicle,
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
-    isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, isSwipeDismiss, setSwipeDismiss, getGuideLang, setGuideLang, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
+    isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, isSwipeDismiss, setSwipeDismiss, isResumeCountdown, setResumeCountdown, getGuideLang, setGuideLang, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
     msUntilDailyReset, formatDailyCountdown, resetPreferences,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,

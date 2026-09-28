@@ -3189,3 +3189,78 @@ html.reduce-motion .combo-meter-fill { transition: none; }
   outline-offset: 2px;
 }
 html.reduce-motion .settings-section > summary.settings-group::after { transition: none; }
+
+
+/* ——— v3.37: resume countdown, magnet HUD, cloud polish ——— */
+.resume-countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 16, 32, 0.35);
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+}
+.resume-countdown[hidden] { display: none !important; }
+.resume-countdown-num {
+  font-size: clamp(3.2rem, 18vw, 5.5rem);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 0 #000, 0 0 28px rgba(78,205,196,.55);
+  letter-spacing: 0.04em;
+}
+.resume-countdown.resume-go .resume-countdown-num {
+  color: #ffe082;
+  text-shadow: 0 4px 0 #000, 0 0 32px rgba(255,217,61,.7);
+}
+.resume-countdown-num.resume-pop {
+  animation: resume-pop 0.45s cubic-bezier(.2,1.2,.3,1);
+}
+@keyframes resume-pop {
+  0% { transform: scale(0.55); opacity: 0.4; }
+  55% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+html.reduce-motion .resume-countdown-num.resume-pop { animation: none; }
+
+.magnet-hud {
+  position: absolute;
+  top: calc(44px + var(--hud-top, calc(10px + var(--safe-top))));
+  left: calc(12px + var(--safe-left));
+  z-index: 6;
+  pointer-events: none;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(157, 23, 77, 0.88);
+  border: 1px solid #f9a8d4;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.45);
+  animation: magnet-hud-pulse 1.1s ease-in-out infinite;
+}
+.magnet-hud[hidden] { display: none !important; }
+.magnet-hud.magnet-expiring {
+  animation: magnet-hud-urgent 0.45s steps(2, end) infinite;
+  border-color: #fecdd3;
+  background: rgba(190, 24, 93, 0.95);
+}
+@keyframes magnet-hud-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(236,72,153,.4); }
+  50% { transform: scale(1.06); box-shadow: 0 0 16px rgba(249,168,212,.65); }
+}
+@keyframes magnet-hud-urgent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+html.reduce-motion .magnet-hud,
+html.reduce-motion .magnet-hud.magnet-expiring { animation: none; }
+
+/* leftover polish: coin hud nudge when magnet active */
+#coin-hud.coin-magnet-on {
+  box-shadow: 0 0 0 1px rgba(249,168,212,.45), 0 0 12px rgba(236,72,153,.25);
+  border-radius: 10px;
+}

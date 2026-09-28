@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.36.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.37.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -192,6 +192,10 @@
   const comboMeterFillEl = document.getElementById('combo-meter-fill');
   const modeBadgeEl = document.getElementById('mode-badge');
   const powerHudEl = document.getElementById('power-hud');
+  const magnetHudEl = document.getElementById('magnet-hud');
+  const resumeCountdownEl = document.getElementById('resume-countdown');
+  const resumeCountdownNumEl = document.getElementById('resume-countdown-num');
+  const resumeCountdownChk = document.getElementById('resume-countdown-toggle');
   const livesHudEl = document.getElementById('lives-hud');
   const unlockTeaserEl = document.getElementById('unlock-teaser');
   const challengeStagePanel = document.getElementById('challenge-stage-panel');
@@ -607,14 +611,25 @@
 
   function initClouds() {
     clouds = [];
-    for (var i = 0; i < 5; i++) {
-      clouds.push({
-        x: Math.random() * W,
-        y: 40 + Math.random() * 180,
-        s: 0.35 + Math.random() * 0.55,
-        w: 40 + Math.random() * 50
-      });
-    }
+    // 3.37: three parallax layers — far / mid / near
+    var layers = [
+      { n: 4, depth: 0.22, y0: 30, y1: 120, w0: 50, w1: 90, a: 0.45 },
+      { n: 4, depth: 0.45, y0: 50, y1: 160, w0: 36, w1: 70, a: 0.7 },
+      { n: 3, depth: 0.75, y0: 70, y1: 200, w0: 28, w1: 55, a: 0.95 }
+    ];
+    layers.forEach(function (L) {
+      for (var i = 0; i < L.n; i++) {
+        clouds.push({
+          x: Math.random() * (W + 120) - 40,
+          y: L.y0 + Math.random() * (L.y1 - L.y0),
+          s: L.depth * (0.85 + Math.random() * 0.3),
+          w: L.w0 + Math.random() * (L.w1 - L.w0),
+          depth: L.depth,
+          a: L.a * (0.85 + Math.random() * 0.2),
+          bob: Math.random() * Math.PI * 2
+        });
+      }
+    });
   }
 
   function initRain() {
@@ -823,6 +838,17 @@ function updateComboMeter(visible) {
     if (isHard()) bits.push({ t: '🔥', k: 'hard', exp: false });
     if (isNoCoin()) bits.push({ t: '🚫🪙', k: 'nocoin', exp: false });
     if (isOneLife()) bits.push({ t: '1️⃣', k: 'onelife', exp: false });
+    // 3.37: dedicated coin magnet HUD icon near coins
+    if (magnetHudEl) {
+      var magOn = now < magnetUntil;
+      magnetHudEl.hidden = !magOn;
+      if (magOn) {
+        magnetHudEl.classList.toggle('magnet-expiring', powerExpiring(magnetUntil));
+        magnetHudEl.textContent = '🧲 ' + powerRemainSec(magnetUntil) + 's';
+      }
+    }
+    var coinHud = document.getElementById('coin-hud');
+    if (coinHud) coinHud.classList.toggle('coin-magnet-on', now < magnetUntil);
     if (bits.length) {
       var fp = bits.map(function (b) { return b.t + (b.exp ? '!' : ''); }).join('|');
       if (updatePowerHud._fp === fp && !powerHudEl.hidden) return; // 3.30 perf: skip DOM rebuild
@@ -1922,6 +1948,7 @@ function updateComboMeter(visible) {
   }
   function pauseGame() {
     if (state !== 'playing') return;
+    hideResumeCountdown();
     state = 'paused';
     if (screenPause) screenPause.hidden = false;
     setPauseBlur(true);
@@ -1940,14 +1967,71 @@ function updateComboMeter(visible) {
       pauseTip.textContent = '💡 ' + pickTutorialTip(Math.floor(Math.random() * 99) + score);
     }
   }
-  function resumeGame() {
-    if (state !== 'paused') return;
+  var resumeCountdownTimer = 0;
+  var resumeCountdownBusy = false;
+
+  function hideResumeCountdown() {
+    if (resumeCountdownEl) resumeCountdownEl.hidden = true;
+    if (resumeCountdownTimer) { clearTimeout(resumeCountdownTimer); resumeCountdownTimer = 0; }
+    resumeCountdownBusy = false;
+  }
+
+  function finishResumeFromPause() {
+    hideResumeCountdown();
     state = 'playing';
     if (screenPause) screenPause.hidden = true;
     setPauseBlur(false);
     lastTs = 0;
   }
+
+  function runResumeCountdown() {
+    if (!resumeCountdownEl || !resumeCountdownNumEl) {
+      finishResumeFromPause();
+      return;
+    }
+    resumeCountdownBusy = true;
+    if (screenPause) screenPause.hidden = true;
+    setPauseBlur(false);
+    resumeCountdownEl.hidden = false;
+    resumeCountdownEl.classList.remove('resume-go');
+    var steps = ['3', '2', '1', 'GO!'];
+    var i = 0;
+    function tick() {
+      if (!resumeCountdownBusy) return;
+      if (i >= steps.length) {
+        finishResumeFromPause();
+        return;
+      }
+      var label = steps[i];
+      resumeCountdownNumEl.textContent = label;
+      resumeCountdownEl.classList.toggle('resume-go', label === 'GO!');
+      resumeCountdownNumEl.classList.remove('resume-pop');
+      void resumeCountdownNumEl.offsetWidth;
+      resumeCountdownNumEl.classList.add('resume-pop');
+      if (label !== 'GO!' && FTAudio && FTAudio.tick) {
+        try { FTAudio.tick(); } catch (_) {}
+      } else if (label === 'GO!' && FTAudio && FTAudio.flap) {
+        try { /* soft cue */ if (FTAudio.score) FTAudio.score(); } catch (_) {}
+      }
+      i++;
+      resumeCountdownTimer = setTimeout(tick, label === 'GO!' ? 380 : 620);
+    }
+    tick();
+  }
+
+  function resumeGame() {
+    if (state !== 'paused') return;
+    if (resumeCountdownBusy) return;
+    var wantCd = !(FTStorage.isResumeCountdown) || !!FTStorage.isResumeCountdown();
+    if (!wantCd || reduceMotion) {
+      finishResumeFromPause();
+      return;
+    }
+    // stay 'paused' until countdown ends so flap/update don't run
+    runResumeCountdown();
+  }
   function quitToMenu() {
+    hideResumeCountdown();
     if (screenPause) screenPause.hidden = true;
     setPauseBlur(false);
     showMenu();
@@ -3629,8 +3713,14 @@ function updateComboMeter(visible) {
 
     groundX = (groundX - scroll * (state === 'playing' ? 1 : 0.5)) % 40;
     clouds.forEach(function (c) {
-      c.x -= c.s * (state === 'playing' ? currentSpeed * 0.15 * sdt : 8 * dt);
-      if (c.x < -80) c.x = W + 40;
+      var depth = c.depth != null ? c.depth : c.s;
+      var spd = state === 'playing' ? currentSpeed * (0.08 + depth * 0.22) * sdt : (4 + depth * 10) * dt;
+      c.x -= spd;
+      if (c.bob != null) c.bob += dt * (0.35 + depth * 0.4);
+      if (c.x < -c.w - 40) {
+        c.x = W + 30 + Math.random() * 60;
+        if (c.depth != null) c.y = (c.depth < 0.35 ? 30 : (c.depth < 0.6 ? 50 : 70)) + Math.random() * 90;
+      }
     });
 
     var drawEnv = activeArea();
@@ -4177,12 +4267,24 @@ function updateComboMeter(visible) {
       ctx.fill();
     }
 
-    clouds.forEach(function (c) {
+    // 3.37: draw far→near for parallax depth
+    var sortedClouds = clouds.slice().sort(function (a, b) {
+      return (a.depth != null ? a.depth : a.s) - (b.depth != null ? b.depth : b.s);
+    });
+    sortedClouds.forEach(function (c) {
+      var depth = c.depth != null ? c.depth : c.s;
+      var bobY = c.bob != null ? Math.sin(c.bob) * (2 + depth * 3) : 0;
+      var alpha = c.a != null ? c.a : (0.4 + depth * 0.5);
+      ctx.globalAlpha = Math.max(0.2, Math.min(1, alpha));
       ctx.fillStyle = pal.cloud;
       ctx.beginPath();
-      ctx.ellipse(c.x, c.y, c.w, c.w * 0.45, 0, 0, Math.PI * 2);
-      ctx.ellipse(c.x + c.w * 0.4, c.y + 4, c.w * 0.7, c.w * 0.35, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x, c.y + bobY, c.w, c.w * 0.45, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x + c.w * 0.4, c.y + bobY + 4, c.w * 0.7, c.w * 0.35, 0, 0, Math.PI * 2);
+      if (depth > 0.55) {
+        ctx.ellipse(c.x - c.w * 0.35, c.y + bobY + 2, c.w * 0.55, c.w * 0.3, 0, 0, Math.PI * 2);
+      }
       ctx.fill();
+      ctx.globalAlpha = 1;
     });
 
     if (pal.fog) {
@@ -5111,6 +5213,13 @@ function updateComboMeter(visible) {
   })();
 
   function closeTopOverlayOrPanel() {
+    if (resumeCountdownBusy) {
+      hideResumeCountdown();
+      state = 'paused';
+      if (screenPause) screenPause.hidden = false;
+      setPauseBlur(true);
+      return true;
+    }
     var share = document.getElementById('share-preview');
     if (share && !share.hidden) { share.hidden = true; return true; }
     if (spinUnlockOverlay && !spinUnlockOverlay.hidden) { dismissSpinUnlockPopup(); return true; }
@@ -5377,6 +5486,7 @@ function updateComboMeter(visible) {
     if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
     if (areaMusicChk) areaMusicChk.checked = !!(FTStorage.isAreaMusic && FTStorage.isAreaMusic());
     if (swipeDismissChk) swipeDismissChk.checked = !(FTStorage.isSwipeDismiss) || !!FTStorage.isSwipeDismiss();
+    if (resumeCountdownChk) resumeCountdownChk.checked = !(FTStorage.isResumeCountdown) || !!FTStorage.isResumeCountdown();
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
     if (soundToggleChk) soundToggleChk.checked = !FTStorage.isMuted();
     if (confettiIntensitySel && FTStorage.getConfettiIntensity) confettiIntensitySel.value = FTStorage.getConfettiIntensity();
@@ -5396,6 +5506,7 @@ function updateComboMeter(visible) {
     syncSettingsFormFromStorage();
     syncAreaMusicPref();
     syncSwipeDismissPref();
+    if (resumeCountdownChk) resumeCountdownChk.checked = !(FTStorage.isResumeCountdown) || !!FTStorage.isResumeCountdown();
     if (resetPrefsConfirmEl) resetPrefsConfirmEl.hidden = true;
     showToast('Settings reset (coins & unlocks kept)', 1600);
   }
@@ -5485,6 +5596,11 @@ function updateComboMeter(visible) {
     if (FTStorage.setSwipeDismiss) FTStorage.setSwipeDismiss(on);
     syncSwipeDismissPref();
     showToast(on ? 'Swipe-down dismiss ON' : 'Swipe-down dismiss OFF', 1000);
+  });
+  if (resumeCountdownChk) resumeCountdownChk.addEventListener('change', function () {
+    var on = !!resumeCountdownChk.checked;
+    if (FTStorage.setResumeCountdown) FTStorage.setResumeCountdown(on);
+    showToast(on ? 'Resume countdown ON' : 'Resume countdown OFF', 1000);
   });
   if (confettiIntensitySel) confettiIntensitySel.addEventListener('change', function () {
     var v = FTStorage.setConfettiIntensity ? FTStorage.setConfettiIntensity(confettiIntensitySel.value) : confettiIntensitySel.value;

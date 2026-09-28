@@ -45,6 +45,7 @@
       </div>
       <div id="mode-badge" hidden></div>
       <div id="coin-hud">🪙 0</div>
+      <div id="magnet-hud" class="magnet-hud" hidden aria-label="Coin magnet active">🧲</div>
       <div id="timer-hud" hidden>60s</div>
       <div id="lives-hud" class="lives-hud" hidden aria-label="Lives"></div>
       <div id="power-hud" hidden></div>
@@ -67,7 +68,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.36.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.37.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -294,6 +295,9 @@
     </div>
 
     <!-- Pause -->
+    <div id="resume-countdown" class="resume-countdown" hidden aria-live="assertive" aria-atomic="true">
+      <span id="resume-countdown-num" class="resume-countdown-num">3</span>
+    </div>
     <div id="screen-pause" class="screen pause-screen" hidden>
       <button type="button" class="panel-close" data-panel-close="pause" aria-label="Close">X</button>
       <h2>Paused</h2>
@@ -360,6 +364,11 @@
           <input id="swipe-dismiss-toggle" type="checkbox" checked />
         </label>
         <p class="setting-hint">Optional · swipe down from top of a panel to dismiss (like Close)</p>
+        <label class="setting-row check-row" for="resume-countdown-toggle">
+          <span>Resume countdown (3·2·1)</span>
+          <input id="resume-countdown-toggle" type="checkbox" checked />
+        </label>
+        <p class="setting-hint">Optional · off = resume instantly from Pause</p>
         <button id="btn-haptic-preview" class="btn ghost btn-sm" type="button">Preview haptic</button>
         <label class="setting-row" for="sens-slider">
           <span>Sensitivity</span>
@@ -412,6 +421,7 @@
       <details class="settings-changelog" id="settings-changelog">
         <summary>Changelog · recent</summary>
         <ul class="changelog-list" aria-label="Recent changes">
+          <li><strong>3.37</strong> — resume countdown · cloud parallax · magnet HUD · polish</li>
           <li><strong>3.36</strong> — notch polish · combo meter · ground bounce juice · settings collapse</li>
           <li><strong>3.35</strong> — score font juice · medal shine · landscape layout · touch dead-zone fix</li>
           <li><strong>3.34</strong> — A2HS install flow · perfect haptic · Guide lang remember · UI polish</li>
@@ -428,7 +438,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.36.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.37.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -501,6 +511,7 @@
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>3.30:</strong> flap whoosh juice · Settings changelog-lite · Guide refresh · performance pass.</li>
+          <li><strong>3.37:</strong> optional pause resume countdown · cloud parallax · coin magnet HUD icon · leftover polish.</li>
           <li><strong>3.36:</strong> portrait notch polish · combo meter bar · soft ground bounce juice · settings section collapse.</li>
           <li><strong>3.35:</strong> score font juice · medal shine · better landscape layout · touch dead-zone fix.</li>
           <li><strong>3.34:</strong> better Install A2HS flow · soft vibration on PERFECT · Guide language remembered · micro UI polish.</li>
