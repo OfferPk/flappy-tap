@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.5.0-urrjaa — voice cooldown/variety, gift voice, spin-unlock popup, Guide (EN/RU/Urdu).
+ * Urr Jaa! v3.5.1-urrjaa — collection depth: more birds/areas, offline seasonal packs, Guide update.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -569,8 +569,8 @@
   function effectiveWeather() {
     if (weatherDynId) return weatherDynId;
     var area = activeArea();
-    if (area === 'rain') return 'rain';
-    if (area === 'night') return 'night';
+    if (area === 'rain' || area === 'monsoon') return 'rain';
+    if (area === 'night' || area === 'quetta') return 'night';
     return weatherId === 'sunny' ? 'clear' : weatherId;
   }
 
@@ -980,7 +980,9 @@
     FTStorage.setMissionMax('score100', score);
     if (!hitThisRun && cleanScorePeak >= 50) FTStorage.setMissionMax('clean50', cleanScorePeak);
     var unlocked = FTStorage.checkEnvMilestones(FTStorage.getBest());
-    if (unlocked.length) showToast('Unlocked: ' + unlocked.join(', '), 2500);
+    var seasonalNew = FTStorage.checkSeasonalUnlocks ? FTStorage.checkSeasonalUnlocks(FTStorage.getBest()) : [];
+    var allNew = unlocked.concat(seasonalNew || []);
+    if (allNew.length) showToast('Unlocked: ' + allNew.join(', '), 2500);
   }
 
   function pauseGame() {
@@ -1268,7 +1270,8 @@
     if (!bird || reduceMotion || trailId === 'none') return;
     var colors = {
       spark: '#ffd93d', smoke: '#94a3b8', stars: '#a78bfa', star: '#fbbf24',
-      fire: '#ff6b35', rainbow: null
+      fire: '#ff6b35', rainbow: null,
+      ind_trail: '#006600', eid_trail: '#f1c40f', winter_trail: '#ebf5fb', basant_trail: '#e74c3c'
     };
     var color = colors[trailId] || '#ffd93d';
     if (trailId === 'rainbow') {
@@ -1276,6 +1279,13 @@
       color = rainbow[Math.floor(Math.random() * rainbow.length)];
     }
     if (trailId === 'fire') color = Math.random() < 0.5 ? '#ff6b35' : '#ffd93d';
+    if (trailId === 'ind_trail') color = Math.random() < 0.5 ? '#006600' : '#ffffff';
+    if (trailId === 'eid_trail') color = Math.random() < 0.5 ? '#f1c40f' : '#ffffff';
+    if (trailId === 'winter_trail') color = Math.random() < 0.5 ? '#ebf5fb' : '#aed6f1';
+    if (trailId === 'basant_trail') {
+      var kite = ['#e74c3c', '#f1c40f', '#3498db', '#2ecc71'];
+      color = kite[Math.floor(Math.random() * kite.length)];
+    }
     particles.push({
       x: bird.x - bird.w * 0.35,
       y: bird.y + (Math.random() - 0.5) * bird.h * 0.4,
@@ -1312,7 +1322,7 @@
     var gained = Math.max(1, Math.round(mult * (pass.coinMul || 1)));
     // Owl night bonus
     var w = effectiveWeather();
-    if (pass.nightBonus && (w === 'night' || activeArea() === 'night')) {
+    if (pass.nightBonus && (w === 'night' || activeArea() === 'night' || activeArea() === 'quetta')) {
       gained = Math.max(1, Math.round(gained * (1 + pass.nightBonus)));
     }
     runCoins += gained;
@@ -1687,8 +1697,8 @@
 
     var drawEnv = activeArea();
     var weather = effectiveWeather();
-    var pal = FTSkins.envPalette(drawEnv === 'rain' ? 'city' : drawEnv, weather);
-    if ((pal.rain || drawEnv === 'rain') && !reduceMotion) {
+    var pal = FTSkins.envPalette(drawEnv === 'rain' || drawEnv === 'monsoon' ? 'city' : drawEnv, weather);
+    if ((pal.rain || drawEnv === 'rain' || drawEnv === 'monsoon') && !reduceMotion) {
       rainDrops.forEach(function (d) {
         d.y += d.spd * dt;
         d.x -= 40 * dt;
@@ -1895,7 +1905,7 @@
   function drawSky() {
     var area = activeArea();
     var weather = effectiveWeather();
-    var palEnv = (area === 'rain') ? 'city' : area;
+    var palEnv = (area === 'rain' || area === 'monsoon') ? 'city' : area;
     var pal = FTSkins.envPalette(palEnv, weather);
     var g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, pal.sky0);
@@ -1906,7 +1916,7 @@
 
     ctx.fillStyle = pal.sun;
     ctx.beginPath();
-    if (pal.stars || area === 'night') {
+    if (pal.stars || area === 'night' || area === 'quetta') {
       ctx.arc(W - 70, 80, 22, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -1926,27 +1936,41 @@
         var bx = ((bi * 90 + groundX * 0.4) % (W + 60)) - 30;
         ctx.fillRect(bx, H - GROUND_H - 90, 8, 40);
       }
-    } else if (area === 'lahore' || area === 'karachi' || area === 'city' || area === 'night' || area === 'rain') {
+    } else if (area === 'lahore' || area === 'karachi' || area === 'city' || area === 'night' || area === 'rain' || area === 'quetta' || area === 'oldcity') {
       for (var ci = 0; ci < 6; ci++) {
         var cx = ((ci * 70 + groundX * 0.3) % (W + 80)) - 40;
         var bh = 40 + (ci % 3) * 25;
+        if (area === 'oldcity') bh = 28 + (ci % 4) * 18;
         ctx.fillRect(cx, H - GROUND_H - bh, 36 + (ci % 2) * 20, bh);
+        if (area === 'quetta' || area === 'oldcity') {
+          ctx.fillStyle = 'rgba(255,200,80,0.25)';
+          ctx.fillRect(cx + 6, H - GROUND_H - bh + 8, 8, 6);
+          ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        }
       }
-    } else if (area === 'murree' || area === 'islamabad' || area === 'mountains') {
+    } else if (area === 'murree' || area === 'islamabad' || area === 'mountains' || area === 'hunza') {
       ctx.beginPath();
       ctx.moveTo(0, H - GROUND_H);
       for (var mi = 0; mi < 5; mi++) {
-        ctx.lineTo(mi * 100, H - GROUND_H - 50 - (mi % 2) * 30);
+        ctx.lineTo(mi * 100, H - GROUND_H - 50 - (mi % 2) * 30 - (area === 'hunza' ? 20 : 0));
       }
       ctx.lineTo(W, H - GROUND_H);
       ctx.fill();
+      if (area === 'hunza') {
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.beginPath();
+        ctx.moveTo(40, H - GROUND_H - 90);
+        ctx.lineTo(80, H - GROUND_H - 130);
+        ctx.lineTo(120, H - GROUND_H - 90);
+        ctx.fill();
+      }
     } else if (area === 'desert') {
       ctx.fillStyle = 'rgba(210,160,40,0.35)';
       ctx.beginPath();
       ctx.ellipse(80, H - GROUND_H, 70, 22, 0, 0, Math.PI * 2);
       ctx.ellipse(250, H - GROUND_H, 90, 18, 0, 0, Math.PI * 2);
       ctx.fill();
-    } else if (area === 'village') {
+    } else if (area === 'village' || area === 'monsoon') {
       for (var vi = 0; vi < 4; vi++) {
         var vx = ((vi * 100 + groundX * 0.25) % (W + 60)) - 20;
         ctx.fillStyle = 'rgba(120,80,40,0.3)';
@@ -1957,6 +1981,28 @@
         ctx.lineTo(vx + 44, H - GROUND_H - 36);
         ctx.fill();
       }
+      if (area === 'monsoon') {
+        ctx.fillStyle = 'rgba(40,120,60,0.25)';
+        for (var fi = 0; fi < 8; fi++) {
+          var fx = ((fi * 50 + groundX * 0.2) % (W + 40)) - 10;
+          ctx.fillRect(fx, H - GROUND_H - 18, 6, 18);
+        }
+      }
+    } else if (area === 'canal') {
+      ctx.fillStyle = 'rgba(52,152,219,0.35)';
+      ctx.fillRect(0, H - GROUND_H - 28, W, 18);
+      ctx.fillStyle = 'rgba(40,40,50,0.2)';
+      for (var cai = 0; cai < 4; cai++) {
+        var cax = ((cai * 110 + groundX * 0.3) % (W + 60)) - 20;
+        ctx.fillRect(cax, H - GROUND_H - 50, 50, 8);
+      }
+    } else if (area === 'gwadar') {
+      ctx.fillStyle = 'rgba(46,134,193,0.4)';
+      ctx.fillRect(0, H - GROUND_H - 36, W, 36);
+      ctx.fillStyle = 'rgba(241,196,15,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(W - 80, H - GROUND_H - 10, 60, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     clouds.forEach(function (c) {
@@ -1976,8 +2022,8 @@
   function drawWeatherFX() {
     var area = activeArea();
     var weather = effectiveWeather();
-    var pal = FTSkins.envPalette(area === 'rain' ? 'city' : area, weather);
-    if ((!pal.rain && area !== 'rain') || reduceMotion) return;
+    var pal = FTSkins.envPalette(area === 'rain' || area === 'monsoon' ? 'city' : area, weather);
+    if ((!pal.rain && area !== 'rain' && area !== 'monsoon') || reduceMotion) return;
     ctx.strokeStyle = pal.storm ? 'rgba(200,220,255,0.55)' : 'rgba(180,200,230,0.45)';
     ctx.lineWidth = 1.5;
     rainDrops.forEach(function (d) {
@@ -1991,7 +2037,7 @@
   function drawPipe(p) {
     var area = activeArea();
     var weather = effectiveWeather();
-    var pal = FTSkins.envPalette(area === 'rain' ? 'city' : area, weather);
+    var pal = FTSkins.envPalette(area === 'rain' || area === 'monsoon' ? 'city' : area, weather);
     var ghost = (isPractice() || ghostActive()) && state === 'playing';
     FTSkins.drawObstaclePair(ctx, p, pal, H - GROUND_H, ghost);
   }
@@ -2089,7 +2135,7 @@
   function drawGround() {
     var area = activeArea();
     var weather = effectiveWeather();
-    var pal = FTSkins.envPalette(area === 'rain' ? 'city' : area, weather);
+    var pal = FTSkins.envPalette(area === 'rain' || area === 'monsoon' ? 'city' : area, weather);
     var gy = H - GROUND_H;
     ctx.fillStyle = pal.ground;
     ctx.fillRect(0, gy, W, GROUND_H);
@@ -2341,6 +2387,33 @@
 
   async function tryUnlock(item, kind) {
     var cost = item.cost || 0;
+    if (item.seasonal) {
+      var packId = item.seasonal;
+      if (FTStorage.isSeasonalUnlocked && FTStorage.isSeasonalUnlocked(packId)) {
+        if (kind === 'hat') FTStorage.unlockHat(item.id);
+        else if (kind === 'trail') FTStorage.unlockTrail(item.id);
+        showToast(item.label + ' unlocked!');
+        refreshGarage();
+        return;
+      }
+      var pack = null;
+      if (FTSkins.SEASONAL_PACKS) {
+        for (var si = 0; si < FTSkins.SEASONAL_PACKS.length; si++) {
+          if (FTSkins.SEASONAL_PACKS[si].id === packId) { pack = FTSkins.SEASONAL_PACKS[si]; break; }
+        }
+      }
+      var bestNow = FTStorage.getBest();
+      if (pack && FTSkins.seasonalEligible && FTSkins.seasonalEligible(pack, bestNow)) {
+        FTStorage.unlockSeasonal(packId);
+        showToast((pack.label || item.label) + ' pack unlocked!');
+        refreshGarage();
+        refreshCollection();
+        return;
+      }
+      var need = pack && pack.milestoneScore ? pack.milestoneScore : '?';
+      showToast('Seasonal — play in window or reach score ' + need);
+      return;
+    }
     if (cost <= 0) return;
     if (FTStorage.getCoins() < cost) { showToast('Need ' + cost + ' coins'); return; }
     if (kind === 'env' && item.unlockScore && FTStorage.getBest() >= item.unlockScore) {
@@ -2501,6 +2574,7 @@
       ' · Acc ' + counts.accessories.have + '/' + counts.accessories.total +
       ' · Trails ' + counts.trails.have + '/' + counts.trails.total +
       ' · Areas ' + counts.areas.have + '/' + counts.areas.total +
+      ' · Seasonals ' + (counts.seasonals ? counts.seasonals.have + '/' + counts.seasonals.total : '0/0') +
       ' · Challenges ' + counts.challenges.have + '/' + counts.challenges.total;
     collectionList.appendChild(summary);
     var prog = document.createElement('p');
@@ -2549,6 +2623,14 @@
     section('Accessories', hats, hatLabels);
     section('Trails', trails, trailLabels);
     section('Areas', envs, envLabels);
+    var seasonalMap = FTStorage.getUnlockedSeasonals ? FTStorage.getUnlockedSeasonals() : {};
+    var seasonalLabels = {};
+    if (FTSkins.SEASONAL_PACKS) {
+      FTSkins.SEASONAL_PACKS.forEach(function (p) {
+        seasonalLabels[p.id] = (p.emoji ? p.emoji + ' ' : '') + p.label;
+      });
+    }
+    section('Seasonals', seasonalMap, seasonalLabels);
     var chMap = {};
     var chLabels = {};
     for (var i = 0; i < CHALLENGE_STAGES.length; i++) {
@@ -2718,6 +2800,7 @@
   applyReduceMotionClass();
   best = FTStorage.getBest();
   FTStorage.checkEnvMilestones(best);
+  if (FTStorage.checkSeasonalUnlocks) FTStorage.checkSeasonalUnlocks(best);
   syncMuteBtn();
   initClouds();
   initRain();

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.4.0 — birds, vehicles, accessories, trails, weather, passives, traffic.
+ * Urr Jaa! v3.5.1-urrjaa — birds, areas, seasonal packs, collection depth.
  * Canvas-drawn; forgiving hitboxes.
  */
 (function (global) {
@@ -11,7 +11,15 @@
     { id: 'eagle', label: 'Eagle', cost: 80 },
     { id: 'chick', label: 'Chick', cost: 30 },
     { id: 'owl', label: 'Owl', cost: 50 },
-    { id: 'funny', label: 'Funny', cost: 100 }
+    { id: 'funny', label: 'Funny', cost: 100 },
+    { id: 'mynah', label: 'Mynah', cost: 45 },
+    { id: 'bulbul', label: 'Bulbul', cost: 48 },
+    { id: 'cheel', label: 'Cheel', cost: 70 },
+    { id: 'mor', label: 'Mor', cost: 90 },
+    { id: 'kawwa', label: 'Kawwa', cost: 42 },
+    { id: 'kabootar', label: 'Kabootar', cost: 38 },
+    { id: 'hoopoe', label: 'Hoopoe', cost: 55 },
+    { id: 'falcon', label: 'Baaz', cost: 85 }
   ];
 
   const VEHICLES = [
@@ -40,7 +48,13 @@
     { id: 'murree', label: 'Murree', cost: 40, unlockScore: 60 },
     { id: 'village', label: 'Village', cost: 30, unlockScore: 80 },
     { id: 'desert', label: 'Desert', cost: 45, unlockScore: 100 },
-    { id: 'night', label: 'Night', cost: 50, unlockScore: 120 }
+    { id: 'night', label: 'Night', cost: 50, unlockScore: 120 },
+    { id: 'canal', label: 'Canal', cost: 48, unlockScore: 130 },
+    { id: 'hunza', label: 'Hunza', cost: 55, unlockScore: 140 },
+    { id: 'gwadar', label: 'Gwadar', cost: 50, unlockScore: 150 },
+    { id: 'quetta', label: 'Quetta Bazaar', cost: 55, unlockScore: 160 },
+    { id: 'monsoon', label: 'Monsoon Fields', cost: 52, unlockScore: 170 },
+    { id: 'oldcity', label: 'Old City Rooftops', cost: 58, unlockScore: 180 }
   ];
 
   const WEATHERS = [
@@ -59,7 +73,15 @@
     owl: { id: 'night', label: 'Night bonus', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0.08 },
     eagle: { id: 'nearmiss', label: 'Near-miss bonus', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 1, nightBonus: 0 },
     chick: { id: 'none', label: 'Cute', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
-    funny: { id: 'none', label: 'Goofy', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0 }
+    funny: { id: 'none', label: 'Goofy', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
+    mynah: { id: 'coin', label: '+4% coins', gravityMul: 1, flapMul: 1, coinMul: 1.04, nearMissBonus: 0, nightBonus: 0 },
+    bulbul: { id: 'flap', label: 'Light flaps', gravityMul: 0.98, flapMul: 1.05, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
+    cheel: { id: 'nearmiss', label: 'Soar near-miss', gravityMul: 1, flapMul: 1.02, coinMul: 1, nearMissBonus: 1, nightBonus: 0 },
+    mor: { id: 'coin', label: '+6% coins', gravityMul: 1.02, flapMul: 1, coinMul: 1.06, nearMissBonus: 0, nightBonus: 0 },
+    kawwa: { id: 'control', label: 'Street smart', gravityMul: 0.97, flapMul: 1.03, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
+    kabootar: { id: 'control', label: 'City glide', gravityMul: 0.95, flapMul: 1.02, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
+    hoopoe: { id: 'night', label: 'Dusk bonus', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0.06 },
+    falcon: { id: 'nearmiss', label: 'Dive bonus', gravityMul: 1.01, flapMul: 1.06, coinMul: 1, nearMissBonus: 1, nightBonus: 0 }
   };
 
   function birdPassive(id) {
@@ -88,7 +110,11 @@
     { id: 'topi', label: 'Topi', cost: 20 },
     { id: 'helmet', label: 'Helmet', cost: 45 },
     { id: 'scarf', label: 'Scarf', cost: 35 },
-    { id: 'crown', label: 'Crown', cost: 60 }
+    { id: 'crown', label: 'Crown', cost: 60 },
+    { id: 'ind_topi', label: 'Azadi Topi', cost: 0, seasonal: 'independence' },
+    { id: 'eid_sparkle', label: 'Eid Sparkle', cost: 0, seasonal: 'eid' },
+    { id: 'winter_shawl', label: 'Winter Shawl', cost: 0, seasonal: 'winter' },
+    { id: 'basant_pagri', label: 'Basant Pagri', cost: 0, seasonal: 'basant' }
   ];
 
   const TRAILS = [
@@ -98,8 +124,81 @@
     { id: 'stars', label: 'Stars', cost: 35 },
     { id: 'star', label: 'Star Dust', cost: 40 },
     { id: 'fire', label: 'Fire', cost: 50 },
-    { id: 'rainbow', label: 'Rainbow', cost: 70 }
+    { id: 'rainbow', label: 'Rainbow', cost: 70 },
+    { id: 'ind_trail', label: 'Azadi Trail', cost: 0, seasonal: 'independence' },
+    { id: 'eid_trail', label: 'Eid Glow', cost: 0, seasonal: 'eid' },
+    { id: 'winter_trail', label: 'Snow Dust', cost: 0, seasonal: 'winter' },
+    { id: 'basant_trail', label: 'Kite Trail', cost: 0, seasonal: 'basant' }
   ];
+
+  /** Offline seasonal packs — date windows (device local) and/or score milestones. Persist forever once unlocked. */
+  const SEASONAL_PACKS = [
+    {
+      id: 'independence',
+      label: 'Azadi Pack',
+      emoji: '🇵🇰',
+      hat: 'ind_topi',
+      trail: 'ind_trail',
+      milestoneScore: 75,
+      // ~14 Aug window (device local calendar)
+      windows: [{ m: 8, d0: 10, d1: 20 }]
+    },
+    {
+      id: 'eid',
+      label: 'Eid Sparkle',
+      emoji: '🌙',
+      hat: 'eid_sparkle',
+      trail: 'eid_trail',
+      milestoneScore: 100,
+      // Approximate lunar + fixed calendar windows + milestone fallback
+      windows: [
+        { m: 3, d0: 15, d1: 31 },
+        { m: 4, d0: 1, d1: 15 },
+        { m: 6, d0: 1, d1: 25 }
+      ]
+    },
+    {
+      id: 'winter',
+      label: 'Winter Shawl',
+      emoji: '🧣',
+      hat: 'winter_shawl',
+      trail: 'winter_trail',
+      milestoneScore: 60,
+      windows: [
+        { m: 12, d0: 1, d1: 31 },
+        { m: 1, d0: 1, d1: 31 },
+        { m: 2, d0: 1, d1: 15 }
+      ]
+    },
+    {
+      id: 'basant',
+      label: 'Basant Kites',
+      emoji: '🪁',
+      hat: 'basant_pagri',
+      trail: 'basant_trail',
+      milestoneScore: 80,
+      windows: [{ m: 2, d0: 1, d1: 28 }]
+    }
+  ];
+
+  function seasonalInWindow(pack, dateObj) {
+    const d = dateObj || new Date();
+    const mo = d.getMonth() + 1;
+    const day = d.getDate();
+    const wins = pack.windows || [];
+    for (let i = 0; i < wins.length; i++) {
+      const w = wins[i];
+      if (mo === w.m && day >= w.d0 && day <= w.d1) return true;
+    }
+    return false;
+  }
+
+  function seasonalEligible(pack, bestScore, dateObj) {
+    if (!pack) return false;
+    if (seasonalInWindow(pack, dateObj)) return true;
+    const best = bestScore | 0;
+    return !!(pack.milestoneScore && best >= pack.milestoneScore);
+  }
 
   const SKINS = BIRDS; // legacy alias
 
@@ -109,7 +208,15 @@
     eagle: { body: '#8d6e63', wing: '#5d4037', beak: '#ffd93d', eye: '#111' },
     chick: { body: '#ffd93d', wing: '#f0a500', beak: '#ff6b6b', eye: '#111' },
     owl: { body: '#a1887f', wing: '#6d4c41', beak: '#ffd93d', eye: '#fff', pupil: '#111' },
-    funny: { body: '#ff6b6b', wing: '#4ecdc4', beak: '#ffd93d', eye: '#111', shades: true }
+    funny: { body: '#ff6b6b', wing: '#4ecdc4', beak: '#ffd93d', eye: '#111', shades: true },
+    mynah: { body: '#4a4a4a', wing: '#2c2c2c', beak: '#f39c12', eye: '#111', cheek: '#f5b7b1' },
+    bulbul: { body: '#6d4c41', wing: '#5d4037', beak: '#ff6b6b', eye: '#111', crest: '#111' },
+    cheel: { body: '#8d6e63', wing: '#5d4037', beak: '#e67e22', eye: '#111' },
+    mor: { body: '#1abc9c', wing: '#16a085', beak: '#f39c12', eye: '#111', crest: '#9b59b6', tail: true },
+    kawwa: { body: '#2c3e50', wing: '#1a252f', beak: '#7f8c8d', eye: '#111' },
+    kabootar: { body: '#95a5a6', wing: '#7f8c8d', beak: '#e74c3c', eye: '#111', neck: '#9b59b6' },
+    hoopoe: { body: '#c0392b', wing: '#f5b041', beak: '#2c3e50', eye: '#111', crest: '#f1c40f' },
+    falcon: { body: '#7f8c8d', wing: '#566573', beak: '#f39c12', eye: '#111' }
   };
 
   function drawBirdBody(ctx, id, scale) {
@@ -130,6 +237,31 @@
       ctx.moveTo(-4, -10);
       ctx.lineTo(0, -18);
       ctx.lineTo(4, -10);
+      ctx.fill();
+    }
+    if (c.cheek) {
+      ctx.fillStyle = c.cheek;
+      ctx.beginPath();
+      ctx.arc(4, 2, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (c.neck) {
+      ctx.fillStyle = c.neck;
+      ctx.beginPath();
+      ctx.ellipse(-2, 4, 6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (c.tail || id === 'mor') {
+      ctx.fillStyle = '#9b59b6';
+      ctx.beginPath();
+      ctx.moveTo(-16, 2);
+      ctx.lineTo(-28, -6);
+      ctx.lineTo(-22, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.arc(-26, -4, 2.5, 0, Math.PI * 2);
       ctx.fill();
     }
     if (id === 'owl') {
@@ -227,6 +359,46 @@
       ctx.lineTo(6, -14);
       ctx.lineTo(10, -22);
       ctx.lineTo(12, -12);
+      ctx.closePath();
+      ctx.fill();
+    } else if (hatId === 'ind_topi') {
+      ctx.fillStyle = '#006600';
+      ctx.fillRect(-12, -22, 24, 12);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-12, -16, 24, 4);
+      ctx.beginPath();
+      ctx.arc(0, -16, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (hatId === 'eid_sparkle') {
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.arc(0, -18, 8, 0.2, Math.PI * 1.6);
+      ctx.lineTo(0, -18);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      for (let si = 0; si < 4; si++) {
+        ctx.fillRect(-10 + si * 7, -26, 2, 2);
+      }
+    } else if (hatId === 'winter_shawl') {
+      ctx.fillStyle = '#5dade2';
+      ctx.beginPath();
+      ctx.ellipse(0, 10, 14, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(8, 8, 8, 18);
+      ctx.fillStyle = '#ebf5fb';
+      ctx.fillRect(9, 16, 6, 4);
+    } else if (hatId === 'basant_pagri') {
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.ellipse(0, -14, 14, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f1c40f';
+      ctx.fillRect(-10, -20, 20, 6);
+      ctx.fillStyle = '#3498db';
+      ctx.beginPath();
+      ctx.moveTo(10, -18);
+      ctx.lineTo(22, -28);
+      ctx.lineTo(18, -14);
       ctx.closePath();
       ctx.fill();
     }
@@ -383,7 +555,13 @@
     lahore: ['pipe', 'kite', 'rickshaw', 'signboard', 'bus'],
     islamabad: ['pipe', 'tree', 'signboard', 'kite'],
     karachi: ['pipe', 'bus', 'signboard', 'rickshaw', 'truck'],
-    murree: ['pipe', 'tree', 'kite', 'wires']
+    murree: ['pipe', 'tree', 'kite', 'wires'],
+    canal: ['pipe', 'wires', 'signboard', 'cycle', 'rickshaw'],
+    hunza: ['pipe', 'tree', 'brick', 'kite'],
+    gwadar: ['pipe', 'bus', 'signboard', 'truck', 'wires'],
+    quetta: ['pipe', 'signboard', 'rickshaw', 'brick', 'wires'],
+    monsoon: ['pipe', 'tree', 'clothesline', 'kite', 'wires'],
+    oldcity: ['pipe', 'clothesline', 'brick', 'wires', 'signboard']
   };
 
   function pickObstacleKind(rng, areaId) {
@@ -540,7 +718,13 @@
       night: { sky0: '#0b1026', sky1: '#1a2744', sky2: '#2a3555', ground: '#3d3428', grass: '#3a7a45', pipe: '#1e6b3a', pipeCap: '#2a8f4e', stars: true },
       bridge: { sky0: '#5dade2', sky1: '#85c1e9', sky2: '#d6eaf8', ground: '#7f8c8d', grass: '#95a5a6', pipe: '#34495e', pipeCap: '#5d6d7e', bridge: true },
       mountains: { sky0: '#aed6f1', sky1: '#d5f5e3', sky2: '#f5eef8', ground: '#7d6b5d', grass: '#66bb6a', pipe: '#4a6741', pipeCap: '#689f38', hills: true, pines: true },
-      rain: { sky0: '#7f8c8d', sky1: '#95a5a6', sky2: '#bdc3c7', ground: '#6d5c4d', grass: '#5a8f3a', pipe: '#2d5a3d', pipeCap: '#3d7a4d', rain: true }
+      rain: { sky0: '#7f8c8d', sky1: '#95a5a6', sky2: '#bdc3c7', ground: '#6d5c4d', grass: '#5a8f3a', pipe: '#2d5a3d', pipeCap: '#3d7a4d', rain: true },
+      canal: { sky0: '#5dade2', sky1: '#a9cce3', sky2: '#d4efdf', ground: '#7dcea0', grass: '#52be80', pipe: '#1a5276', pipeCap: '#2874a6', canal: true },
+      hunza: { sky0: '#85c1e9', sky1: '#aed6f1', sky2: '#f5eef8', ground: '#a1887f', grass: '#58d68d', pipe: '#1e8449', pipeCap: '#27ae60', hills: true, pines: true },
+      gwadar: { sky0: '#5dade2', sky1: '#76d7c4', sky2: '#f9e79f', ground: '#d5b895', grass: '#82e0aa', pipe: '#1a5276', pipeCap: '#148f77', sea: true },
+      quetta: { sky0: '#1a2744', sky1: '#2c3e50', sky2: '#5d6d7e', ground: '#5d4e37', grass: '#3a7a45', pipe: '#7b241c', pipeCap: '#922b21', stars: true, bazaar: true },
+      monsoon: { sky0: '#5d6d7e', sky1: '#85929e', sky2: '#a9cce3', ground: '#6d5c4d', grass: '#196f3d', pipe: '#1e8449', pipeCap: '#196f3d', rain: true },
+      oldcity: { sky0: '#f5b041', sky1: '#f8c471', sky2: '#fdebd0', ground: '#a04000', grass: '#7d6608', pipe: '#6e2c00', pipeCap: '#935116', rooftops: true }
     };
     const pal = Object.assign({
       sun: 'rgba(255,240,150,0.85)',
@@ -646,7 +830,7 @@
         cctx.font = '24px system-ui';
         cctx.textAlign = 'center';
         cctx.textBaseline = 'middle';
-        const icons = { none: '·', topi: '🎩', cap: '🧢', crown: '👑', sunglasses: '🕶', hat: '👒', helmet: '⛑', scarf: '🧣', spark: '✨', smoke: '💨', stars: '⭐', star: '🌟', fire: '🔥', rainbow: '🌈' };
+        const icons = { none: '·', topi: '🎩', cap: '🧢', crown: '👑', sunglasses: '🕶', hat: '👒', helmet: '⛑', scarf: '🧣', spark: '✨', smoke: '💨', stars: '⭐', star: '🌟', fire: '🔥', rainbow: '🌈', ind_topi: '🇵🇰', eid_sparkle: '🌙', winter_shawl: '🧣', basant_pagri: '🪁', ind_trail: '💚', eid_trail: '✨', winter_trail: '❄', basant_trail: '🪁' };
         cctx.fillText(icons[item.id] || '?', 32, 32);
       }
       if (!unlocked) {
@@ -666,6 +850,11 @@
         const hint = document.createElement('span');
         hint.className = 'skin-unlock-hint';
         hint.textContent = cost + ' 🪙';
+        btn.appendChild(hint);
+      } else if (!unlocked && item.seasonal) {
+        const hint = document.createElement('span');
+        hint.className = 'skin-unlock-hint';
+        hint.textContent = '📅 Seasonal';
         btn.appendChild(hint);
       }
       btn.addEventListener('click', () => {
@@ -722,8 +911,9 @@
   }
 
   global.FTSkins = {
-    SKINS, BIRDS, VEHICLES, ENVS, WEATHERS, HATS, TRAILS,
+    SKINS, BIRDS, VEHICLES, ENVS, WEATHERS, HATS, TRAILS, SEASONAL_PACKS,
     BIRD_PASSIVES, birdPassive, weatherMods, BOSS_KINDS, pickBossKind,
+    seasonalInWindow, seasonalEligible,
     draw, drawLegacy, hitbox, renderPicker, isUnlocked,
     envPalette, pickObstacleKind, drawObstaclePair, OBSTACLE_KINDS,
     AREA_OBSTACLES, pickTrafficKind, drawTraffic, trafficHitbox, TRAFFIC_TIERS

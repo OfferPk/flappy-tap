@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.5.0-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album, gift boxes, Mystery Rewards spin wheel.
+ * Urr Jaa! v3.5.1-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -31,6 +31,7 @@
     unlockedEnvs: PREFIX + 'unlocked-envs',
     unlockedHats: PREFIX + 'unlocked-hats',
     unlockedTrails: PREFIX + 'unlocked-trails',
+    unlockedSeasonals: PREFIX + 'unlocked-seasonals',
     collection: PREFIX + 'collection',
     missionsDate: PREFIX + 'missions-date',
     missionsProgress: PREFIX + 'missions-progress',
@@ -65,7 +66,8 @@
   };
 
   const BIRDS = {
-    sparrow: 1, parrot: 1, eagle: 1, chick: 1, owl: 1, funny: 1
+    sparrow: 1, parrot: 1, eagle: 1, chick: 1, owl: 1, funny: 1,
+    mynah: 1, bulbul: 1, cheel: 1, mor: 1, kawwa: 1, kabootar: 1, hoopoe: 1, falcon: 1
   };
   const VEHICLES = {
     none: 1, rickshaw: 1, cycle: 1, bike: 1, scooty: 1, bicycle: 1,
@@ -73,15 +75,21 @@
   };
   const ENVS = {
     city: 1, lahore: 1, islamabad: 1, karachi: 1, murree: 1,
-    village: 1, desert: 1, night: 1, bridge: 1, mountains: 1, rain: 1
+    village: 1, desert: 1, night: 1, bridge: 1, mountains: 1, rain: 1,
+    canal: 1, hunza: 1, gwadar: 1, quetta: 1, monsoon: 1, oldcity: 1
   };
   const HATS = {
     none: 1, topi: 1, cap: 1, crown: 1,
-    sunglasses: 1, hat: 1, helmet: 1, scarf: 1
+    sunglasses: 1, hat: 1, helmet: 1, scarf: 1,
+    ind_topi: 1, eid_sparkle: 1, winter_shawl: 1, basant_pagri: 1
   };
   const TRAILS = {
     none: 1, spark: 1, smoke: 1, stars: 1,
-    fire: 1, star: 1, rainbow: 1
+    fire: 1, star: 1, rainbow: 1,
+    ind_trail: 1, eid_trail: 1, winter_trail: 1, basant_trail: 1
+  };
+  const SEASONALS = {
+    independence: 1, eid: 1, winter: 1, basant: 1
   };
   const VALID_MEDALS = { bronze: 1, silver: 1, gold: 1, platinum: 1, legend: 1 };
   const LEGACY_SKIN = { bird: 'sparrow', bike: 'sparrow', rickshaw: 'sparrow', rocket: 'eagle' };
@@ -378,12 +386,16 @@
     const challengeStage = getChallengeStage();
     const challengeTotal = 5;
     const challengesHave = Math.max(0, Math.min(challengeTotal, challengeStage - 1));
+    const seasonals = getUnlockedSeasonals();
+    const seasonalTotal = Object.keys(SEASONALS).length;
+    const seasonalHave = Object.keys(seasonals).filter((k) => seasonals[k]).length;
     return {
       birds: { have: count(birds), total: total(BIRDS) },
       vehicles: { have: count(vehs), total: total(VEHICLES) },
       accessories: { have: count(hats), total: total(HATS) },
       trails: { have: count(trails), total: total(TRAILS) },
       areas: { have: count(envs), total: total(ENVS) },
+      seasonals: { have: seasonalHave, total: seasonalTotal },
       challenges: { have: challengesHave, total: challengeTotal }
     };
   }
@@ -443,6 +455,7 @@
     else if (kind === 'hat' || kind === 'accessory') unlockHat(id);
     else if (kind === 'trail') unlockTrail(id);
     else if (kind === 'env' || kind === 'area') unlockEnv(id);
+    else if (kind === 'seasonal') unlockSeasonal(id);
     else { addFragments(cost); return false; }
     return true;
   }
@@ -881,11 +894,54 @@
     return { totalCoins: total, results: results, giftsLeft: getGiftBoxes(), spinsLeft: getSpinCharges(), count: results.length };
   }
 
+  function getUnlockedSeasonals() {
+    return parseSet(get(KEYS.unlockedSeasonals, ''), SEASONALS, []);
+  }
+  function isSeasonalUnlocked(id) {
+    return !!getUnlockedSeasonals()[id];
+  }
+  function unlockSeasonal(id) {
+    if (!SEASONALS[id]) return false;
+    const u = getUnlockedSeasonals();
+    if (u[id]) return false;
+    u[id] = true;
+    writeSet(KEYS.unlockedSeasonals, u);
+    addToCollection('seasonal', id);
+    // Grant pack cosmetics
+    const packs = (typeof FTSkins !== 'undefined' && FTSkins.SEASONAL_PACKS) ? FTSkins.SEASONAL_PACKS : [];
+    const pack = packs.find ? packs.find((p) => p.id === id) : null;
+    if (pack) {
+      if (pack.hat) unlockHat(pack.hat);
+      if (pack.trail) unlockTrail(pack.trail);
+    }
+    return true;
+  }
+
+  /** Offline date + milestone seasonal unlocks. Persists forever once earned. */
+  function checkSeasonalUnlocks(bestScore, dateObj) {
+    const packs = (typeof FTSkins !== 'undefined' && FTSkins.SEASONAL_PACKS) ? FTSkins.SEASONAL_PACKS : [];
+    const unlocked = [];
+    const best = bestScore | 0;
+    packs.forEach((pack) => {
+      if (isSeasonalUnlocked(pack.id)) return;
+      let ok = false;
+      if (typeof FTSkins !== 'undefined' && FTSkins.seasonalEligible) {
+        ok = FTSkins.seasonalEligible(pack, best, dateObj);
+      } else if (pack.milestoneScore && best >= pack.milestoneScore) {
+        ok = true;
+      }
+      if (ok && unlockSeasonal(pack.id)) unlocked.push(pack.id);
+    });
+    return unlocked;
+  }
+
   function checkEnvMilestones(bestScore) {
     const gates = [
       [15, 'lahore'], [25, 'bridge'], [30, 'islamabad'], [40, 'mountains'],
       [45, 'karachi'], [55, 'rain'], [60, 'murree'], [80, 'village'],
-      [100, 'desert'], [120, 'night']
+      [100, 'desert'], [120, 'night'],
+      [130, 'canal'], [140, 'hunza'], [150, 'gwadar'],
+      [160, 'quetta'], [170, 'monsoon'], [180, 'oldcity']
     ];
     const unlocked = [];
     gates.forEach(([need, id]) => {
@@ -913,6 +969,7 @@
     getUnlockedEnvs, isEnvUnlocked, unlockEnv,
     getUnlockedHats, isHatUnlocked, unlockHat,
     getUnlockedTrails, isTrailUnlocked, unlockTrail,
+    getUnlockedSeasonals, isSeasonalUnlocked, unlockSeasonal, checkSeasonalUnlocks,
     getCollection, addToCollection, collectionCounts,
     getMissions, bumpMission, setMissionMax, claimMission, MISSION_DEFS, MISSION_POOL,
     getActiveMissionIds, getMetersBest, setMetersBest, checkEnvMilestones,
@@ -927,6 +984,6 @@
     rollBoxRarity, BOX_RARITIES,
     getGiftBoxes, setGiftBoxes, addGiftBoxes, spendGiftBoxes, getSpinCharges,
     spinWheelOnce, spinWheelAll, rollWheelCoins, WHEEL_REWARDS, GIFTS_PER_SPIN,
-    BIRDS, VEHICLES, ENVS, HATS, TRAILS
+    BIRDS, VEHICLES, ENVS, HATS, TRAILS, SEASONALS
   };
 })(window);
