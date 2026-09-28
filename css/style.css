@@ -1509,13 +1509,14 @@ html.reduce-motion #combo-display.combo-x5 { animation: none !important; }
 }
 .garage-search-wrap {
   display: block;
+  position: relative;
   width: min(340px, 100%);
   margin: 0 auto 8px;
 }
 .garage-search {
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 12px;
+  padding: 8px 36px 8px 12px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,.16);
   background: rgba(15,23,42,.72);
@@ -1524,6 +1525,24 @@ html.reduce-motion #combo-display.combo-x5 { animation: none !important; }
   font-weight: 600;
   outline: none;
 }
+.garage-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  font-weight: 700;
+}
+.garage-search-clear:hover { background: rgba(255,100,100,.35); }
+.garage-search-clear[hidden] { display: none !important; }
 .garage-search::placeholder { color: rgba(255,255,255,.45); font-weight: 500; }
 .garage-search:focus {
   border-color: rgba(255,217,61,.55);
@@ -3417,3 +3436,34 @@ html.reduce-motion .missions-claim-all.claim-all-juice { animation: none; }
   100% { box-shadow: 0 0 0 1px rgba(255,217,61,.35), 0 8px 28px rgba(0,0,0,.35); }
 }
 html.reduce-motion .toast.toast-claim.toast-pop { animation: toast-pop 0.25s ease-out; }
+
+/* ——— v3.42: garage favorites pin, search clear ——— */
+.skin-fav-pin {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15,23,42,.72);
+  color: rgba(255,255,255,.55);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,.35);
+}
+.skin-fav-pin.on {
+  color: #ffd93d;
+  background: rgba(92,61,12,.9);
+  text-shadow: 0 0 8px rgba(255,217,61,.55);
+}
+.skin-card.favorited {
+  box-shadow: 0 0 0 1px rgba(255,217,61,.4), 0 4px 14px rgba(0,0,0,.25);
+}
+.skin-fav-pin:focus-visible {
+  outline: 2px solid rgba(255,217,61,.8);
+  outline-offset: 1px;
+}

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.39.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.42.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -37,6 +37,7 @@
     coachDone: PREFIX + 'coach-done',
     coachStep: PREFIX + 'coach-step',
     garageSort: PREFIX + 'garage-sort',
+    garageFavorites: PREFIX + 'garage-favorites',
     haptics: PREFIX + 'haptics',
     hapticIntensity: PREFIX + 'haptic-intensity',
     unlockedSkins: PREFIX + 'unlocked-skins',
@@ -1018,6 +1019,33 @@
     set(KEYS.garageSort, v);
     return v;
   }
+  /** 3.42: garage favorites pin — keys kind:id */
+  function garageFavKey(kind, id) {
+    return String(kind || 'item') + ':' + String(id || '');
+  }
+  function getGarageFavorites() {
+    let arr = [];
+    try { arr = JSON.parse(get(KEYS.garageFavorites, '[]')); } catch (e) { arr = []; }
+    if (!Array.isArray(arr)) arr = [];
+    return arr.filter(function (x) { return typeof x === 'string' && x.indexOf(':') > 0; }).slice(0, 80);
+  }
+  function isGarageFavorite(kind, id) {
+    return getGarageFavorites().indexOf(garageFavKey(kind, id)) >= 0;
+  }
+  function toggleGarageFavorite(kind, id) {
+    const key = garageFavKey(kind, id);
+    let arr = getGarageFavorites();
+    const i = arr.indexOf(key);
+    let nowOn = false;
+    if (i >= 0) arr.splice(i, 1);
+    else {
+      arr.push(key);
+      nowOn = true;
+      if (arr.length > 64) arr = arr.slice(-64);
+    }
+    set(KEYS.garageFavorites, JSON.stringify(arr));
+    return nowOn;
+  }
   function getHaptics() { return get(KEYS.haptics, '1') === '1'; }
   function setHaptics(on) { set(KEYS.haptics, on ? '1' : '0'); }
   /** 3.29: haptic intensity low | normal | high */
@@ -1295,7 +1323,7 @@
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
     msUntilDailyReset, formatDailyCountdown, resetPreferences,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,
-    getGarageSort, setGarageSort,
+    getGarageSort, setGarageSort, getGarageFavorites, isGarageFavorite, toggleGarageFavorite, garageFavKey,
     getHaptics, setHaptics, getHapticIntensity, setHapticIntensity, getVoicePack, setVoicePack,
     getUnlockedSkins, isSkinUnlocked, unlockSkin,
     getCoins, setCoins, addCoins, spendCoins,

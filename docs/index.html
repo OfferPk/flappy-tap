@@ -68,7 +68,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.41.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.42.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -141,13 +141,15 @@
       <p class="coins-line">🪙 <span id="garage-coins">0</span></p>
       <div class="garage-filters" id="garage-filters" role="tablist" aria-label="Garage filter">
         <button type="button" class="garage-filter active" data-garage-filter="all" role="tab" aria-selected="true">All</button>
+        <button type="button" class="garage-filter" data-garage-filter="fav" role="tab" aria-selected="false">★ Favs</button>
         <button type="button" class="garage-filter" data-garage-filter="theme" role="tab" aria-selected="false">🌿 Themes</button>
         <button type="button" class="garage-filter" data-garage-filter="seasonal" role="tab" aria-selected="false">📅 Seasonals</button>
       </div>
-      <label class="garage-search-wrap" for="garage-search">
-        <span class="sr-only">Search skins</span>
+      <div class="garage-search-wrap">
+        <label class="sr-only" for="garage-search">Search skins</label>
         <input type="search" id="garage-search" class="garage-search" placeholder="Search skins…" autocomplete="off" enterkeyhint="search" />
-      </label>
+        <button type="button" id="garage-search-clear" class="garage-search-clear" hidden aria-label="Clear search">×</button>
+      </div>
       <label class="setting-row garage-sort-row" for="garage-sort">
         <span>Sort</span>
         <select id="garage-sort" class="setting-select" aria-label="Garage sort">
@@ -425,6 +427,7 @@
       <details class="settings-changelog" id="settings-changelog">
         <summary>Changelog · recent</summary>
         <ul class="changelog-list" aria-label="Recent changes">
+          <li><strong>3.42</strong> — garage favorites · star coin toast · search clear · polish</li>
           <li><strong>3.41</strong> — shooting star · claim-all toast · garage search · polish</li>
           <li><strong>3.40</strong> — starfield night · claim-all juice · garage CTA · perf · Guide</li>
           <li><strong>3.39</strong> — dusk/night flare · empty states · gift ribbon trail · claim all</li>
@@ -446,7 +449,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.41.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.42.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -519,6 +522,7 @@
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>3.30:</strong> flap whoosh juice · Settings changelog-lite · Guide refresh · performance pass.</li>
+          <li><strong>3.42:</strong> Garage ★ favorites pin · rare shooting-star coin toast · search clear × · polish.</li>
           <li><strong>3.41:</strong> rare night shooting star · richer Claim-all toast · Garage search · micro polish.</li>
           <li><strong>3.40:</strong> milestone — starfield night polish · claim-all juice · garage empty CTA · perf pass.</li>
           <li><strong>3.39:</strong> dusk/night flare · better empty states · gift ribbon trail · mission claim batch.</li>
@@ -554,6 +558,7 @@
           <li><strong>Quiet at night / Confetti:</strong> Settings mein — night soft SFX · confetti Off→High.</li>
           <li><strong>Collection:</strong> naye birds (Mynah, Bulbul, Cheel, Mor…) aur areas (Hunza, Gwadar, Canal…) coins ya score se unlock.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant — local date window ya score milestone. Server seasons nahi.</li>
+          <li><strong>3.42:</strong> Garage ★ favorites · shooting-star coin toast · search clear ×.</li>
           <li><strong>3.41:</strong> rare shooting star at night · better Claim-all toast · Garage search.</li>
           <li><strong>3.40 milestone:</strong> night starfield · Claim all juice · Garage empty → Show all / Mystery.</li>
           <li><strong>Naya (3.28–3.30):</strong> daily countdown · power expiry pulse · boss inbound warn · gift→spin toast · haptic intensity · flap whoosh · Settings changelog.</li>
@@ -576,6 +581,7 @@
           <li><strong>کلیکشن:</strong> نئے پرندے اور علاقے سکے یا اسکور سے کھلیں۔</li>
           <li><strong>سیزنل (آف لائن):</strong> آزادی / عید / سردی / بسنت — مقامی تاریخ یا اسکور۔ کوئی سرور سیزن نہیں۔</li>
           <li><strong>نیا (۳.۲۸–۳.۳۰):</strong> یومیہ کاؤنٹ ڈاؤن · پاور ختم وارننگ · باس وارن · گفٹ→اسپن ٹوسٹ · ہیپٹک شدت · فلیپ وُش · چینج لاگ۔</li>
+                  <li><strong>3.42:</strong> گیراج فیورٹ ★ · شوٹنگ اسٹار کوائن · سرچ صاف ×۔</li>
           <li><strong>3.41:</strong> رات کا شوٹنگ اسٹار · بہتر کلیم ٹوسٹ · گیراج سرچ۔</li>
                   <li><strong>3.40:</strong> رات کا ستارہ میدان · سب مشن ایک ساتھ کلیم · گیراج خالی CTA۔</li>
         </ul>

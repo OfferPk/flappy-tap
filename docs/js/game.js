@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.41.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.42.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -4332,7 +4332,20 @@ function updateComboMeter(visible) {
     ctx.arc(s.x, s.y, 5.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    if (s.life <= 0 || s.x < -80 || s.x > W + 80 || s.y > H * 0.55) shootingStar = null;
+    if (s.life <= 0 || s.x < -80 || s.x > W + 80 || s.y > H * 0.55) {
+      // 3.42: rare coin toast when a night shooting star finishes mid-run
+      if (!s.rewarded && state === 'playing' && Math.random() < 0.2) {
+        s.rewarded = true;
+        var n = 1 + (Math.random() < 0.4 ? 1 : 0) + (Math.random() < 0.15 ? 1 : 0);
+        if (FTStorage.addCoins) FTStorage.addCoins(n);
+        if (typeof updateCoinHud === 'function') updateCoinHud();
+        showToast('⭐ Shooting star! +' + n + ' 🪙', 2200, 'lucky');
+        if (FTAudio && FTAudio.coin) FTAudio.coin();
+        else if (FTAudio && FTAudio.score) FTAudio.score();
+        if (typeof haptic === 'function') haptic('gift');
+      }
+      shootingStar = null;
+    }
   }
 
   function drawSky() {
@@ -6008,12 +6021,14 @@ function updateComboMeter(visible) {
     drawFrame(true);
   }
 
-  var garageFilter = 'all'; // all | theme | seasonal
+  var garageFilter = 'all'; // all | theme | seasonal | fav
 
   function applyGarageFilter() {
     var hint = document.getElementById('garage-filter-hint');
     var searchEl = document.getElementById('garage-search');
     var q = searchEl ? String(searchEl.value || '').trim().toLowerCase() : '';
+    var clearBtn = document.getElementById('garage-search-clear');
+    if (clearBtn) clearBtn.hidden = !q;
     if (hint) {
       if (q) {
         hint.textContent = 'Search: "' + q + '"' + (garageFilter !== 'all' ? ' · filter ' + garageFilter : '');
@@ -6022,13 +6037,16 @@ function updateComboMeter(visible) {
           ? 'Showing theme skins — Jungle · Mountains · Sea (+ matching vehicles)'
           : garageFilter === 'seasonal'
             ? 'Showing seasonal packs — unlock by date window or score'
-            : 'Theme skins: Jungle · Mountains · Sea (score or coins) · search below';
+            : garageFilter === 'fav'
+              ? 'Showing pinned favorites — tap ★ on a skin to pin'
+              : 'Theme skins · pin ★ favorites · search below';
       }
     }
     document.querySelectorAll('#screen-garage .skin-card').forEach(function (card) {
       var show = true;
       if (garageFilter === 'theme') show = card.dataset.theme === '1';
       else if (garageFilter === 'seasonal') show = card.dataset.seasonal === '1';
+      else if (garageFilter === 'fav') show = card.dataset.fav === '1';
       if (show && q) {
         var lab = (card.dataset.label || '').toLowerCase();
         if (!lab) {
@@ -6059,10 +6077,12 @@ function updateComboMeter(visible) {
     if (gEmpty) {
       gEmpty.hidden = anyVisible;
       if (!anyVisible) {
-        var emptyTitle = q ? 'No skins match' : 'Nothing in this filter';
+        var emptyTitle = q ? 'No skins match' : (garageFilter === 'fav' ? 'No favorites yet' : 'Nothing in this filter');
         var emptyHint = q
           ? 'Clear search or try another name / id.'
-          : 'Switch filter or grab unlocks from Mystery Rewards.';
+          : (garageFilter === 'fav'
+            ? 'Tap ★ on any skin card to pin it here.'
+            : 'Switch filter or grab unlocks from Mystery Rewards.');
         gEmpty.innerHTML = '<div class="panel-empty-ico" aria-hidden="true">🧺</div>' +
           '<p class="panel-empty-title">' + emptyTitle + '</p>' +
           '<p class="hint">' + emptyHint + '</p>' +
@@ -6206,6 +6226,35 @@ function updateComboMeter(visible) {
     garageSearchEl.addEventListener('input', function () { applyGarageFilter(); });
     garageSearchEl.addEventListener('search', function () { applyGarageFilter(); });
   }
+  var garageSearchClear = document.getElementById('garage-search-clear');
+  if (garageSearchClear && !garageSearchClear._urrjaaBound) {
+    garageSearchClear._urrjaaBound = true;
+    garageSearchClear.addEventListener('click', function () {
+      var gs = document.getElementById('garage-search');
+      if (gs) { gs.value = ''; gs.focus(); }
+      applyGarageFilter();
+      showToast('Search cleared', 700);
+    });
+  }
+  // 3.42: pin refresh keeps filter + search
+  global.onGarageFavoriteChange = function (kind, id, nowOn, label) {
+    showToast((nowOn ? '★ Pinned · ' : '☆ Unpinned · ') + (label || id), 900);
+    if (typeof haptic === 'function') haptic('power');
+    var q = '';
+    var gs = document.getElementById('garage-search');
+    if (gs) q = gs.value;
+    var keep = garageFilter;
+    refreshGarage();
+    garageFilter = keep;
+    document.querySelectorAll('.garage-filter').forEach(function (b) {
+      var on = b.getAttribute('data-garage-filter') === garageFilter;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    if (gs) gs.value = q;
+    applyGarageFilter();
+    if (typeof startGaragePreview === 'function') startGaragePreview();
+  };
   document.querySelectorAll('[data-close="garage"]').forEach(function (b) {
     b.addEventListener('click', function () { stopGaragePreview(); showMenu(); });
   });

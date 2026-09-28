@@ -1298,10 +1298,15 @@
       if (kind === 'trail') return FTStorage.isTrailUnlocked(item.id);
       return true;
     }
-    // 3.25 garage sort
+    // 3.25 garage sort · 3.42 favorites pin first
     let items = list.slice();
     const sortMode = (typeof FTStorage !== 'undefined' && FTStorage.getGarageSort) ? FTStorage.getGarageSort() : 'owned';
+    const favOf = function (it) {
+      return (typeof FTStorage !== 'undefined' && FTStorage.isGarageFavorite && FTStorage.isGarageFavorite(kind, it.id)) ? 0 : 1;
+    };
     items.sort(function (a, b) {
+      const fa = favOf(a), fb = favOf(b);
+      if (fa !== fb) return fa - fb;
       if (sortMode === 'name') return String(a.label || a.id).localeCompare(String(b.label || b.id));
       if (sortMode === 'cost') return (a.cost || 0) - (b.cost || 0) || String(a.label || '').localeCompare(String(b.label || ''));
       // owned first (default)
@@ -1325,6 +1330,9 @@
       btn.dataset.label = item.label || item.id;
       btn.dataset.theme = isTheme ? '1' : '0';
       btn.dataset.seasonal = isSeasonal ? '1' : '0';
+      const isFav = !!(typeof FTStorage !== 'undefined' && FTStorage.isGarageFavorite && FTStorage.isGarageFavorite(kind, item.id));
+      btn.dataset.fav = isFav ? '1' : '0';
+      if (isFav) btn.className += ' favorited';
       const c = document.createElement('canvas');
       c.width = 64;
       c.height = 64;
@@ -1410,6 +1418,29 @@
         btn.appendChild(bar);
         if (pct >= 70) btn.classList.add('skin-teaser-near');
       }
+      // 3.42 favorites pin
+      const pin = document.createElement('button');
+      pin.type = 'button';
+      pin.className = 'skin-fav-pin' + (isFav ? ' on' : '');
+      pin.setAttribute('aria-label', isFav ? 'Unpin favorite' : 'Pin favorite');
+      pin.title = isFav ? 'Unpin' : 'Pin favorite';
+      pin.textContent = isFav ? '★' : '☆';
+      pin.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!FTStorage || !FTStorage.toggleGarageFavorite) return;
+        const nowOn = FTStorage.toggleGarageFavorite(kind, item.id);
+        pin.classList.toggle('on', nowOn);
+        pin.textContent = nowOn ? '★' : '☆';
+        pin.setAttribute('aria-label', nowOn ? 'Unpin favorite' : 'Pin favorite');
+        pin.title = nowOn ? 'Unpin' : 'Pin favorite';
+        btn.classList.toggle('favorited', nowOn);
+        btn.dataset.fav = nowOn ? '1' : '0';
+        if (typeof global.onGarageFavoriteChange === 'function') {
+          global.onGarageFavoriteChange(kind, item.id, nowOn, item.label || item.id);
+        }
+      });
+      btn.appendChild(pin);
       btn.addEventListener('click', () => {
         if (!unlocked) {
           if (typeof onUnlockRequest === 'function') onUnlockRequest(item, kind);

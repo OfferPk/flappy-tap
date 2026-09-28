@@ -1,6 +1,6 @@
 {
   "name": "urr-jaa",
-  "version": "3.41.0-urrjaa",
+  "version": "3.42.0-urrjaa",
   "description": "Urr Jaa! \u2014 offline one-tap fly arcade (PWA + Capacitor). Repo folder: flappy-tap.",
   "private": true,
   "scripts": {

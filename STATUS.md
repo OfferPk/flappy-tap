@@ -1,5 +1,22 @@
 # Urr Jaa! STATUS
 
+## Current: **3.42.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.41)
+- **Garage favorites pin** — ★ on skin cards · Favs filter · favorites sort first
+- **Shooting star coin toast** — rare +1–3 🪙 when a night star finishes mid-run
+- **Search clear ×** — explicit clear button on garage search
+- Bugfixes / polish — fav empty CTA, pin refresh keeps search/filter
+- KEEP ALL ≤3.41 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v51-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.42.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.42.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.41.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.40)
