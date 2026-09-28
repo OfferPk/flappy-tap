@@ -1,5 +1,25 @@
 # Urr Jaa! STATUS
 
+## Current: **3.18.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.17)
+- **Combo milestone toasts** — 5 / 10 / 15 / 20 / 25 / 30 / 40 / 50 with confetti + voice
+- **Garage preview rotate** — live wing-flap / vehicle lean on unlocked skin cards
+- **Mission claim juice** — card pulse, confetti, haptic, medal/gift toast
+- **Quiet at night** — settings toggle (default ON) ducks SFX in night/storm (voice stays)
+- **Better gift glow** — pulsing aura + gold ring on in-run gift boxes
+- **Mobile tap latency** — touchstart-first flap path, 18ms debounce, 0.05s cooldown
+- KEEP ALL ≤3.17 incl. **15s Mystery Spin once**, Close (X), tips, fireworks, …
+
+SW cache: `urrjaa-v27-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.18.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.18.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.17.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.16)

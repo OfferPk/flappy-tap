@@ -11,6 +11,7 @@
 
   let ctx = null;
   let muted = false;
+  let quietMul = 1; // 3.18 night quiet duck (1 = full)
   let voiceOn = true;
   let speechUnlocked = false;
   let cachedVoice = null;
@@ -29,7 +30,8 @@
   /** Game SFX — respects mute. */
   function tone(freq, dur, type, gain, slideTo) {
     if (muted) return;
-    return rawTone(freq, dur, type, gain, slideTo);
+    var g = (gain == null ? 0.12 : gain) * quietMul;
+    return rawTone(freq, dur, type, g, slideTo);
   }
 
   /** Desi voice tones — respect voiceOn only (independent of mute). */
@@ -67,7 +69,8 @@
     src.buffer = buf;
     const g = c.createGain();
     const t0 = c.currentTime;
-    g.gain.setValueAtTime(gain == null ? 0.08 : gain, t0);
+    var gv = (gain == null ? 0.08 : gain) * quietMul;
+    g.gain.setValueAtTime(gv, t0);
     g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
     src.connect(g);
     g.connect(c.destination);
@@ -747,6 +750,9 @@
 
   function setMuted(on) { muted = !!on; if (muted) stopAreaMusic(); }
   function isMuted() { return muted; }
+  /** 3.18: night quiet — softens SFX (~35%) without full mute. */
+  function setQuietMode(on) { quietMul = on ? 0.35 : 1; }
+  function isQuietMode() { return quietMul < 0.99; }
   function setVoicePack(on) {
     voiceOn = !!on;
     if (!on && speechAvailable()) {
@@ -764,6 +770,6 @@
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
     voice: voice, voiceGift: voiceGift, preview: preview, VOICE_LABELS: VOICE_LABELS, SPEAK_TEXT: SPEAK_TEXT, VOICE_POOLS: VOICE_POOLS,
-    setMuted: setMuted, isMuted: isMuted, setVoicePack: setVoicePack, isVoicePack: isVoicePack, unlock: unlock
+    setMuted: setMuted, isMuted: isMuted, setQuietMode: setQuietMode, isQuietMode: isQuietMode, setVoicePack: setVoicePack, isVoicePack: isVoicePack, unlock: unlock
   };
 })(window);

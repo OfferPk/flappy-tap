@@ -2071,3 +2071,21 @@ html.reduce-motion .new-record-banner.fw-boom { animation: none; }
   padding-left: calc(16px + var(--safe-left));
   padding-right: calc(16px + var(--safe-right));
 }
+
+
+/* ——— v3.18: mission claim juice, combo milestone, quiet night ——— */
+.mission-card.claim-juice {
+  animation: claim-juice-pop 0.55s cubic-bezier(.2,.85,.25,1);
+  border-color: rgba(255, 217, 61, 0.85);
+  box-shadow: 0 0 22px rgba(250, 204, 21, 0.45), 0 0 40px rgba(192, 132, 252, 0.25);
+}
+@keyframes claim-juice-pop {
+  0% { transform: scale(0.96); filter: brightness(1.35); }
+  45% { transform: scale(1.03); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+html.reduce-motion .mission-card.claim-juice { animation: none; }
+#combo-display.combo-hot {
+  text-shadow: 0 0 12px rgba(255, 217, 61, 0.65);
+}
+.skin-card canvas { will-change: transform; }

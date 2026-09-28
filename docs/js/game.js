@@ -1,8 +1,8 @@
 /**
- * Urr Jaa! v3.17.0-urrjaa — Tutorial tips polish, high-score fireworks, death tip, pipe variety,
- * SFX mix, safe-area polish, bugfixes. KEEP ALL ≤3.16 incl. 15s Mystery Spin once + Close (X).
+ * Urr Jaa! v3.18.0-urrjaa — Combo milestone toasts, garage preview rotate, mission claim juice,
+ * quiet night mode, better gift glow, mobile tap latency, bugfixes.
+ * KEEP ALL ≤3.17 incl. 15s Mystery Spin once + Close (X) + tips/fireworks/pipes.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all prior features — different pack from 3.11–3.16.
  */
 (function () {
   'use strict';
@@ -19,7 +19,7 @@
   const GRAVITY = 1850;
   const FLAP_IMPULSE = -430;      // snappier tap response (3.11)
   const TERMINAL_V = 620;
-  const FLAP_COOLDOWN = 0.07;     // tighter tap cadence (3.11)
+  const FLAP_COOLDOWN = 0.05;     // 3.18: snappier mobile tap cadence (was 0.07)
   const PIPE_W = 64;
   const BASE_SPEED = 138;        // Classic baseline a touch calmer (3.11); Hard uses modeSpeedMul
   const BASE_GAP = 194;          // Classic: roomier reactable gaps (3.11)
@@ -111,6 +111,7 @@
   let playMode = 'classic';
   let combo = 0;
   let coinCombo = 0;
+  var comboMilestonesHit = Object.create(null); // 3.18 milestone toasts
   let nearMissStreak = 0;
   let riskyUntil = 0;
   let shieldActive = false;
@@ -211,6 +212,7 @@
   const soundToggleChk = document.getElementById('sound-toggle');
   const hapticsToggleChk = document.getElementById('haptics-toggle');
   const voiceToggleChk = document.getElementById('voice-toggle');
+  const quietNightChk = document.getElementById('quiet-night-toggle');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -652,6 +654,38 @@
       comboEl.classList.toggle('combo-hot', ccm >= 5 || combo >= 5 || riskyActive());
     } else {
       comboEl.hidden = true;
+    }
+  }
+
+
+  var COMBO_MILESTONES = [5, 10, 15, 20, 25, 30, 40, 50];
+
+  function isNightAmbience() {
+    var a = typeof activeArea === 'function' ? activeArea() : envId;
+    var w = typeof effectiveWeather === 'function' ? effectiveWeather() : weatherId;
+    return a === 'night' || a === 'quetta' || w === 'night' || w === 'storm';
+  }
+  function syncQuietNight() {
+    if (!FTAudio || !FTAudio.setQuietMode) return;
+    var want = !!(FTStorage.isQuietNight && FTStorage.isQuietNight()) && isNightAmbience() && state === 'playing';
+    FTAudio.setQuietMode(want);
+  }
+
+  function maybeComboMilestone(c) {
+    if (!c || state !== 'playing') return;
+    for (var i = 0; i < COMBO_MILESTONES.length; i++) {
+      var m = COMBO_MILESTONES[i];
+      if (c === m && !comboMilestonesHit[m]) {
+        comboMilestonesHit[m] = 1;
+        showToast('🔥 Combo ' + m + '!', 1300, 'medal');
+        showBanner('COMBO ' + m + '!', 900);
+        if (FTAudio.combo) FTAudio.combo();
+        haptic('gift');
+        if (!reduceMotion && bird) spawnConfettiBurst(bird.x, bird.y - 24, m >= 20 ? 16 : 10);
+        if (m >= 20) voiceCue('shabaash');
+        else if (m >= 10) voiceCue('wah_ji');
+        break;
+      }
     }
   }
 
@@ -1214,6 +1248,7 @@
   }
 
   function showMenu() {
+    stopGaragePreview();
     state = 'menu';
     hideAllScreens();
     screenStart.hidden = false;
@@ -1227,6 +1262,7 @@
     updateUnlockTeaser();
     updateLivesHud();
     refreshMenuTip();
+    if (FTAudio && FTAudio.setQuietMode) FTAudio.setQuietMode(false);
     drawFrame(true);
   }
 
@@ -1471,6 +1507,7 @@
     hitFlash = 0;
     deathFreezeUntil = 0;
     flapCooldown = 0;
+    comboMilestonesHit = Object.create(null);
     lastTs = 0;
     trailAcc = 0;
     toastOyeAcc = 0;
@@ -2446,6 +2483,7 @@
 
   function addPipeScore(p) {
     combo += 1;
+    maybeComboMilestone(combo);
     runBestCombo = Math.max(runBestCombo, combo, coinCombo, nearMissStreak);
     var mult = pipeComboMult();
     // Perfect Pass: near gap center → +3 base (tune with existing mult)
@@ -2620,7 +2658,7 @@
     if (state === 'playing' && powerHudEl && !powerHudEl.hidden) {
       if (!updatePowerHud._acc) updatePowerHud._acc = 0;
       updatePowerHud._acc += dt;
-      if (updatePowerHud._acc > 0.25) { updatePowerHud._acc = 0; updatePowerHud(); }
+      if (updatePowerHud._acc > 0.25) { updatePowerHud._acc = 0; updatePowerHud(); syncQuietNight(); }
     }
 
     for (var i = particles.length - 1; i >= 0; i--) {
@@ -3148,11 +3186,31 @@
 
   function drawBox(b) {
     if (b.taken) return;
-    var bob = reduceMotion ? 0 : Math.sin(performance.now() / 250 + b.x) * 3;
+    var t = performance.now();
+    var bob = reduceMotion ? 0 : Math.sin(t / 250 + b.x) * 3;
+    var pulse = reduceMotion ? 1 : (0.85 + 0.15 * Math.sin(t / 180 + b.x * 0.05));
     ctx.save();
     ctx.translate(b.x, b.y + bob);
+    // 3.18: soft outer glow + pulse ring so gifts read clearer mid-flight
+    if (!reduceMotion) {
+      ctx.globalAlpha = 0.28 * pulse;
+      ctx.fillStyle = '#c084fc';
+      ctx.beginPath();
+      ctx.arc(0, 0, 22 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = '#ffd93d';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16 + 3 * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     ctx.fillStyle = '#8e44ad';
     ctx.fillRect(-12, -12, 24, 24);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-12, -12, 24, 24);
     ctx.fillStyle = '#ffd93d';
     ctx.fillRect(-12, -2, 24, 4);
     ctx.fillRect(-2, -12, 4, 24);
@@ -3532,16 +3590,21 @@
   }
 
   var lastFlapTouchTs = 0;
-  function onPointer(e) {
+  /** 3.18: shared flap path — touchstart first (lower latency), pointer as fallback. */
+  function tryFlapFromInput(e) {
     if (e.target && e.target.closest && e.target.closest(
-      'button, .skin-card, #ad-stub-modal, .screen, label, input, .tab-btn, .mission-card, .chip, .garage-filter, .power-chip'
-    )) return;
-    // 3.12: debounce duplicate pointer/touch within 30ms (mobile double-fire)
+      'button, .skin-card, #ad-stub-modal, .screen, label, input, .tab-btn, .mission-card, .chip, .garage-filter, .power-chip, .icon-btn'
+    )) return false;
     var now = performance.now();
-    if (now - lastFlapTouchTs < 30) return;
+    // 18ms debounce: blocks touch+pointer double-fire without delaying first tap
+    if (now - lastFlapTouchTs < 18) return false;
     lastFlapTouchTs = now;
     if (e.cancelable) e.preventDefault();
     flap();
+    return true;
+  }
+  function onPointer(e) {
+    tryFlapFromInput(e);
   }
   // Unlock AudioContext + speechSynthesis on first user tap (mobile gate)
   (function () {
@@ -3560,17 +3623,13 @@
   })();
 
   canvas.style.touchAction = 'none';
+  // 3.18: touchstart before pointerdown → lower mobile tap latency
+  canvas.addEventListener('touchstart', function (e) {
+    if (state === 'playing' || state === 'menu') tryFlapFromInput(e);
+  }, { passive: false });
   canvas.addEventListener('pointerdown', onPointer, { passive: false });
-  // Prefer pointer events only on #app during play (avoids touch+mouse double flap)
   document.getElementById('app').addEventListener('pointerdown', function (e) {
-    if (state === 'playing') {
-      if (e.target.closest && e.target.closest('button, .screen, label, input, .icon-btn')) return;
-      var now = performance.now();
-      if (now - lastFlapTouchTs < 30) return;
-      lastFlapTouchTs = now;
-      if (e.cancelable) e.preventDefault();
-      flap();
-    }
+    if (state === 'playing') tryFlapFromInput(e);
   }, { passive: false });
 
   function closePanelByKey(key) {
@@ -3759,6 +3818,7 @@
     if (soundToggleChk) soundToggleChk.checked = !FTStorage.isMuted();
     if (hapticsToggleChk) hapticsToggleChk.checked = hapticsOn;
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
+    if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
   });
   if (btnSettingsClose) btnSettingsClose.addEventListener('click', function () { screenSettings.hidden = true; });
   var btnHapticPreview = document.getElementById('btn-haptic-preview');
@@ -3784,6 +3844,11 @@
   if (hapticsToggleChk) hapticsToggleChk.addEventListener('change', function () {
     hapticsOn = !!hapticsToggleChk.checked;
     FTStorage.setHaptics(hapticsOn);
+  });
+  if (quietNightChk) quietNightChk.addEventListener('change', function () {
+    if (FTStorage.setQuietNight) FTStorage.setQuietNight(!!quietNightChk.checked);
+    syncQuietNight();
+    showToast(quietNightChk.checked ? 'Quiet at night ON' : 'Quiet at night OFF', 1000);
   });
   if (voiceToggleChk) voiceToggleChk.addEventListener('change', function () {
     var on = !!voiceToggleChk.checked;
@@ -3922,6 +3987,47 @@
     });
   }
 
+
+  var garagePreviewRaf = 0;
+  var garagePreviewT0 = 0;
+  function stopGaragePreview() {
+    if (garagePreviewRaf) {
+      cancelAnimationFrame(garagePreviewRaf);
+      garagePreviewRaf = 0;
+    }
+  }
+  function tickGaragePreview(now) {
+    if (!screenGarage || screenGarage.hidden) { stopGaragePreview(); return; }
+    if (!garagePreviewT0) garagePreviewT0 = now;
+    var t = (now - garagePreviewT0) / 1000;
+    var cards = screenGarage.querySelectorAll('.skin-card canvas');
+    for (var i = 0; i < cards.length; i++) {
+      var c = cards[i];
+      var card = c.parentElement;
+      if (!card || card.classList.contains('locked') || card.hidden) continue;
+      var kind = card.closest('#garage-birds') ? 'bird' :
+        card.closest('#garage-vehicles') ? 'vehicle' : null;
+      if (!kind || !FTSkins || !FTSkins.draw) continue;
+      var id = card.dataset.id;
+      var cctx = c.getContext('2d');
+      cctx.clearRect(0, 0, 64, 64);
+      var flap = Math.sin(t * 6 + i * 0.4) * 0.55;
+      var rot = Math.sin(t * 1.2 + i * 0.2) * 0.18;
+      if (kind === 'bird') {
+        FTSkins.draw(cctx, id, 32, 30, rot, 1.0, { wingFlap: flap, tipFlutter: flap * 0.3, mouthOpen: 0.15 + 0.1 * Math.max(0, flap) });
+      } else {
+        FTSkins.draw(cctx, 'sparrow', 32, 28, rot * 0.5, 1.0, { vehicle: id, wingFlap: 0, vehLean: Math.sin(t * 2 + i) * 0.12 });
+      }
+    }
+    garagePreviewRaf = requestAnimationFrame(tickGaragePreview);
+  }
+  function startGaragePreview() {
+    stopGaragePreview();
+    garagePreviewT0 = 0;
+    if (reduceMotion) return;
+    garagePreviewRaf = requestAnimationFrame(tickGaragePreview);
+  }
+
   function refreshGarage() {
     updateCoinHud();
     if (garageBirds) FTSkins.renderPicker(garageBirds, birdId, onPickCosmetic, tryUnlock, 'bird');
@@ -3958,6 +4064,7 @@
     hideAllScreens();
     if (screenGarage) screenGarage.hidden = false;
     refreshGarage();
+    startGaragePreview();
   });
   document.querySelectorAll('.garage-filter').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -3971,7 +4078,7 @@
     });
   });
   document.querySelectorAll('[data-close="garage"]').forEach(function (b) {
-    b.addEventListener('click', function () { showMenu(); });
+    b.addEventListener('click', function () { stopGaragePreview(); showMenu(); });
   });
 
 
@@ -4081,14 +4188,25 @@
       btn.addEventListener('click', function () {
         var r = FTStorage.claimMission(m.id);
         if (r) {
+          // 3.18 mission claim juice
+          card.classList.remove('claim-juice');
+          void card.offsetWidth;
+          card.classList.add('claim-juice');
+          haptic('gift');
+          if (!reduceMotion) spawnConfettiBurst(W * 0.5, H * 0.35, 14);
+          if (FTAudio.combo) FTAudio.combo();
           if (r.mystery) {
-            showToast('Mission: +' + (r.gifts || 1) + ' Gift 🎁');
+            showToast('Mission: +' + (r.gifts || 1) + ' Gift 🎁', 1600, 'gift');
             if (FTAudio.mystery) FTAudio.mystery();
             voiceGiftCue();
-            // gifts already added in storage — detect spin unlock from delta
             detectSpinUnlockFromDelta(r.gifts || 1);
-          } else if (r.fragments) showToast('+' + r.fragments + ' fragments!');
-          else showToast('+' + r.coins + ' coins!');
+          } else if (r.fragments) {
+            showToast('+' + r.fragments + ' fragments!', 1400, 'medal');
+            voiceCue('wah_ji');
+          } else {
+            showToast('+' + r.coins + ' coins!', 1400, 'medal');
+            voiceCue('shabaash');
+          }
           refreshMissions(); updateCoinHud();
         }
       });

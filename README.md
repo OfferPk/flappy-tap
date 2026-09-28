@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.17.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.18.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,11 +29,12 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.17.0-urrjaa)
+## Features (v3.18.0-urrjaa)
 
-- **Tutorial tips** on menu / pause / death · **high-score fireworks** · contextual **death tip**
-- **Pipe variety:** lattice + stripe skins · **SFX mix** jitter · portrait **safe-area** HUD
-- **Mystery wheel 15s** Spin once (KEEP) · Spin all **15s / 8s / 5s** tiering
+- **Combo milestones** toasts · **garage preview** flap/rotate · **mission claim juice**
+- **Quiet at night** SFX duck · **gift glow** · snappier **mobile taps**
+- **Tutorial tips** · high-score fireworks · death tip · lattice/stripe pipes · SFX mix · safe-area
+- **Mystery wheel 15s** Spin once (KEEP) · Spin all **15s / 8s / 5s** · Close (X)
 - Power VFX clarity (Slow-mo / Ghost / Turbo) · Challenge stage picker · One Life heart HUD
 - Coin economy balance · Bird unlock teasers · Gift haptic · Landscape safe-area
 - Universal Close (X) on all panels · Esc · mid-spin Mystery keeps charge

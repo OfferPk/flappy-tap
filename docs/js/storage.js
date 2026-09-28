@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.15.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.18.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -17,6 +17,7 @@
     hat: PREFIX + 'hat',
     trail: PREFIX + 'trail',
     mute: PREFIX + 'mute',
+    quietNight: PREFIX + 'quiet-night',
     runs: PREFIX + 'runs',
     medal: PREFIX + 'best-medal',
     dailyBest: PREFIX + 'daily-best',
@@ -825,6 +826,9 @@
 
   function isMuted() { return get(KEYS.mute, '0') === '1'; }
   function setMuted(on) { set(KEYS.mute, on ? '1' : '0'); }
+  /** 3.18: duck SFX/music automatically in night areas (default ON). */
+  function isQuietNight() { return get(KEYS.quietNight, '1') === '1'; }
+  function setQuietNight(on) { set(KEYS.quietNight, on ? '1' : '0'); }
   function getRunCount() { return parseInt(get(KEYS.runs, '0'), 10) || 0; }
   function bumpRunCount() {
     const n = getRunCount() + 1;
@@ -1093,7 +1097,7 @@
     getBestCombo, setBestCombo, getLeaderboards,
     getSkin, setSkin, getBird, setBird, getVehicle, setVehicle,
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
-    isMuted, setMuted, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
+    isMuted, setMuted, isQuietNight, setQuietNight, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion,
     getHaptics, setHaptics, getVoicePack, setVoicePack,
     getUnlockedSkins, isSkinUnlocked, unlockSkin,
