@@ -2658,3 +2658,45 @@ html.reduce-motion .screen.pause-screen:not([hidden]) {
 }
 .changelog-list li { margin: 4px 0; }
 .changelog-list .muted { color: var(--muted); list-style: none; margin-left: -0.6rem; font-size: 0.75rem; }
+
+
+/* ——— v3.31: collection % meter, jackpot wheel ——— */
+.collection-pct-meter {
+  position: relative;
+  height: 22px;
+  margin: 8px 0 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(78, 205, 196, 0.35);
+  overflow: hidden;
+}
+.collection-pct-header { max-width: 280px; margin-left: auto; margin-right: auto; }
+.collection-pct-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4ecdc4, #fbbf24 70%, #f472b6);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+.collection-pct-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #f8fafc;
+  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+  pointer-events: none;
+}
+.wheel-wrap.wheel-jackpot .wheel-rim {
+  animation: jackpot-glow 0.55s ease-in-out 3;
+  box-shadow: 0 0 28px rgba(251, 191, 36, 0.75), 0 0 48px rgba(244, 114, 182, 0.4);
+}
+@keyframes jackpot-glow {
+  0%, 100% { filter: brightness(1); transform: scale(1); }
+  50% { filter: brightness(1.25); transform: scale(1.03); }
+}
+html.reduce-motion .wheel-wrap.wheel-jackpot .wheel-rim { animation: none; }

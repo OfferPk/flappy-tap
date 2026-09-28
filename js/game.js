@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.30.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.31.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -239,6 +239,7 @@
   const hapticIntensitySel = document.getElementById('haptic-intensity');
   const voiceToggleChk = document.getElementById('voice-toggle');
   const quietNightChk = document.getElementById('quiet-night-toggle');
+  const areaMusicChk = document.getElementById('area-music-toggle');
   const confettiIntensitySel = document.getElementById('confetti-intensity');
   const largeButtonsChk = document.getElementById('large-buttons-toggle');
   const ghostOpacitySlider = document.getElementById('ghost-opacity-slider');
@@ -1544,6 +1545,17 @@
     allScreens().forEach(function (el) { if (el) el.hidden = true; });
   }
 
+
+  function syncAreaMusicPref() {
+    var on = !!(FTStorage.isAreaMusic && FTStorage.isAreaMusic());
+    if (FTAudio.setAreaMusicEnabled) FTAudio.setAreaMusicEnabled(on);
+    if (areaMusicChk) areaMusicChk.checked = on;
+    if (!on) {
+      if (FTAudio.stopAreaMusic) FTAudio.stopAreaMusic();
+      if (FTAudio.stopMenuMusic) FTAudio.stopMenuMusic();
+    }
+  }
+
   function showMenu() {
     stopGaragePreview();
     setPauseBlur(false);
@@ -1552,6 +1564,9 @@
     hideAllScreens();
     screenStart.hidden = false;
     hud.hidden = true;
+    if (FTAudio.stopAreaMusic) FTAudio.stopAreaMusic();
+    lastAreaMusic = null;
+    if (FTAudio.playMenuMusic) FTAudio.playMenuMusic();
     hitFlash = 0;
     playMode = 'classic';
     oneLifeLocked = false;
@@ -1879,6 +1894,7 @@
 
   function startRun(fromContinue, mode) {
     FTAudio.unlock();
+    if (FTAudio.stopMenuMusic) FTAudio.stopMenuMusic();
     if (mode) playMode = mode;
     if (isChallenge()) {
       challengeStageIdx = Math.max(0, Math.min(CHALLENGE_STAGES.length - 1, (FTStorage.getChallengeStage() || 1) - 1));
@@ -2157,7 +2173,10 @@
     else FTAudio.nearmiss();
     showBanner('LUCKY!', 750);
     showToast('LUCKY!', 1000, 'lucky');
-    if (bird) spawnLandingDust(bird.x, H - GROUND_H - 2, 10);
+    if (bird) {
+      spawnSoftCollisionDust(bird.x, bird.y, 14);
+      spawnLandingDust(bird.x, H - GROUND_H - 2, 6);
+    }
     triggerChirpMouth('close');
     voiceCue('lucky');
     haptic('nearmiss');
@@ -2174,6 +2193,7 @@
         if (bird.y + bird.h / 2 > H - GROUND_H - 2) bird.y -= 2;
         if (bird.y - bird.h / 2 < 2) bird.y += 2;
         bird.vy *= 0.92;
+        if (!reduceMotion && bird && rng() < 0.08) spawnSoftCollisionDust(bird.x, bird.y, 4);
       }
       return;
     }
@@ -2204,6 +2224,37 @@
     if (particles.length > cap) particles.splice(0, particles.length - cap);
   }
 
+
+  /** 3.31: soft collision / LUCKY dust puff at bird. */
+  function spawnSoftCollisionDust(x, y, n) {
+    if (reduceMotion) return;
+    n = n || 12;
+    var cols = ['rgba(125,211,252,0.65)', 'rgba(253,230,138,0.7)', 'rgba(226,232,240,0.55)', 'rgba(194,160,92,0.5)'];
+    for (var i = 0; i < n; i++) {
+      var a = (Math.PI * 2 * i) / n + rng() * 0.3;
+      var sp = 35 + rng() * 70;
+      particles.push({
+        x: x + (rng() - 0.5) * 8,
+        y: y + (rng() - 0.5) * 8,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 25,
+        life: 0.4 + rng() * 0.25,
+        max: 0.65,
+        color: cols[i % cols.length],
+        r: 2.2 + rng() * 2.8,
+        kind: 'dust'
+      });
+    }
+    if (!reduceMotion) {
+      particles.push({
+        x: x, y: y, vx: 0, vy: 0,
+        life: 0.3, max: 0.3,
+        color: 'rgba(125,211,252,0.45)',
+        r: 8, kind: 'ring', grow: 32
+      });
+    }
+    trimParticles();
+  }
 
   /** 3.23: soft dust puff when bird skims / lands near ground. */
   function spawnLandingDust(x, y, n) {
@@ -2878,6 +2929,32 @@
     spinResultEl.classList.add('win-flash');
   }
 
+
+  /** 3.31: extra juice when wheel lands jackpot (999) / mega (888+). */
+  function celebrateJackpot(coins) {
+    coins = coins | 0;
+    if (coins < 888) return;
+    var isJack = coins >= 999;
+    showBanner(isJack ? '💎 JACKPOT 999!' : '✨ MEGA ' + coins + '!', isJack ? 2200 : 1600);
+    haptic(isJack ? 'boss' : 'gift');
+    if (!reduceMotion) {
+      spawnFireworks(W * 0.5, H * 0.35, isJack ? 7 : 4);
+      spawnCoinRain(isJack ? 36 : 18);
+      spawnConfettiBurst(W * 0.5, H * 0.4, isJack ? 28 : 14);
+      if (isJack) {
+        setTimeout(function () { spawnFireworks(W * 0.3, H * 0.28, 4); }, 220);
+        setTimeout(function () { spawnFireworks(W * 0.7, H * 0.3, 4); spawnCoinRain(14); }, 420);
+      }
+    }
+    if (wheelWrapEl) {
+      wheelWrapEl.classList.remove('wheel-jackpot');
+      void wheelWrapEl.offsetWidth;
+      wheelWrapEl.classList.add('wheel-jackpot');
+      setTimeout(function () { if (wheelWrapEl) wheelWrapEl.classList.remove('wheel-jackpot'); }, 2200);
+    }
+    voiceCue(isJack ? 'shabaash' : 'wah_ji');
+  }
+
   function doSpinOnce() {
     if (wheelSpinning || spinQueueActive) return;
     var begin = FTStorage.beginWheelSpin || null;
@@ -2894,10 +2971,11 @@
       showMysteryResult(spinRarityLabel(r.coins) + '!', '+' + r.coins + ' coins');
       flashSpinResult('You won +' + r.coins + ' 🪙 · ' + (FTStorage.getGiftBoxes ? FTStorage.getGiftBoxes() : r.giftsLeft) + ' gifts left');
       showToast('+' + r.coins + ' 🪙 ' + spinRarityLabel(r.coins), 1600, r.coins >= 888 ? 'medal' : 'gift');
+      celebrateJackpot(r.coins);
       refreshGiftsUI();
       updateCoinHud();
       setSpinButtonsBusy(false);
-      voiceCue('wah_ji');
+      if (r.coins < 888) voiceCue('wah_ji');
     }, SPIN_ONCE_MS);
   }
 
@@ -2949,6 +3027,7 @@
         results.push(r.coins);
         total += r.coins;
         flashSpinResult('+' + r.coins + ' 🪙  (' + results.length + '/' + planned + ')');
+        if (r.coins >= 888) celebrateJackpot(r.coins);
         refreshGiftsUI();
         updateCoinHud();
         if (results.length >= planned) {
@@ -4976,6 +5055,7 @@
       hapticIntensitySel.disabled = !hapticsOn;
     }
     if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
+    if (areaMusicChk) areaMusicChk.checked = !!(FTStorage.isAreaMusic && FTStorage.isAreaMusic());
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
     if (soundToggleChk) soundToggleChk.checked = !FTStorage.isMuted();
     if (confettiIntensitySel && FTStorage.getConfettiIntensity) confettiIntensitySel.value = FTStorage.getConfettiIntensity();
@@ -5069,6 +5149,13 @@
     if (FTStorage.setQuietNight) FTStorage.setQuietNight(!!quietNightChk.checked);
     syncQuietNight();
     showToast(quietNightChk.checked ? 'Quiet at night ON' : 'Quiet at night OFF', 1000);
+  });
+  if (areaMusicChk) areaMusicChk.addEventListener('change', function () {
+    var on = !!areaMusicChk.checked;
+    if (FTStorage.setAreaMusic) FTStorage.setAreaMusic(on);
+    syncAreaMusicPref();
+    showToast(on ? 'Area / menu music ON' : 'Area / menu music OFF', 1000);
+    if (on && state === 'menu' && FTAudio.playMenuMusic) FTAudio.playMenuMusic();
   });
   if (confettiIntensitySel) confettiIntensitySel.addEventListener('change', function () {
     var v = FTStorage.setConfettiIntensity ? FTStorage.setConfettiIntensity(confettiIntensitySel.value) : confettiIntensitySel.value;
@@ -5542,6 +5629,32 @@
     var claimed = FTStorage.getAlbumClaimed ? FTStorage.getAlbumClaimed() : {};
     var frags = FTStorage.getFragments ? FTStorage.getFragments() : 0;
     collectionList.innerHTML = '';
+    // 3.31: collection % meter
+    var meterWrap = document.createElement('div');
+    meterWrap.className = 'collection-pct-meter';
+    meterWrap.setAttribute('role', 'progressbar');
+    meterWrap.setAttribute('aria-valuemin', '0');
+    meterWrap.setAttribute('aria-valuemax', '100');
+    meterWrap.setAttribute('aria-valuenow', String(pct));
+    meterWrap.setAttribute('aria-label', 'Album completion ' + pct + ' percent');
+    var meterFill = document.createElement('span');
+    meterFill.className = 'collection-pct-fill';
+    meterFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    var meterLabel = document.createElement('strong');
+    meterLabel.className = 'collection-pct-label';
+    meterLabel.textContent = pct + '% complete';
+    meterWrap.appendChild(meterFill);
+    meterWrap.appendChild(meterLabel);
+    collectionList.appendChild(meterWrap);
+    var headerMeter = document.getElementById('collection-pct-header');
+    var headerFill = document.getElementById('collection-pct-header-fill');
+    var headerTxt = document.getElementById('collection-pct-header-text');
+    if (headerMeter) {
+      headerMeter.hidden = false;
+      headerMeter.setAttribute('aria-valuenow', String(pct));
+    }
+    if (headerFill) headerFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    if (headerTxt) headerTxt.textContent = pct + '%';
     var summary = document.createElement('p');
     summary.className = 'hint';
     summary.textContent =
@@ -5873,6 +5986,7 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   FTStorage.checkEnvMilestones(best);
   if (FTStorage.checkSeasonalUnlocks) FTStorage.checkSeasonalUnlocks(best);
   syncMuteBtn();
+  syncAreaMusicPref();
   startDailyCountdownTicker();
   initClouds();
   initRain();

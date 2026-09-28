@@ -270,9 +270,33 @@
     if (areaMusicTimer) { clearInterval(areaMusicTimer); areaMusicTimer = null; }
     areaMusicId = null;
   }
+  let menuMusicTimer = null;
+  let areaMusicEnabled = true;
+  function setAreaMusicEnabled(on) {
+    areaMusicEnabled = !!on;
+    if (!areaMusicEnabled) { stopAreaMusic(); stopMenuMusic(); }
+  }
+  function isAreaMusicEnabled() { return areaMusicEnabled; }
+  function stopMenuMusic() {
+    if (menuMusicTimer) { clearInterval(menuMusicTimer); menuMusicTimer = null; }
+  }
+  /** 3.31: soft menu stub loop (very quiet arpeggio). */
+  function playMenuMusic() {
+    if (muted || !areaMusicEnabled) { stopMenuMusic(); return; }
+    if (menuMusicTimer) return;
+    ensure();
+    var notes = [262, 330, 392, 523, 392, 330];
+    var i = 0;
+    menuMusicTimer = setInterval(function () {
+      if (muted || !areaMusicEnabled) return;
+      tone(notes[i % notes.length], 0.14, 'sine', 0.018);
+      i++;
+    }, 520);
+  }
   function playAreaMusic(areaId) {
-    if (muted) { stopAreaMusic(); return; }
+    if (muted || !areaMusicEnabled) { stopAreaMusic(); return; }
     if (areaMusicId === areaId) return;
+    stopMenuMusic();
     stopAreaMusic();
     areaMusicId = areaId;
     ensure();
@@ -800,7 +824,7 @@
     return voice('oye_hoye', { force: true });
   }
 
-  function setMuted(on) { muted = !!on; if (muted) { stopAreaMusic(); stopSpinWhoosh(); } }
+  function setMuted(on) { muted = !!on; if (muted) { stopAreaMusic(); stopMenuMusic(); stopSpinWhoosh(); } }
   function isMuted() { return muted; }
   /** 3.18: night quiet — softens SFX (~35%) without full mute. */
   function setQuietMode(on) { quietMul = on ? 0.35 : 1; }
@@ -823,6 +847,8 @@
     tick: tick, startSpinWhoosh: startSpinWhoosh, stopSpinWhoosh: stopSpinWhoosh, spinLand: spinLand,
     thunder: thunder, fanfare: fanfare,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
+    playMenuMusic: playMenuMusic, stopMenuMusic: stopMenuMusic,
+    setAreaMusicEnabled: setAreaMusicEnabled, isAreaMusicEnabled: isAreaMusicEnabled,
     voice: voice, voiceGift: voiceGift, preview: preview, VOICE_LABELS: VOICE_LABELS, SPEAK_TEXT: SPEAK_TEXT, VOICE_POOLS: VOICE_POOLS,
     setMuted: setMuted, isMuted: isMuted, setQuietMode: setQuietMode, isQuietMode: isQuietMode, setVoicePack: setVoicePack, isVoicePack: isVoicePack, unlock: unlock
   };

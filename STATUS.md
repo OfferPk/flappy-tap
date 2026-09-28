@@ -1,5 +1,23 @@
 # Urr Jaa! STATUS
 
+## Current: **3.31.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.30)
+- **Soft collision dust** — cyan/gold puff + ring on LUCKY saves
+- **Area / menu music stub** — Settings toggle; soft menu arpeggio + in-run beds
+- **Collection % meter** — visual progress bar on Album
+- **Mystery jackpot juice** — fireworks/coin rain/confetti on 888+ / 999 lands
+- KEEP ALL ≤3.30 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v40-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.31.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.31.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.30.0-urrjaa** (2026-09-28 PKT) · milestone
 
 ### This pack (NEW vs 3.11–3.29)

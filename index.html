@@ -63,7 +63,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.30.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.31.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -167,6 +167,10 @@
     <div id="screen-collection" class="screen panel-screen scroll-screen" hidden>
       <button type="button" class="panel-close" data-panel-close="collection" aria-label="Close">X</button>
       <h2>Collection Album</h2>
+      <div id="collection-pct-header" class="collection-pct-meter collection-pct-header" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Album completion" hidden>
+        <span id="collection-pct-header-fill" class="collection-pct-fill"></span>
+        <strong id="collection-pct-header-text" class="collection-pct-label">0%</strong>
+      </div>
       <button id="btn-collection-gifts" class="btn reward btn-sm" type="button">🎁 Mystery Rewards</button>
       <div id="collection-list" class="collection-list"></div>
       <button class="btn primary" type="button" data-close="collection">Back</button>
@@ -307,6 +311,11 @@
           <input id="quiet-night-toggle" type="checkbox" checked />
         </label>
         <p class="setting-hint">Softens game SFX in night / storm areas · voice stays · sleep-friendly</p>
+        <label class="setting-row check-row" for="area-music-toggle">
+          <span>Area / menu music</span>
+          <input id="area-music-toggle" type="checkbox" checked />
+        </label>
+        <p class="setting-hint">Soft stub loops on menu + in-run areas · off = silent beds</p>
         <label class="setting-row check-row" for="voice-toggle">
           <span>Desi voice ON/OFF</span>
           <input id="voice-toggle" type="checkbox" checked />
@@ -377,6 +386,7 @@
       <details class="settings-changelog" id="settings-changelog">
         <summary>Changelog · recent</summary>
         <ul class="changelog-list" aria-label="Recent changes">
+          <li><strong>3.31</strong> — soft collision dust · area/menu music · collection % meter · jackpot juice</li>
           <li><strong>3.30</strong> — flap whoosh juice · changelog · guide refresh · perf pass</li>
           <li><strong>3.29</strong> — haptic intensity · boss inbound warn · gift→spin toast · panel slide</li>
           <li><strong>3.28</strong> — power expiry pulse · near-miss edge flash · daily countdown · reset prefs</li>
@@ -387,7 +397,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.30.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.31.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -460,6 +470,7 @@
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>3.30:</strong> flap whoosh juice · Settings changelog-lite · Guide refresh · performance pass.</li>
+          <li><strong>3.31:</strong> soft collision dust · area/menu music stub · collection % meter · mystery jackpot juice.</li>
           <li><strong>Quick tips (3.23–3.30):</strong> share score card · coach marks · death freeze/path replay · daily countdown · haptic intensity · gift→spin toast · boss inbound · flap whoosh.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
