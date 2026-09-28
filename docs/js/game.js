@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.55.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.56.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -3731,9 +3731,10 @@ function updateComboMeter(visible) {
   }
 
   function spawnPipeClearJuice(x, y, kind) {
-    // 3.50–3.55 soft clear ring — gold / CLOSE cyan / PERFECT mint + micro sparks
+    // 3.50–3.56 soft clear ring — gold / CLOSE cyan / PERFECT mint + micro sparks
     if (reduceMotion || !bird) return;
-    if (particles.length > particleBudget() * 0.9) return;
+    var cap = particleBudget(); // 3.56: one budget read
+    if (particles.length > cap * 0.9) return;
     var grow = 36 + Math.min(14, combo * 1.4);
     var col = combo >= 5 ? 'rgba(251,191,36,0.55)' : 'rgba(255,217,61,0.42)';
     if (kind === 'close') col = combo >= 5 ? 'rgba(125,211,252,0.58)' : 'rgba(125,211,252,0.45)';
@@ -3748,8 +3749,8 @@ function updateComboMeter(visible) {
       kind: 'ring',
       grow: grow
     });
-    // 3.55 tiny juice: 2–3 micro sparks on normal/CLOSE clear
-    if (kind !== 'perfect' && particles.length < particleBudget() * 0.85) {
+    // 3.55/3.56 tiny juice: 2–3 micro sparks on normal/CLOSE clear
+    if (kind !== 'perfect' && particles.length < cap * 0.85) {
       var n = kind === 'close' ? 3 : 2;
       for (var si = 0; si < n; si++) {
         particles.push({
@@ -3784,7 +3785,12 @@ function updateComboMeter(visible) {
       tag = 'PERFECT!';
       if (FTAudio.perfect) FTAudio.perfect();
       showBanner('PERFECT!', 800);
-      showToast('PERFECT!', 900, 'perfect');
+      // 3.56: throttle PERFECT toast on rapid string (banner still fires)
+      var nowPerfect = performance.now();
+      if (!addPipeScore._lastPerfectToastAt || (nowPerfect - addPipeScore._lastPerfectToastAt) > 720) {
+        showToast('PERFECT!', 900, 'perfect');
+        addPipeScore._lastPerfectToastAt = nowPerfect;
+      }
       haptic('perfect');
       spawnPerfectStars(bird.x, bird.y);
       perfectRailFlash = 1;
@@ -3812,7 +3818,7 @@ function updateComboMeter(visible) {
     }
     var gained = basePts * mult;
     setScore(score + gained);
-    // 3.51–3.55: soft pipe-clear SFX/mix; tinted ring; soft squash; no stacked score on PERFECT
+    // 3.51–3.56: soft pipe-clear SFX/mix; tinted ring; soft squash; micro cam on clear
     var juiceKind = tag === 'PERFECT!' ? 'perfect' : (tag.indexOf('CLOSE') === 0 ? 'close' : 'clear');
     if (!reduceMotion) {
       // skip clear ring on PERFECT when particle pressure high (stars already fire)
@@ -3821,6 +3827,11 @@ function updateComboMeter(visible) {
       }
       // soft squash pulse only when not already deep in a flap squash
       if (squashTarget >= 0.9) squashTarget = 0.88;
+      // 3.56 tiny juice: micro cam nudge on plain clear (skip if already kicking)
+      if (juiceKind === 'clear' && camKickZoom < 0.006) {
+        camKickZoom = 0.01;
+        camKickY = -2;
+      }
     }
     if (tag === 'PERFECT!') {
       /* perfect() already played */
