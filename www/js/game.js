@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.42.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.43.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -320,8 +320,8 @@
     if (!toastEl) return;
     toastEl.textContent = msg;
     toastEl.hidden = false;
-    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim');
-    if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal' || kind === 'claim') {
+    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync');
+    if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal' || kind === 'claim' || kind === 'sync') {
       toastEl.classList.add('toast-' + kind);
     }
     void toastEl.offsetWidth;
@@ -329,7 +329,7 @@
     clearTimeout(showToast._t);
     showToast._t = setTimeout(function () {
       toastEl.hidden = true;
-      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim');
+      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync');
     }, ms || 1600);
   }
 
@@ -1722,6 +1722,7 @@ function updateComboMeter(visible) {
 
   function showMenu() {
     stopGaragePreview();
+    if (typeof closeGarageLongPreview === 'function') closeGarageLongPreview();
     setPauseBlur(false);
     state = 'menu';
     hideCoach();
@@ -2118,6 +2119,8 @@ function updateComboMeter(visible) {
   function startRun(fromContinue, mode) {
     FTAudio.unlock();
     if (FTAudio.stopMenuMusic) FTAudio.stopMenuMusic();
+    starCoinRunGain = 0; // 3.43 star coin run cap
+    starCoinLastAt = 0;
     if (mode) playMode = mode;
     if (isChallenge()) {
       challengeStageIdx = Math.max(0, Math.min(CHALLENGE_STAGES.length - 1, (FTStorage.getChallengeStage() || 1) - 1));
@@ -4244,6 +4247,11 @@ function updateComboMeter(visible) {
   var starfieldCache = null;
   var starfieldW = 0, starfieldH = 0;
   var shootingStar = null; // 3.41 rare night shooting star
+  var starCoinRunGain = 0; // 3.43 per-run cap
+  var starCoinLastAt = 0;
+  var STAR_COIN_CHANCE = 0.12;
+  var STAR_COIN_RUN_CAP = 3;
+  var STAR_COIN_COOLDOWN_MS = 10000;
   function ensureStarfield() {
     if (starfieldCache && starfieldW === W && starfieldH === H) return starfieldCache;
     starfieldW = W; starfieldH = H;
@@ -4333,16 +4341,24 @@ function updateComboMeter(visible) {
     ctx.fill();
     ctx.restore();
     if (s.life <= 0 || s.x < -80 || s.x > W + 80 || s.y > H * 0.55) {
-      // 3.42: rare coin toast when a night shooting star finishes mid-run
-      if (!s.rewarded && state === 'playing' && Math.random() < 0.2) {
+      // 3.42/3.43: rare star coin — lower chance, run cap, cooldown, mostly +1
+      if (!s.rewarded && state === 'playing') {
         s.rewarded = true;
-        var n = 1 + (Math.random() < 0.4 ? 1 : 0) + (Math.random() < 0.15 ? 1 : 0);
-        if (FTStorage.addCoins) FTStorage.addCoins(n);
-        if (typeof updateCoinHud === 'function') updateCoinHud();
-        showToast('⭐ Shooting star! +' + n + ' 🪙', 2200, 'lucky');
-        if (FTAudio && FTAudio.coin) FTAudio.coin();
-        else if (FTAudio && FTAudio.score) FTAudio.score();
-        if (typeof haptic === 'function') haptic('gift');
+        var now = performance.now();
+        var room = STAR_COIN_RUN_CAP - starCoinRunGain;
+        var cooled = (now - starCoinLastAt) >= STAR_COIN_COOLDOWN_MS;
+        if (room > 0 && cooled && Math.random() < STAR_COIN_CHANCE) {
+          var n = (room >= 2 && Math.random() < 0.22) ? 2 : 1;
+          if (n > room) n = room;
+          starCoinRunGain += n;
+          starCoinLastAt = now;
+          if (FTStorage.addCoins) FTStorage.addCoins(n);
+          if (typeof updateCoinHud === 'function') updateCoinHud();
+          showToast('⭐ Star luck! +' + n + ' 🪙' + (starCoinRunGain >= STAR_COIN_RUN_CAP ? ' · cap' : ''), 2000, 'lucky');
+          if (FTAudio && FTAudio.coin) FTAudio.coin();
+          else if (FTAudio && FTAudio.score) FTAudio.score();
+          if (typeof haptic === 'function') haptic('gift');
+        }
       }
       shootingStar = null;
     }
@@ -6197,6 +6213,8 @@ function updateComboMeter(visible) {
     if (screenGarage) screenGarage.hidden = false;
     refreshGarage();
     startGaragePreview();
+    bindGarageLongPress();
+    closeGarageLongPreview();
   });
   if (garageSortSel) {
     garageSortMode = (FTStorage.getGarageSort && FTStorage.getGarageSort()) || 'owned';
@@ -6236,9 +6254,13 @@ function updateComboMeter(visible) {
       showToast('Search cleared', 700);
     });
   }
-  // 3.42: pin refresh keeps filter + search
+  // 3.42/3.43: pin refresh + favorite sync toast
   global.onGarageFavoriteChange = function (kind, id, nowOn, label) {
-    showToast((nowOn ? '★ Pinned · ' : '☆ Unpinned · ') + (label || id), 900);
+    var favCount = 0;
+    if (FTStorage.getGarageFavorites) favCount = FTStorage.getGarageFavorites().length;
+    var syncMsg = (nowOn ? '★ Synced · ' : '☆ Synced · ') + (label || id) +
+      ' · ' + favCount + ' favorite' + (favCount === 1 ? '' : 's');
+    showToast(syncMsg, 1600, 'sync');
     if (typeof haptic === 'function') haptic('power');
     var q = '';
     var gs = document.getElementById('garage-search');
@@ -6254,9 +6276,156 @@ function updateComboMeter(visible) {
     if (gs) gs.value = q;
     applyGarageFilter();
     if (typeof startGaragePreview === 'function') startGaragePreview();
+    if (typeof bindGarageLongPress === 'function') bindGarageLongPress();
   };
+
+  // 3.43: long-press skin card → large animated preview
+  var garageLpTimer = 0;
+  var garageLpRaf = 0;
+  var garageLpOpened = false;
+  var garageLpSuppressClick = false;
+  var garageLpCard = null;
+
+  function stopGarageLpAnim() {
+    if (garageLpRaf) { cancelAnimationFrame(garageLpRaf); garageLpRaf = 0; }
+  }
+  function closeGarageLongPreview() {
+    var ov = document.getElementById('garage-lp-preview');
+    if (ov) ov.hidden = true;
+    stopGarageLpAnim();
+    garageLpOpened = false;
+    garageLpCard = null;
+  }
+  function drawGarageLpFrame(kind, id, canvas, t0) {
+    if (!canvas || !FTSkins || !FTSkins.draw) return;
+    var cctx = canvas.getContext('2d');
+    var S = canvas.width;
+    var mid = S / 2;
+    var sc = S / 64;
+    cctx.clearRect(0, 0, S, S);
+    var t = (performance.now() - t0) / 1000;
+    var flap = Math.sin(t * 6) * 0.55;
+    var rot = Math.sin(t * 1.2) * 0.18;
+    cctx.save();
+    cctx.translate(mid, mid);
+    cctx.scale(sc, sc);
+    cctx.translate(-32, -32);
+    if (kind === 'bird') {
+      FTSkins.draw(cctx, id, 32, 30, rot, 1.0, { wingFlap: flap, tipFlutter: flap * 0.3, mouthOpen: 0.15 + 0.1 * Math.max(0, flap) });
+    } else if (kind === 'vehicle') {
+      FTSkins.draw(cctx, 'sparrow', 32, 28, rot * 0.5, 1.0, { vehicle: id, wingFlap: 0, vehLean: Math.sin(t * 2) * 0.12 });
+    } else if (kind === 'env' && FTSkins.envPalette) {
+      var pal = FTSkins.envPalette(id, 'clear');
+      var g = cctx.createLinearGradient(0, 0, 0, 64);
+      g.addColorStop(0, pal.sky0); g.addColorStop(1, pal.sky2);
+      cctx.fillStyle = g; cctx.fillRect(0, 0, 64, 48);
+      cctx.fillStyle = pal.ground; cctx.fillRect(0, 48, 64, 16);
+      cctx.fillStyle = pal.grass; cctx.fillRect(0, 48, 64, 4);
+    } else if (kind === 'hat' || kind === 'trail') {
+      // reuse tiny picker icon style via blank + label handled outside
+      cctx.fillStyle = '#1a1a2e'; cctx.fillRect(0, 0, 64, 64);
+      var src = garageLpCard && garageLpCard.querySelector('canvas');
+      if (src) cctx.drawImage(src, 0, 0, 64, 64);
+    }
+    cctx.restore();
+  }
+  function openGarageLongPreview(card) {
+    if (!card || reduceMotion) {
+      // still show static preview when reduce-motion
+    }
+    var kind = card.closest('#garage-birds') ? 'bird' :
+      card.closest('#garage-vehicles') ? 'vehicle' :
+      card.closest('#garage-envs') ? 'env' :
+      card.closest('#garage-hats') ? 'hat' :
+      card.closest('#garage-trails') ? 'trail' : null;
+    if (!kind) return;
+    var id = card.dataset.id;
+    var label = card.dataset.label || id;
+    var ov = document.getElementById('garage-lp-preview');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'garage-lp-preview';
+      ov.className = 'garage-lp-preview';
+      ov.setAttribute('role', 'dialog');
+      ov.setAttribute('aria-label', 'Skin preview');
+      ov.innerHTML = '<div class="garage-lp-card">' +
+        '<canvas id="garage-lp-canvas" width="160" height="160" aria-hidden="true"></canvas>' +
+        '<p class="garage-lp-label" id="garage-lp-label"></p>' +
+        '<p class="hint garage-lp-hint">Release or tap to close · long-press any skin</p>' +
+        '<button type="button" class="btn ghost btn-sm" id="garage-lp-close">Close</button>' +
+        '</div>';
+      var host = document.getElementById('screen-garage') || document.body;
+      host.appendChild(ov);
+      ov.addEventListener('click', function (e) {
+        if (e.target === ov || (e.target && e.target.id === 'garage-lp-close')) closeGarageLongPreview();
+      });
+    }
+    var lab = document.getElementById('garage-lp-label');
+    if (lab) lab.textContent = (card.classList.contains('locked') ? '🔒 ' : '') + label;
+    var canvas = document.getElementById('garage-lp-canvas');
+    garageLpCard = card;
+    garageLpOpened = true;
+    ov.hidden = false;
+    stopGarageLpAnim();
+    var t0 = performance.now();
+    function tick() {
+      if (!garageLpOpened) return;
+      drawGarageLpFrame(kind, id, canvas, t0);
+      if (!reduceMotion && (kind === 'bird' || kind === 'vehicle')) {
+        garageLpRaf = requestAnimationFrame(tick);
+      }
+    }
+    tick();
+    if (typeof haptic === 'function') haptic('power');
+  }
+  function bindGarageLongPress() {
+    if (!screenGarage || screenGarage._lpBound) return;
+    screenGarage._lpBound = true;
+    screenGarage.addEventListener('pointerdown', function (e) {
+      if (e.button != null && e.button !== 0) return;
+      var card = e.target.closest && e.target.closest('.skin-card');
+      if (!card || e.target.closest('.skin-fav-pin')) return;
+      clearTimeout(garageLpTimer);
+      garageLpSuppressClick = false;
+      var ptr = e.pointerId;
+      garageLpTimer = setTimeout(function () {
+        garageLpTimer = 0;
+        garageLpSuppressClick = true;
+        openGarageLongPreview(card);
+      }, 450);
+      function clearLp() {
+        clearTimeout(garageLpTimer);
+        garageLpTimer = 0;
+        screenGarage.releasePointerCapture && screenGarage.releasePointerCapture(ptr);
+      }
+      function onUp() {
+        clearLp();
+        screenGarage.removeEventListener('pointerup', onUp);
+        screenGarage.removeEventListener('pointercancel', onUp);
+        screenGarage.removeEventListener('pointerleave', onUp);
+        // keep preview open until explicit close / second tap outside
+      }
+      try { screenGarage.setPointerCapture && screenGarage.setPointerCapture(ptr); } catch (err) {}
+      screenGarage.addEventListener('pointerup', onUp);
+      screenGarage.addEventListener('pointercancel', onUp);
+    }, true);
+    screenGarage.addEventListener('click', function (e) {
+      if (!garageLpSuppressClick) return;
+      var card = e.target.closest && e.target.closest('.skin-card');
+      if (card) {
+        e.preventDefault();
+        e.stopPropagation();
+        garageLpSuppressClick = false;
+      }
+    }, true);
+    screenGarage.addEventListener('contextmenu', function (e) {
+      if (e.target.closest && e.target.closest('.skin-card')) e.preventDefault();
+    });
+  }
+  bindGarageLongPress();
+
   document.querySelectorAll('[data-close="garage"]').forEach(function (b) {
-    b.addEventListener('click', function () { stopGaragePreview(); showMenu(); });
+    b.addEventListener('click', function () { closeGarageLongPreview(); stopGaragePreview(); showMenu(); });
   });
 
 

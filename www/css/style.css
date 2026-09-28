@@ -3467,3 +3467,49 @@ html.reduce-motion .toast.toast-claim.toast-pop { animation: toast-pop 0.25s eas
   outline: 2px solid rgba(255,217,61,.8);
   outline-offset: 1px;
 }
+
+/* ——— v3.43: fav sync toast, garage long-press preview ——— */
+.toast.toast-sync {
+  color: #fff6c8;
+  border-color: rgba(250,204,21,.75);
+  background: linear-gradient(135deg, rgba(66,48,12,.96), rgba(30,41,59,.94));
+  font-weight: 800;
+  box-shadow: 0 0 0 1px rgba(255,217,61,.3), 0 8px 24px rgba(0,0,0,.35);
+}
+.toast.toast-sync.toast-pop { animation: toast-impact .32s cubic-bezier(.2,.8,.2,1); }
+.garage-lp-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8,12,24,.72);
+  backdrop-filter: blur(4px);
+}
+.garage-lp-preview[hidden] { display: none !important; }
+.garage-lp-card {
+  width: min(280px, 92%);
+  text-align: center;
+  padding: 16px 14px 12px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(30,41,59,.98), rgba(15,23,42,.96));
+  border: 1px solid rgba(255,217,61,.35);
+  box-shadow: 0 12px 40px rgba(0,0,0,.45);
+}
+.garage-lp-card canvas {
+  display: block;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 8px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.04);
+}
+.garage-lp-label {
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #fff;
+}
+.garage-lp-hint { margin: 0 0 10px; font-size: 0.72rem; }
+html.reduce-motion .garage-lp-preview { backdrop-filter: none; }

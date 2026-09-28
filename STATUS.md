@@ -1,5 +1,22 @@
 # Urr Jaa! STATUS
 
+## Current: **3.43.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.42)
+- **Favorite sync toast** — ★/☆ Synced · name · N favorites (`toast-sync`)
+- **Star coin balance** — 12% chance, mostly +1, run cap 3, 10s cooldown
+- **Garage long-press preview** — hold skin ~450ms for large animated preview
+- Polish / bugfixes — suppress click after long-press; close preview on menu
+- KEEP ALL ≤3.42 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v52-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.43.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.43.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.42.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.41)
