@@ -9,7 +9,7 @@
 
 ## Sync
 - Fetched/merged `origin/main` before work (already up to date @ 3.11.0).
-- Shipped: tag `v3.12.0-urrjaa` · Pages `docs/` · release zip
+- Shipped: commit `1d9d3ef` · tag `v3.12.0-urrjaa` · Pages `docs/` · release zip
 
 ## ADD — v3.12.0 pack (different from 3.11)
 - [x] Daily mission variety (PERFECT/combo/gifts/fly + rotate full pool)
