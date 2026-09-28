@@ -1,4 +1,4 @@
-/* Urr Jaa! — mobile-first polished UI (v3.3.0-urrjaa) */
+/* Urr Jaa! — mobile-first polished UI (v3.3.1-urrjaa) */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -647,6 +647,11 @@ html.reduce-motion #score-display.score-bump { animation: none; }
 
 #voice-toggle {
   width: 22px; height: 22px; accent-color: var(--accent);
+}
+.voice-preview-btn {
+  width: 100%;
+  margin: 4px 0 10px;
+  font-size: 0.92rem;
 }
 
 

@@ -1,7 +1,7 @@
 {
   "name": "urr-jaa",
-  "version": "3.3.0-urrjaa",
-  "description": "Urr Jaa! — offline one-tap fly arcade (PWA + Capacitor). Repo folder: flappy-tap.",
+  "version": "3.3.1-urrjaa",
+  "description": "Urr Jaa! \u2014 offline one-tap fly arcade (PWA + Capacitor). Repo folder: flappy-tap.",
   "private": true,
   "scripts": {
     "start": "npx --yes serve -l 4174 .",

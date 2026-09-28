@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.3.0-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album.
+ * Urr Jaa! v3.3.1-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {

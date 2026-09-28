@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.3.0 — birds, vehicles, accessories, trails, weather, passives, traffic.
+ * Urr Jaa! v3.3.1 — birds, vehicles, accessories, trails, weather, passives, traffic.
  * Canvas-drawn; forgiving hitboxes.
  */
 (function (global) {

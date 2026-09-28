@@ -1,10 +1,10 @@
-# STATUS — Urr Jaa! v3.3.0-urrjaa
+# STATUS — Urr Jaa! v3.3.1-urrjaa
 
 **Path:** `/workspace/games/flappy-tap` (repo OfferPk/flappy-tap; UI title **Urr Jaa!**)
 **Owner:** Mia Smith
-**Updated:** 2026-09-28 ~16:15 Asia/Karachi (PKT)
-**Version:** **3.3.0-urrjaa**
-**SW cache:** `urrjaa-v8-20260928`
+**Updated:** 2026-09-28 ~16:20 Asia/Karachi (PKT)
+**Version:** **3.3.1-urrjaa**
+**SW cache:** `urrjaa-v9-20260928`
 **Capacitor appId:** `com.offerpk.urrjaa`
 
 ## OWNER COMPLETE ✅
@@ -25,7 +25,16 @@
 - [x] First-run protection (runs ≤3): extra-wide gaps, fewer vehicles, slower, earlier power-ups
 - [x] Calibration from last 5 run durations (short→ease, long→gently harden) — not Hard/Challenge/One Life
 - [x] Sensitivity still scales gravity & flap
-- [x] **Desi voice FIX:** toasts + Web Audio beeps fire on events; Settings Desi voice ON/OFF (localStorage, default ON); mute ≠ voice (independent); no TTS required
+- [x] Desi voice ON/OFF (localStorage, default ON); mute ≠ voice (independent)
+
+### ADD — v3.3.1 (Desi speech)
+- [x] **speechSynthesis** for short phrases when Desi voice ON: oye hoye, bach ke, wah ji wah, kya udaan hai, haye oye, shabaash, lucky
+- [x] Prefer `hi-IN` / `ur` voice; else best available; rate ~1.1
+- [x] Fallback: multi-note melodic chirp (audible) + toast still shows
+- [x] Unlock AudioContext + speech on first user tap (mobile)
+- [x] Settings Desi voice gates speech; **Preview voice** button speaks “Oye hoye!”
+- [x] Game mute does **not** mute Desi speech (voice independent)
+- [x] Cues on flap milestones, near-miss, death, new record, lucky, etc.
 
 ### Forgiveness by mode
 | Mode | Forgiving |
@@ -34,7 +43,7 @@
 | Hard / Challenge / One Life | NO — aggressive / stage / strict |
 
 ### Ship
-- [x] Offline PWA (`urrjaa-v8-20260928`)
+- [x] Offline PWA (`urrjaa-v9-20260928`)
 - [x] `www/` + `docs/` + `dist/urr-jaa-web-windows.zip`
 - [x] `npm run check` + `npm run smoke`
 - [x] No git push · no secrets

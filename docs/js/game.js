@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.3.0-urrjaa — forgiving feel (30–60s survival), Desi voice fix, calibration.
+ * Urr Jaa! v3.3.1-urrjaa — forgiving feel (30–60s survival), Desi speechSynthesis voice, calibration.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -188,6 +188,7 @@
   const soundToggleChk = document.getElementById('sound-toggle');
   const hapticsToggleChk = document.getElementById('haptics-toggle');
   const voiceToggleChk = document.getElementById('voice-toggle');
+  const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
   const medalLabelEl = document.getElementById('medal-label');
@@ -243,8 +244,8 @@
     if (!FTAudio || typeof FTAudio.isVoicePack !== 'function') return;
     if (!FTAudio.isVoicePack()) return;
     if (FTAudio.unlock) FTAudio.unlock();
-    var label = FTAudio.voice(id);
-    // Always toast when Desi voice ON (works even if true TTS unavailable)
+    var label = FTAudio.voice(id); // speechSynthesis or melodic chirp fallback
+    // Always toast when Desi voice ON
     if (label) showToast(label, 1200);
     else if (FTAudio.VOICE_LABELS && FTAudio.VOICE_LABELS[id]) showToast(FTAudio.VOICE_LABELS[id], 1200);
   }
@@ -1137,7 +1138,7 @@
     else FTAudio.nearmiss();
     showBanner('LUCKY!', 750);
     showToast('LUCKY!', 900);
-    voiceCue('wah_ji');
+    voiceCue('lucky');
     haptic('nearmiss');
   }
 
@@ -2004,6 +2005,22 @@
     e.preventDefault();
     flap();
   }
+  // Unlock AudioContext + speechSynthesis on first user tap (mobile gate)
+  (function () {
+    var done = false;
+    function once() {
+      if (done) return;
+      done = true;
+      if (FTAudio && FTAudio.unlock) FTAudio.unlock();
+      document.removeEventListener('pointerdown', once, true);
+      document.removeEventListener('touchstart', once, true);
+      document.removeEventListener('keydown', once, true);
+    }
+    document.addEventListener('pointerdown', once, true);
+    document.addEventListener('touchstart', once, true);
+    document.addEventListener('keydown', once, true);
+  })();
+
   canvas.addEventListener('pointerdown', onPointer);
   document.getElementById('app').addEventListener('pointerdown', function (e) {
     if (state === 'playing') {
@@ -2104,10 +2121,20 @@
     FTAudio.setVoicePack(on);
     if (on) {
       FTAudio.unlock();
-      voiceCue('oye_hoye'); // preview: toast + beep (independent of mute)
+      voiceCue('oye_hoye'); // preview sample when enabling (speech; independent of mute)
     } else {
       showToast('Desi voice off', 900);
     }
+  });
+  if (btnVoicePreview) btnVoicePreview.addEventListener('click', function () {
+    FTAudio.unlock();
+    if (!FTAudio.isVoicePack()) {
+      showToast('Turn Desi voice ON first', 1000);
+      return;
+    }
+    var label = (FTAudio.preview && FTAudio.preview()) || FTAudio.voice('oye_hoye');
+    if (label) showToast(label, 1200);
+    else showToast('Oye hoye!', 1200);
   });
 
   async function tryUnlock(item, kind) {
