@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.51.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.52.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -1887,7 +1887,7 @@ function updateComboMeter(visible) {
     return TUTORIAL_TIPS[i];
   }
 
-  // 3.51: Play shimmer once per calendar day (not forever / not every menu)
+  // 3.51/3.52: Play shimmer once per calendar day — edge-case hardened
   var PLAY_SPLASH_DAY_KEY = 'flappy-tap:play-splash-day';
   var _playSplashSessionFallback = false;
 
@@ -1900,9 +1900,17 @@ function updateComboMeter(visible) {
 
   function maybePlayShimmer() {
     if (reduceMotion) return;
+    if (typeof document !== 'undefined' && document.hidden) return; // background tab
+    if (!btnPlay || !screenStart || screenStart.hidden) return;
+    if (!(W > 8 && H > 8)) return; // canvas not ready
+    var now = performance.now();
+    if (maybePlayShimmer._lastTry && (now - maybePlayShimmer._lastTry) < 900) return; // debounce
+    maybePlayShimmer._lastTry = now;
     var today = playSplashTodayKey();
     try {
-      if (localStorage.getItem(PLAY_SPLASH_DAY_KEY) === today) return;
+      var prev = localStorage.getItem(PLAY_SPLASH_DAY_KEY);
+      if (prev === today) return;
+      // corrupt / non-date → treat as fresh; future-dated (clock skew) → still claim today
       localStorage.setItem(PLAY_SPLASH_DAY_KEY, today);
     } catch (_) {
       if (_playSplashSessionFallback) return;
@@ -1917,7 +1925,7 @@ function updateComboMeter(visible) {
         if (btnPlay) btnPlay.classList.remove('btn-play-milestone');
       }, 1400);
     }
-    if (typeof spawnConfettiBurst === 'function') {
+    if (typeof spawnConfettiBurst === 'function' && particles.length < particleBudget() * 0.55) {
       spawnConfettiBurst(W * 0.5, H * 0.58, 8);
     }
   }
@@ -3705,17 +3713,18 @@ function updateComboMeter(visible) {
   }
 
   function spawnPipeClearJuice(x, y) {
-    // 3.50/3.51 soft gold pipe-clear ring (+ soft SFX in addPipeScore)
+    // 3.50–3.52 soft gold pipe-clear ring (combo-scaled grow = small juice)
     if (reduceMotion || !bird) return;
     if (particles.length > particleBudget() * 0.9) return;
+    var grow = 36 + Math.min(14, combo * 1.4);
     particles.push({
       x: x, y: y,
       vx: 0, vy: 0,
       life: 0.3, max: 0.3,
       color: combo >= 5 ? 'rgba(251,191,36,0.55)' : 'rgba(255,217,61,0.42)',
-      r: 11,
+      r: 10 + Math.min(3, combo * 0.25),
       kind: 'ring',
-      grow: 40
+      grow: grow
     });
     trimParticles();
   }
@@ -3765,12 +3774,12 @@ function updateComboMeter(visible) {
     }
     var gained = basePts * mult;
     setScore(score + gained);
-    // 3.51: soft pipe-clear SFX; skip stacked score blip on PERFECT (already has perfect())
+    // 3.51/3.52: soft pipe-clear SFX w/ volume mix; no stacked score on PERFECT
     if (!reduceMotion) spawnPipeClearJuice(bird.x + 8, bird.y);
     if (tag === 'PERFECT!') {
       /* perfect() already played */
     } else if (FTAudio && FTAudio.pipeClear) {
-      FTAudio.pipeClear();
+      FTAudio.pipeClear({ combo: combo });
     } else if (FTAudio && FTAudio.score) {
       FTAudio.score();
     }
