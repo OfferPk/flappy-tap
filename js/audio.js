@@ -212,6 +212,36 @@
     setTimeout(function () { tone(990, 0.08, 'triangle', 0.07); }, 45);
   }
 
+  /** 3.19: soft wheel segment tick during Mystery spin (15s). */
+  function tick() {
+    var j = (Math.random() - 0.5) * 50;
+    tone(880 + j, 0.018, 'triangle', 0.035);
+    tone(1320 + j * 0.4, 0.012, 'sine', 0.02);
+  }
+
+  /** Soft whoosh bed while the wheel spins (call start/stop). */
+  var spinWhooshTimer = null;
+  function startSpinWhoosh() {
+    stopSpinWhoosh();
+    if (muted) return;
+    var step = 0;
+    spinWhooshTimer = setInterval(function () {
+      if (muted) return;
+      step += 1;
+      var base = 180 + (step % 8) * 18;
+      tone(base, 0.09, 'sine', 0.018);
+      if (step % 3 === 0) tone(base * 1.5, 0.06, 'triangle', 0.012);
+    }, 220);
+  }
+  function stopSpinWhoosh() {
+    if (spinWhooshTimer) { clearInterval(spinWhooshTimer); spinWhooshTimer = null; }
+  }
+  function spinLand() {
+    tone(523, 0.06, 'sine', 0.09);
+    setTimeout(function () { tone(784, 0.08, 'triangle', 0.08); }, 50);
+    setTimeout(function () { tone(1047, 0.12, 'sine', 0.07); }, 110);
+  }
+
   let areaMusicTimer = null;
   let areaMusicId = null;
   function stopAreaMusic() {
@@ -748,7 +778,7 @@
     return voice('oye_hoye', { force: true });
   }
 
-  function setMuted(on) { muted = !!on; if (muted) stopAreaMusic(); }
+  function setMuted(on) { muted = !!on; if (muted) { stopAreaMusic(); stopSpinWhoosh(); } }
   function isMuted() { return muted; }
   /** 3.18: night quiet — softens SFX (~35%) without full mute. */
   function setQuietMode(on) { quietMul = on ? 0.35 : 1; }
@@ -768,6 +798,7 @@
     flap: flap, score: score, coin: coin, hit: hit, firework: firework, powerup: powerup, nearmiss: nearmiss, chirp: chirp,
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
+    tick: tick, startSpinWhoosh: startSpinWhoosh, stopSpinWhoosh: stopSpinWhoosh, spinLand: spinLand,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
     voice: voice, voiceGift: voiceGift, preview: preview, VOICE_LABELS: VOICE_LABELS, SPEAK_TEXT: SPEAK_TEXT, VOICE_POOLS: VOICE_POOLS,
     setMuted: setMuted, isMuted: isMuted, setQuietMode: setQuietMode, isQuietMode: isQuietMode, setVoicePack: setVoicePack, isVoicePack: isVoicePack, unlock: unlock

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.18.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.19.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -18,6 +18,9 @@
     trail: PREFIX + 'trail',
     mute: PREFIX + 'mute',
     quietNight: PREFIX + 'quiet-night',
+    topRuns: PREFIX + 'top-runs',
+    streakLog: PREFIX + 'streak-log',
+    confettiIntensity: PREFIX + 'confetti-intensity',
     runs: PREFIX + 'runs',
     medal: PREFIX + 'best-medal',
     dailyBest: PREFIX + 'daily-best',
@@ -531,6 +534,7 @@
     set(KEYS.streakDay, day);
     set(KEYS.streakDate, todayKey());
     set(KEYS.streakClaimed, '1');
+    markStreakClaimedDay(todayKey());
     const result = { day: day, type: reward.type, coins: 0, unlocked: null };
     if (reward.type === 'coins') {
       addCoins(reward.coins);
@@ -605,6 +609,59 @@
     set(KEYS.challengeStage, Math.max(1, n | 0));
   }
 
+
+  // ——— 3.19: local top-5 runs, streak calendar log, confetti intensity ———
+  const TOP_RUNS_MAX = 5;
+  function getTopRuns() {
+    try {
+      const raw = get(KEYS.topRuns, '[]');
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.slice(0, TOP_RUNS_MAX) : [];
+    } catch (e) { return []; }
+  }
+  function recordTopRun(entry) {
+    if (!entry || !(entry.score > 0)) return getTopRuns();
+    const list = getTopRuns();
+    list.push({
+      score: entry.score | 0,
+      mode: String(entry.mode || 'classic').slice(0, 24),
+      date: entry.date || todayKey(),
+      perfects: entry.perfects | 0,
+      combo: entry.combo | 0
+    });
+    list.sort(function (a, b) { return (b.score | 0) - (a.score | 0); });
+    const trimmed = list.slice(0, TOP_RUNS_MAX);
+    set(KEYS.topRuns, JSON.stringify(trimmed));
+    return trimmed;
+  }
+
+  function getStreakLog() {
+    try {
+      const raw = get(KEYS.streakLog, '[]');
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function markStreakClaimedDay(dateStr) {
+    const d = dateStr || todayKey();
+    const log = getStreakLog().filter(function (x) { return x !== d; });
+    log.push(d);
+    // keep ~90 days
+    while (log.length > 90) log.shift();
+    set(KEYS.streakLog, JSON.stringify(log));
+    return log;
+  }
+
+  function getConfettiIntensity() {
+    const v = get(KEYS.confettiIntensity, 'normal');
+    return (v === 'off' || v === 'low' || v === 'normal' || v === 'high') ? v : 'normal';
+  }
+  function setConfettiIntensity(v) {
+    if (v !== 'off' && v !== 'low' && v !== 'normal' && v !== 'high') v = 'normal';
+    set(KEYS.confettiIntensity, v);
+    return v;
+  }
+
   function getLeaderboards() {
     return {
       personalBest: getBest(),
@@ -615,7 +672,8 @@
       timeAttack: getTimeAttackBest(),
       oneLife: getOneLifeBest(),
       hard: getHardBest(),
-      noCoin: getNoCoinBest()
+      noCoin: getNoCoinBest(),
+      topRuns: getTopRuns()
     };
   }
 
@@ -1111,7 +1169,8 @@
     getCollection, addToCollection, collectionCounts,
     getMissions, bumpMission, setMissionMax, claimMission, MISSION_DEFS, MISSION_POOL,
     getActiveMissionIds, getMetersBest, setMetersBest, checkEnvMilestones, checkThemeSkinMilestones,
-    getStreak, claimStreak, STREAK_REWARDS,
+    getStreak, claimStreak, STREAK_REWARDS, getStreakLog, markStreakClaimedDay,
+    getTopRuns, recordTopRun, getConfettiIntensity, setConfettiIntensity,
     getOneLifeBest, setOneLifeBest, oneLifeMedalFor, getOneLifeMedal,
     getTimeAttackBest, setTimeAttackBest,
     getNoCoinBest, setNoCoinBest, getHardBest, setHardBest,

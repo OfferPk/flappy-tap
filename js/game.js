@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.18.0-urrjaa — Combo milestone toasts, garage preview rotate, mission claim juice,
- * quiet night mode, better gift glow, mobile tap latency, bugfixes.
- * KEEP ALL ≤3.17 incl. 15s Mystery Spin once + Close (X) + tips/fireworks/pipes.
+ * Urr Jaa! v3.19.0-urrjaa — Streak calendar UI, mystery spin SFX during 15s, idle blink polish,
+ * local top-5 boards, confetti intensity setting, bugfixes.
+ * KEEP ALL ≤3.18 incl. 15s Mystery Spin once + Close (X) + quiet night + tap latency.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  */
 (function () {
@@ -213,6 +213,7 @@
   const hapticsToggleChk = document.getElementById('haptics-toggle');
   const voiceToggleChk = document.getElementById('voice-toggle');
   const quietNightChk = document.getElementById('quiet-night-toggle');
+  const confettiIntensitySel = document.getElementById('confetti-intensity');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -867,10 +868,22 @@
         tailWag = Math.sin(t * 4.2) * 0.18;
         vehLean = Math.sin(t * 1.8) * 0.04;
       }
-      // Eye blink every ~2.8s for ~0.12s
-      var blinkCycle = (t % 2.85);
-      eyeBlink = (blinkCycle > 2.72) ? Math.min(1, (blinkCycle - 2.72) / 0.06) : 0;
-      if (blinkCycle > 2.78) eyeBlink = Math.max(0, 1 - (blinkCycle - 2.78) / 0.07);
+      // 3.19 idle blink polish: ~2.4–3.6s cadence, soft open/close, occasional double-blink
+      var blinkPeriod = 2.55 + (Math.sin(t * 0.17) * 0.5 + 0.5) * 0.9; // 2.55–3.45s
+      var blinkCycle = t % blinkPeriod;
+      var closeStart = blinkPeriod - 0.16;
+      eyeBlink = 0;
+      if (blinkCycle > closeStart) {
+        var u = (blinkCycle - closeStart) / 0.16;
+        // ease in-out lid
+        eyeBlink = u < 0.45 ? (u / 0.45) : (u < 0.7 ? 1 : Math.max(0, 1 - (u - 0.7) / 0.3));
+      }
+      // Occasional double-blink (~every 4th cycle)
+      var cycleIdx = Math.floor(t / blinkPeriod);
+      if ((cycleIdx % 4) === 2 && blinkCycle < 0.22) {
+        var u2 = blinkCycle / 0.22;
+        eyeBlink = Math.max(eyeBlink, u2 < 0.4 ? u2 / 0.4 : Math.max(0, 1 - (u2 - 0.4) / 0.6));
+      }
       // Mouth open during chirp window (tap / near-miss / gift) + idle micro-chirp
       if (now < mouthChirpUntil) {
         var rem = (mouthChirpUntil - now) / 280;
@@ -1365,6 +1378,12 @@
       modeDeathValueEl.textContent = labels[playMode] || playMode;
     }
     var isRecord = persistScore();
+    if (!isPractice() && score > 0 && FTStorage.recordTopRun) {
+      FTStorage.recordTopRun({
+        score: score, mode: playMode, perfects: runPerfects,
+        combo: Math.max(runBestCombo, runBestCoinCombo)
+      });
+    }
     FTStorage.setBestPerfect(runPerfects);
     FTStorage.bumpNearMissTotal(runNearMisses);
     FTStorage.bumpPerfectTotal(runPerfects);
@@ -1811,10 +1830,20 @@
     trimParticles();
   }
 
+  function confettiScale() {
+    var lvl = (FTStorage.getConfettiIntensity && FTStorage.getConfettiIntensity()) || 'normal';
+    if (lvl === 'off') return 0;
+    if (lvl === 'low') return 0.45;
+    if (lvl === 'high') return 1.55;
+    return 1;
+  }
   function spawnConfettiBurst(x, y, n) {
     if (reduceMotion) return;
+    var scale = confettiScale();
+    if (scale <= 0) return;
     var cols = ['#ff6b6b', '#ffd93d', '#4ecdc4', '#c084fc', '#60a5fa', '#f472b6'];
-    n = n || 18;
+    n = Math.max(0, Math.round((n || 18) * scale));
+    if (n < 1) return;
     for (var i = 0; i < n; i++) {
       particles.push({
         x: x, y: y,
@@ -2256,6 +2285,9 @@
       cancelAnimationFrame(wheelAnimRaf);
       wheelAnimRaf = 0;
     }
+    if (FTAudio && FTAudio.stopSpinWhoosh) {
+      try { FTAudio.stopSpinWhoosh(); } catch (errC) { /* ignore */ }
+    }
   }
   function wheelEaseOut(t) {
     // Fast start, long decelerate into the winning segment (easeOutQuint)
@@ -2290,6 +2322,10 @@
     if (spinResultEl && !reduce && dur >= 5000) {
       flashSpinResult('Spinning… 🎰');
     }
+    // 3.19: soft whoosh bed during long spins (esp. full 15s Spin once)
+    if (!reduce && dur >= 2000 && FTAudio && FTAudio.startSpinWhoosh) {
+      try { FTAudio.startSpinWhoosh(); } catch (errW) { /* ignore */ }
+    }
     // Kill any leftover CSS transition — rAF owns transform exclusively
     spinWheelEl.style.transition = 'none';
     spinWheelEl.style.webkitTransition = 'none';
@@ -2319,6 +2355,12 @@
         spinWheelEl.style.transform = 'rotate(' + target + 'deg) translateZ(0)';
         spinWheelEl.style.webkitTransform = 'rotate(' + target + 'deg) translateZ(0)';
         wheelSpinning = false;
+        if (FTAudio && FTAudio.stopSpinWhoosh) {
+          try { FTAudio.stopSpinWhoosh(); } catch (errS) { /* ignore */ }
+        }
+        if (!reduce && FTAudio && FTAudio.spinLand) {
+          try { FTAudio.spinLand(); } catch (errL) { /* ignore */ }
+        }
         if (wheelWrapEl) {
           wheelWrapEl.classList.remove('wheel-spinning');
           wheelWrapEl.classList.remove('wheel-win');
@@ -3819,6 +3861,9 @@
     if (hapticsToggleChk) hapticsToggleChk.checked = hapticsOn;
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
     if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
+    if (confettiIntensitySel && FTStorage.getConfettiIntensity) {
+      confettiIntensitySel.value = FTStorage.getConfettiIntensity();
+    }
   });
   if (btnSettingsClose) btnSettingsClose.addEventListener('click', function () { screenSettings.hidden = true; });
   var btnHapticPreview = document.getElementById('btn-haptic-preview');
@@ -3849,6 +3894,11 @@
     if (FTStorage.setQuietNight) FTStorage.setQuietNight(!!quietNightChk.checked);
     syncQuietNight();
     showToast(quietNightChk.checked ? 'Quiet at night ON' : 'Quiet at night OFF', 1000);
+  });
+  if (confettiIntensitySel) confettiIntensitySel.addEventListener('change', function () {
+    var v = FTStorage.setConfettiIntensity ? FTStorage.setConfettiIntensity(confettiIntensitySel.value) : confettiIntensitySel.value;
+    showToast('Confetti: ' + v, 900);
+    if (v !== 'off' && !reduceMotion) spawnConfettiBurst(W * 0.5, H * 0.4, 12);
   });
   if (voiceToggleChk) voiceToggleChk.addEventListener('change', function () {
     var on = !!voiceToggleChk.checked;
@@ -4352,7 +4402,24 @@
       ['One Life PB', lb.oneLife],
       ['Best Medal', bestMedal ? String(bestMedal) : '—']
     ];
-    boardsList.innerHTML = '<h3 class="section-title">Medal Gallery</h3>' + gallery +
+    var top = (lb.topRuns && lb.topRuns.length) ? lb.topRuns : (FTStorage.getTopRuns ? FTStorage.getTopRuns() : []);
+    var topHtml = '<h3 class="section-title">Local Top 5</h3><div class="top5-list" role="list">';
+    if (!top.length) {
+      topHtml += '<p class="hint top5-empty">No ranked runs yet — finish a flight!</p>';
+    } else {
+      for (var ti = 0; ti < top.length; ti++) {
+        var tr = top[ti];
+        topHtml += '<div class="top5-row" role="listitem">' +
+          '<span class="top5-rank">#' + (ti + 1) + '</span>' +
+          '<span class="top5-score">' + (tr.score | 0) + '</span>' +
+          '<span class="top5-meta">' + (tr.mode || 'classic') +
+          (tr.perfects ? (' · ✨' + tr.perfects) : '') +
+          (tr.combo ? (' · 🔥' + tr.combo) : '') +
+          '<em>' + (tr.date || '') + '</em></span></div>';
+      }
+    }
+    topHtml += '</div>';
+    boardsList.innerHTML = '<h3 class="section-title">Medal Gallery</h3>' + gallery + topHtml +
       '<h3 class="section-title">Scores</h3>' +
       rows.map(function (r) {
         return '<div class="board-row"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';
@@ -4367,6 +4434,32 @@
     b.addEventListener('click', function () { showMenu(); });
   });
 
+  function buildStreakCalendarHtml() {
+    var log = (FTStorage.getStreakLog && FTStorage.getStreakLog()) || [];
+    var claimed = Object.create(null);
+    for (var i = 0; i < log.length; i++) claimed[log[i]] = 1;
+    var now = new Date();
+    var y = now.getFullYear();
+    var m = now.getMonth(); // 0-based
+    var monthName = now.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    var firstDow = new Date(y, m, 1).getDay(); // 0 Sun
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var todayStr = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    var html = '<div class="streak-calendar" aria-label="Streak calendar ' + monthName + '">';
+    html += '<div class="streak-cal-head"><strong>' + monthName + '</strong><span>claimed days lit</span></div>';
+    html += '<div class="streak-cal-dows" aria-hidden="true"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>';
+    html += '<div class="streak-cal-grid">';
+    for (var b = 0; b < firstDow; b++) html += '<span class="streak-cal-cell empty"></span>';
+    for (var d = 1; d <= daysInMonth; d++) {
+      var key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      var cls = 'streak-cal-cell';
+      if (claimed[key]) cls += ' claimed';
+      if (key === todayStr) cls += ' today';
+      html += '<span class="' + cls + '" title="' + key + '">' + d + '</span>';
+    }
+    html += '</div></div>';
+    return html;
+  }
   function refreshStreak() {
     if (!streakBody) return;
     var st = FTStorage.getStreak();
@@ -4387,6 +4480,7 @@
         '<span>D' + i + '</span><strong>' + label + '</strong></div>';
     }
     html += '</div>';
+    html += buildStreakCalendarHtml();
     streakBody.innerHTML = html;
     var btn = document.getElementById('btn-claim-streak');
     if (btn) {

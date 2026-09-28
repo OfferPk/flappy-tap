@@ -1,5 +1,24 @@
 # Urr Jaa! STATUS
 
+## Current: **3.19.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.18)
+- **Streak calendar UI** — month grid with claimed days lit (+ 7-day reward row)
+- **Mystery spin SFX** — whoosh bed + segment ticks + land chime during **15s** Spin once
+- **Idle blink polish** — softer lids, variable cadence, occasional double-blink
+- **Local Top 5** boards — offline ranked runs (score · mode · date)
+- **Confetti intensity** setting — off / low / normal / high
+- KEEP ALL ≤3.18 incl. **15s Mystery Spin once**, Close (X), quiet night, …
+
+SW cache: `urrjaa-v28-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.19.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.19.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.18.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.17)

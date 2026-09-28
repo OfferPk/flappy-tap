@@ -43,7 +43,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.18.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.19.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
@@ -292,6 +292,16 @@
           <input id="reduce-motion" type="checkbox" />
         </label>
         <p class="setting-hint">Less shake, no trail, fewer particles · better on low-end phones</p>
+        <label class="setting-row" for="confetti-intensity">
+          <span>Confetti intensity</span>
+        </label>
+        <select id="confetti-intensity" class="setting-select" aria-label="Confetti intensity">
+          <option value="off">Off</option>
+          <option value="low">Low</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High</option>
+        </select>
+        <p class="setting-hint">Scales celebration confetti (milestones, claims, records)</p>
       </div>
       <button id="btn-settings-close" class="btn primary" type="button">Done</button>
     </div>
@@ -300,6 +310,7 @@
     <div id="screen-boards" class="screen panel-screen scroll-screen" hidden>
       <button type="button" class="panel-close" data-panel-close="boards" aria-label="Close">X</button>
       <h2>Local Boards</h2>
+      <p class="hint">Offline Top 5 + medals · no accounts</p>
       <div id="boards-list" class="boards-list"></div>
       <button class="btn primary" type="button" data-close="boards">Back</button>
     </div>
@@ -308,6 +319,7 @@
     <div id="screen-streak" class="screen panel-screen scroll-screen" hidden>
       <button type="button" class="panel-close" data-panel-close="streak" aria-label="Close">X</button>
       <h2>Daily Streak</h2>
+      <p class="hint">7-day rewards · calendar shows claimed days this month</p>
       <div id="streak-body"></div>
       <button id="btn-claim-streak" class="btn primary" type="button">Claim</button>
       <button class="btn ghost" type="button" data-close="streak">Back</button>
@@ -345,6 +357,7 @@
           <li><strong>Mystery wheel:</strong> Spin once is a full <strong>15s</strong> decelerate into the segment; Spin all uses 15s / 8s / 5s tiering.</li>
           <li><strong>Tips &amp; fireworks:</strong> menu/pause/death tips · high-score fireworks · lattice &amp; stripe pipes.</li>
           <li><strong>3.18:</strong> combo milestones · garage preview flap · mission claim juice · Quiet at night · gift glow · snappier taps.</li>
+          <li><strong>3.19:</strong> streak calendar · spin SFX on 15s wheel · blink polish · local Top 5 · confetti intensity.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>
