@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.49.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.50.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -668,6 +668,8 @@
   }
 
   function resizeCanvas() {
+    _particleBudgetCached = -1; // 3.50 refresh perf cache on resize
+
     var app = document.getElementById('app');
     if (!app) return;
     var landscape = false;
@@ -1884,9 +1886,36 @@ function updateComboMeter(visible) {
     return TUTORIAL_TIPS[i];
   }
 
+  var _milestone350TipShown = false;
+  var _milestone350SplashDone = false;
+
+  function maybeMilestonePlaySplash() {
+    if (_milestone350SplashDone || reduceMotion) return;
+    _milestone350SplashDone = true;
+    if (btnPlay) {
+      btnPlay.classList.remove('btn-play-milestone');
+      void btnPlay.offsetWidth;
+      btnPlay.classList.add('btn-play-milestone');
+      clearTimeout(maybeMilestonePlaySplash._t);
+      maybeMilestonePlaySplash._t = setTimeout(function () {
+        if (btnPlay) btnPlay.classList.remove('btn-play-milestone');
+      }, 1400);
+    }
+    if (typeof spawnConfettiBurst === 'function') {
+      spawnConfettiBurst(W * 0.5, H * 0.58, 8);
+    }
+  }
+
   function refreshMenuTip() {
     var el = document.getElementById('menu-tip');
     if (!el) return;
+    if (!_milestone350TipShown) {
+      _milestone350TipShown = true;
+      el.textContent = '💡 3.50 milestone — snappier feel · Garage Undo/Clear · night ducks for voice · Spin once still 15s';
+      el.hidden = false;
+      maybeMilestonePlaySplash();
+      return;
+    }
     el.textContent = '💡 ' + pickTutorialTip(Date.now() / 8000);
     el.hidden = false;
   }
@@ -3666,9 +3695,28 @@ function updateComboMeter(visible) {
     }
   }
 
+  function spawnPipeClearJuice(x, y) {
+    // 3.50 milestone feel splash — soft gold clear ring (one juice, not bloat)
+    if (reduceMotion || !bird) return;
+    if (particles.length > particleBudget() * 0.9) return;
+    particles.push({
+      x: x, y: y,
+      vx: 0, vy: 0,
+      life: 0.3, max: 0.3,
+      color: combo >= 5 ? 'rgba(251,191,36,0.55)' : 'rgba(255,217,61,0.42)',
+      r: 11,
+      kind: 'ring',
+      grow: 40
+    });
+    trimParticles();
+  }
+
   function addPipeScore(p) {
     combo += 1;
     maybeComboMilestone(combo);
+    if (!reduceMotion) {
+      spawnPipeClearJuice(bird.x + 8, bird.y);
+    }
     runBestCombo = Math.max(runBestCombo, combo, coinCombo, nearMissStreak);
     var mult = pipeComboMult();
     // Perfect Pass: near gap center → +3 base (tune with existing mult)
@@ -3804,12 +3852,22 @@ function updateComboMeter(visible) {
     var sdt = dt * timeScale;
     var scroll = currentSpeed * sdt * (state === 'playing' ? 1 : 0.35);
 
-    // 3.45/3.46 soft night ambience ticks while flying at night (volume-gated)
-    if (state === 'playing' && isNightAmbience() && !(FTAudio && FTAudio.getNightAmbienceVolumeMul && FTAudio.getNightAmbienceVolumeMul() <= 0.001)) {
-      nightAmbAcc += dt;
-      if (nightAmbAcc > 1.8 + Math.random() * 1.4) {
+    // 3.45/3.50 soft night ambience — cache volume mul ~0.4s (stability/perf)
+    if (state === 'playing' && isNightAmbience()) {
+      if (now - (update._nightAmbVolAt || 0) > 400) {
+        update._nightAmbVolCache = (FTAudio && FTAudio.getNightAmbienceVolumeMul)
+          ? FTAudio.getNightAmbienceVolumeMul() : 1;
+        update._nightAmbVolAt = now;
+      }
+      if ((update._nightAmbVolCache || 0) > 0.001) {
+        nightAmbAcc += dt;
+        if (nightAmbAcc > 1.8 + (update._nightAmbNext || 0)) {
+          nightAmbAcc = 0;
+          update._nightAmbNext = Math.random() * 1.4;
+          if (FTAudio && FTAudio.nightAmbienceTick) FTAudio.nightAmbienceTick();
+        }
+      } else {
         nightAmbAcc = 0;
-        if (FTAudio && FTAudio.nightAmbienceTick) FTAudio.nightAmbienceTick();
       }
     } else {
       nightAmbAcc = 0;
@@ -4134,10 +4192,10 @@ function updateComboMeter(visible) {
     }
     if (envFade > 0) envFade = Math.max(0, envFade - sdt * 1.35);
 
-    // 3.30 perf: adaptive trail interval when particle pressure high
+    // 3.30/3.50 perf: adaptive trail interval — reuse frame particle budget
     trailAcc += sdt;
     var trailGap = TRAIL_INTERVAL;
-    if (particles.length > particleBudget() * 0.7) trailGap = TRAIL_INTERVAL * 2.2;
+    if (particles.length > _pCap * 0.7) trailGap = TRAIL_INTERVAL * 2.2;
     else if (reduceMotion) trailGap = TRAIL_INTERVAL * 3;
     if (trailAcc >= trailGap) { trailAcc = 0; spawnTrailParticle(); }
 

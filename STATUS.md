@@ -1,5 +1,22 @@
 # Urr Jaa! STATUS
 
+## Current: **3.50.0-urrjaa** (2026-09-28 PKT) · milestone
+
+### This pack (NEW vs ≤3.49)
+- **Changelog update** — lean recent list · 3.41–3.49 rolled up
+- **Stability / perf** — reuse particle budget in trail · cache night-amb vol · refresh budget on resize
+- **Feel juice splash** — soft gold pipe-clear ring · one-session Play milestone shimmer
+- **Guide tip** — 3.50 milestone note (EN / RU / UR)
+- Bugfixes / no feature bloat — KEEP ALL ≤3.49 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v59-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.50.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.50.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.49.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.48)
