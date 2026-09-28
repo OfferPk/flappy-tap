@@ -242,6 +242,28 @@
     setTimeout(function () { tone(1047, 0.12, 'sine', 0.07); }, 110);
   }
 
+  /** 3.20: distant thunder rumble for storm lightning. */
+  var lastThunderAt = 0;
+  function thunder() {
+    var now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (now - lastThunderAt < 900) return; // debounce
+    lastThunderAt = now;
+    noiseBurst(0.28, 0.09);
+    tone(55, 0.35, 'sawtooth', 0.07, 28);
+    setTimeout(function () { tone(40, 0.4, 'triangle', 0.05); }, 60);
+    setTimeout(function () { noiseBurst(0.18, 0.045); }, 140);
+  }
+
+  /** 3.20: skin unlock fanfare (brighter than record). */
+  function fanfare() {
+    tone(523, 0.07, 'sine', 0.1);
+    setTimeout(function () { tone(659, 0.07, 'sine', 0.09); }, 55);
+    setTimeout(function () { tone(784, 0.07, 'sine', 0.09); }, 110);
+    setTimeout(function () { tone(1047, 0.1, 'triangle', 0.1); }, 170);
+    setTimeout(function () { tone(1319, 0.14, 'sine', 0.08); }, 250);
+    setTimeout(function () { tone(1568, 0.12, 'triangle', 0.06); }, 340);
+  }
+
   let areaMusicTimer = null;
   let areaMusicId = null;
   function stopAreaMusic() {
@@ -799,6 +821,7 @@
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     tick: tick, startSpinWhoosh: startSpinWhoosh, stopSpinWhoosh: stopSpinWhoosh, spinLand: spinLand,
+    thunder: thunder, fanfare: fanfare,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
     voice: voice, voiceGift: voiceGift, preview: preview, VOICE_LABELS: VOICE_LABELS, SPEAK_TEXT: SPEAK_TEXT, VOICE_POOLS: VOICE_POOLS,
     setMuted: setMuted, isMuted: isMuted, setQuietMode: setQuietMode, isQuietMode: isQuietMode, setVoicePack: setVoicePack, isVoicePack: isVoicePack, unlock: unlock

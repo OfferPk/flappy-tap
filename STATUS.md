@@ -1,5 +1,24 @@
 # Urr Jaa! STATUS
 
+## Current: **3.20.0-urrjaa** (2026-09-28 PKT)
+
+### Milestone pack (NEW vs 3.11–3.19)
+- **Daily challenge calendar polish** — month grid on Missions; claim days lit
+- **Skin unlock fanfare** — banner + confetti/fireworks + fanfare SFX + haptic
+- **Weather thunder rumble** — lightning flash pairs with thunder + soft haptic
+- **Micro-perf** — cached particle budget, reused weather id, skip empty particle draw
+- **Guide** — Quiet at night + Confetti intensity notes
+- KEEP ALL ≤3.19 incl. **15s Mystery Spin once**, Close (X), Top 5, streak calendar, …
+
+SW cache: `urrjaa-v29-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.20.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.20.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.19.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.18)

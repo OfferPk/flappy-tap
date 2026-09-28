@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.19.0-urrjaa — Streak calendar UI, mystery spin SFX during 15s, idle blink polish,
- * local top-5 boards, confetti intensity setting, bugfixes.
- * KEEP ALL ≤3.18 incl. 15s Mystery Spin once + Close (X) + quiet night + tap latency.
+ * Urr Jaa! v3.20.0-urrjaa — Milestone: daily mission calendar polish, skin unlock fanfare,
+ * storm thunder rumble, micro-perf, guide notes (confetti / quiet night), bugfixes.
+ * KEEP ALL ≤3.19 incl. 15s Mystery Spin once + Close (X) + Top 5 + streak calendar.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  */
 (function () {
@@ -1782,13 +1782,22 @@
   }
 
   var MAX_PARTICLES = 96;
+  var _particleBudgetCached = -1;
+  var _particleBudgetAt = 0;
   function particleBudget() {
-    if (reduceMotion) return 28;
-    // Mobile / low DPR: tighter budget (3.12 perf)
-    var dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-    var narrow = (typeof window !== 'undefined' && window.innerWidth < 480);
-    if (narrow || dpr > 2.5) return 56;
-    return MAX_PARTICLES;
+    // 3.20 micro-perf: cache budget ~1s (resize/reduce-motion still refresh)
+    var now = performance.now();
+    if (_particleBudgetCached >= 0 && (now - _particleBudgetAt) < 1000) return _particleBudgetCached;
+    var cap;
+    if (reduceMotion) cap = 28;
+    else {
+      var dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+      var narrow = (typeof window !== 'undefined' && window.innerWidth < 480);
+      cap = (narrow || dpr > 2.5) ? 56 : MAX_PARTICLES;
+    }
+    _particleBudgetCached = cap;
+    _particleBudgetAt = now;
+    return cap;
   }
 
   function trimParticles() {
@@ -2669,8 +2678,8 @@
 
     var drawEnv = activeArea();
     var weather = effectiveWeather();
+    var weatherNow = weather; // 3.20 micro-perf: reuse cached weather id
     var pal = FTSkins.envPalette(drawEnv === 'rain' || drawEnv === 'monsoon' ? 'city' : drawEnv, weather);
-    var weatherNow = effectiveWeather();
     if ((pal.rain || drawEnv === 'rain' || drawEnv === 'monsoon' || weatherNow === 'storm') && !reduceMotion) {
       rainDrops.forEach(function (d) {
         d.y += d.spd * dt;
@@ -2692,7 +2701,14 @@
     }
     if (weatherNow === 'storm' && !reduceMotion) {
       if (weatherFlash > 0) weatherFlash = Math.max(0, weatherFlash - dt * 2.2);
-      else if (rng() < 0.008) weatherFlash = 0.85 + rng() * 0.4;
+      else if (rng() < 0.008) {
+        weatherFlash = 0.85 + rng() * 0.4;
+        // 3.20: thunder rumble paired with lightning
+        if (FTAudio && FTAudio.thunder) {
+          try { FTAudio.thunder(); } catch (errT) { /* ignore */ }
+        }
+        if (hapticsOn) haptic('close');
+      }
     } else {
       weatherFlash = 0;
     }
@@ -3265,6 +3281,7 @@
   }
 
   function drawParticles() {
+    if (!particles.length) return; // 3.20 micro-perf
     for (var pi = 0; pi < particles.length; pi++) {
       var pt = particles[pi];
       var a = Math.max(0, pt.life / (pt.max || 0.5));
@@ -3881,6 +3898,7 @@
     reduceMotion = !!reduceMotionChk.checked;
     FTStorage.setReduceMotion(reduceMotion);
     applyReduceMotionClass();
+    _particleBudgetCached = -1; // 3.20 refresh perf cache
   });
   if (soundToggleChk) soundToggleChk.addEventListener('change', function () {
     FTStorage.setMuted(!soundToggleChk.checked);
@@ -3922,6 +3940,21 @@
     else showToast('Oye hoye!', 1200);
   });
 
+
+  function playUnlockFanfare(label) {
+    showBanner('UNLOCKED!', 1200);
+    showToast((label || 'Skin') + ' unlocked! ✨', 2000, 'medal');
+    if (FTAudio.fanfare) FTAudio.fanfare();
+    else if (FTAudio.legendary) FTAudio.legendary();
+    else if (FTAudio.record) FTAudio.record();
+    voiceCue('shabaash');
+    haptic('gift');
+    if (!reduceMotion) {
+      spawnConfettiBurst(W * 0.5, H * 0.35, 22);
+      spawnFireworks(W * 0.5, H * 0.3, 3);
+    }
+  }
+
   async function tryUnlock(item, kind) {
     var cost = item.cost || 0;
     if (item.seasonal) {
@@ -3929,7 +3962,7 @@
       if (FTStorage.isSeasonalUnlocked && FTStorage.isSeasonalUnlocked(packId)) {
         if (kind === 'hat') FTStorage.unlockHat(item.id);
         else if (kind === 'trail') FTStorage.unlockTrail(item.id);
-        showToast(item.label + ' unlocked!');
+        playUnlockFanfare(item.label);
         refreshGarage();
         return;
       }
@@ -3942,7 +3975,7 @@
       var bestNow = FTStorage.getBest();
       if (pack && FTSkins.seasonalEligible && FTSkins.seasonalEligible(pack, bestNow)) {
         FTStorage.unlockSeasonal(packId);
-        showToast((pack.label || item.label) + ' pack unlocked!');
+        playUnlockFanfare(pack.label || item.label);
         refreshGarage();
         refreshCollection();
         return;
@@ -3959,8 +3992,7 @@
       else if (kind === 'trail') FTStorage.unlockTrail(item.id);
       else return;
       FTStorage.addToCollection(kind === 'hat' ? 'accessory' : kind, item.id);
-      showToast(item.label + ' unlocked (best ' + item.unlockScore + '+)!');
-      voiceCue('wah_ji');
+      playUnlockFanfare(item.label);
       updateCoinHud();
       refreshGarage();
       refreshCollection();
@@ -3988,8 +4020,7 @@
     else if (kind === 'hat') FTStorage.unlockHat(item.id);
     else if (kind === 'trail') FTStorage.unlockTrail(item.id);
     FTStorage.addToCollection(kind === 'hat' ? 'accessory' : kind, item.id);
-    showToast(item.label + ' unlocked!');
-    voiceCue('wah_ji');
+    playUnlockFanfare(item.label);
     updateCoinHud();
     refreshGarage();
     refreshCollection();
@@ -4201,9 +4232,42 @@
     if (challengeStagePanel) challengeStagePanel.hidden = true;
   });
 
+  function buildMissionCalendarHtml() {
+    var log = (FTStorage.getMissionDays && FTStorage.getMissionDays()) || [];
+    var claimed = Object.create(null);
+    for (var i = 0; i < log.length; i++) claimed[log[i]] = 1;
+    var now = new Date();
+    var y = now.getFullYear();
+    var mo = now.getMonth();
+    var monthName = now.toLocaleString(undefined, { month: 'short', year: 'numeric' });
+    var firstDow = new Date(y, mo, 1).getDay();
+    var daysInMonth = new Date(y, mo + 1, 0).getDate();
+    var todayStr = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    var html = '<div class="mission-calendar" aria-label="Daily challenge calendar">';
+    html += '<div class="mission-cal-head"><strong>📅 ' + monthName + '</strong><span>claim days lit</span></div>';
+    html += '<div class="mission-cal-dows" aria-hidden="true"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>';
+    html += '<div class="mission-cal-grid">';
+    for (var b = 0; b < firstDow; b++) html += '<span class="mission-cal-cell empty"></span>';
+    for (var d = 1; d <= daysInMonth; d++) {
+      var key = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      var cls = 'mission-cal-cell';
+      if (claimed[key]) cls += ' claimed';
+      if (key === todayStr) cls += ' today';
+      html += '<span class="' + cls + '" title="' + key + '">' + d + '</span>';
+    }
+    html += '</div></div>';
+    return html;
+  }
   function refreshMissions() {
     if (!missionsList) return;
     missionsList.innerHTML = '';
+    var dateEl = document.createElement('p');
+    dateEl.className = 'hint mission-today';
+    dateEl.textContent = 'Today · ' + (FTStorage.getDailyDate ? FTStorage.getDailyDate() : new Date().toDateString()) + ' · 3 challenges';
+    missionsList.appendChild(dateEl);
+    var calWrap = document.createElement('div');
+    calWrap.innerHTML = buildMissionCalendarHtml();
+    while (calWrap.firstChild) missionsList.appendChild(calWrap.firstChild);
     FTStorage.getMissions().forEach(function (m) {
       var card = document.createElement('div');
       card.className = 'mission-card' + (m.done ? ' done' : '') + (m.claimed ? ' claimed' : '');

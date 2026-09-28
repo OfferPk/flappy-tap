@@ -2166,3 +2166,59 @@ html.reduce-motion .mission-card.claim-juice { animation: none; }
   color: var(--text);
   font: inherit;
 }
+
+
+/* ——— v3.20: daily mission calendar, unlock fanfare polish ——— */
+.mission-today {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: #cfe8ff;
+}
+.mission-calendar {
+  margin: 0 0 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(125, 211, 252, 0.22);
+}
+.mission-cal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+}
+.mission-cal-head span { color: var(--muted); font-size: 0.72rem; }
+.mission-cal-dows, .mission-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+.mission-cal-dows span {
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+.mission-cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  color: #cbd5e1;
+}
+.mission-cal-cell.empty { background: transparent; }
+.mission-cal-cell.claimed {
+  background: linear-gradient(145deg, #38bdf8, #818cf8);
+  color: #0f172a;
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+.mission-cal-cell.today {
+  outline: 2px solid #ffd93d;
+  outline-offset: 1px;
+}

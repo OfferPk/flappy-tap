@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.19.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.20.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -21,6 +21,7 @@
     topRuns: PREFIX + 'top-runs',
     streakLog: PREFIX + 'streak-log',
     confettiIntensity: PREFIX + 'confetti-intensity',
+    missionDays: PREFIX + 'mission-days',
     runs: PREFIX + 'runs',
     medal: PREFIX + 'best-medal',
     dailyBest: PREFIX + 'daily-best',
@@ -837,6 +838,24 @@
     set(KEYS.missionsProgress, JSON.stringify(progress));
   }
 
+
+  /** 3.20: days the player claimed ≥1 daily mission (calendar polish). */
+  function getMissionDays() {
+    try {
+      const raw = get(KEYS.missionDays, '[]');
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function markMissionDay(dateStr) {
+    const d = dateStr || todayKey();
+    const log = getMissionDays().filter(function (x) { return x !== d; });
+    log.push(d);
+    while (log.length > 120) log.shift();
+    set(KEYS.missionDays, JSON.stringify(log));
+    return log;
+  }
+
   function claimMission(id) {
     const list = getMissions();
     const m = list.find((x) => x.id === id);
@@ -846,6 +865,7 @@
       .filter(Boolean);
     claimed.push(id);
     set(KEYS.missionsClaimed, claimed.join(','));
+    markMissionDay(todayKey());
     const result = { id: id, type: m.rewardType || 'coins', coins: 0, fragments: 0, mystery: false };
     if (m.rewardType === 'fragment') {
       addFragments(m.reward || 2);
@@ -1167,7 +1187,7 @@
     getUnlockedTrails, isTrailUnlocked, unlockTrail,
     getUnlockedSeasonals, isSeasonalUnlocked, unlockSeasonal, checkSeasonalUnlocks,
     getCollection, addToCollection, collectionCounts,
-    getMissions, bumpMission, setMissionMax, claimMission, MISSION_DEFS, MISSION_POOL,
+    getMissions, bumpMission, setMissionMax, claimMission, getMissionDays, markMissionDay, MISSION_DEFS, MISSION_POOL,
     getActiveMissionIds, getMetersBest, setMetersBest, checkEnvMilestones, checkThemeSkinMilestones,
     getStreak, claimStreak, STREAK_REWARDS, getStreakLog, markStreakClaimedDay,
     getTopRuns, recordTopRun, getConfettiIntensity, setConfettiIntensity,

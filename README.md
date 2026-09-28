@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.19.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.20.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,11 +29,11 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.19.0-urrjaa)
+## Features (v3.20.0-urrjaa)
 
-- **Streak calendar** · **spin SFX** during 15s wheel · **idle blink** polish · **local Top 5** boards
-- **Confetti intensity** setting (off/low/normal/high)
-- Combo milestones · garage preview · mission juice · Quiet at night · gift glow · snappy taps
+- **Mission calendar** · **skin unlock fanfare** · **storm thunder rumble** · micro-perf
+- Guide notes for **Quiet at night** + **Confetti intensity**
+- Streak calendar · spin SFX · blink · Top 5 · confetti setting · combo milestones · quiet night
 - **Mystery wheel 15s** Spin once (KEEP) · Close (X) · tips · fireworks · pipes · safe-area
 - Power VFX clarity (Slow-mo / Ghost / Turbo) · Challenge stage picker · One Life heart HUD
 - Coin economy balance · Bird unlock teasers · Gift haptic · Landscape safe-area
