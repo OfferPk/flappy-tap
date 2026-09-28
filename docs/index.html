@@ -18,7 +18,8 @@
   <title>Urr Jaa!</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
+<body class="has-notch-pad">
+  <div id="notch-pad" class="notch-pad" aria-hidden="true"></div>
   <div id="boot-splash" class="boot-splash" role="status" aria-live="polite">
     <div class="splash-inner">
       <div class="splash-logo">Urr Jaa!</div>
@@ -39,6 +40,9 @@
     <div id="hud" class="overlay-layer" hidden>
       <div id="score-display">0</div>
       <div id="combo-display" hidden>COMBO 0</div>
+      <div id="combo-meter" class="combo-meter" hidden aria-hidden="true">
+        <span id="combo-meter-fill" class="combo-meter-fill"></span>
+      </div>
       <div id="mode-badge" hidden></div>
       <div id="coin-hud">🪙 0</div>
       <div id="timer-hud" hidden>60s</div>
@@ -63,7 +67,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.35.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.36.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -309,7 +313,9 @@
       <button type="button" class="panel-close" data-panel-close="settings" aria-label="Close">X</button>
       <h2>Settings</h2>
       <div class="settings-card">
-        <h3 class="settings-group">Audio</h3>
+        <details class="settings-section" id="settings-sec-audio" open>
+        <summary class="settings-group">Audio</summary>
+        <div class="settings-section-body">
         <label class="setting-row check-row" for="sound-toggle">
           <span>Sound</span>
           <input id="sound-toggle" type="checkbox" checked />
@@ -331,7 +337,10 @@
         </label>
         <p class="setting-hint">Independent of Sound mute · speech (hi-IN/ur) + toast · melodic chirp fallback</p>
         <button id="btn-voice-preview" class="btn ghost voice-preview-btn" type="button">Preview voice · Oye hoye!</button>
-        <h3 class="settings-group">Feel</h3>
+        </div></details>
+        <details class="settings-section" id="settings-sec-feel" open>
+        <summary class="settings-group">Feel</summary>
+        <div class="settings-section-body">
         <label class="setting-row check-row" for="haptics-toggle">
           <span>Haptics</span>
           <input id="haptics-toggle" type="checkbox" checked />
@@ -384,8 +393,10 @@
         </label>
         <input id="ghost-opacity-slider" type="range" min="0.15" max="0.85" step="0.05" value="0.38" aria-label="Practice ghost opacity" />
         <p class="setting-hint">How visible the Practice mode ghost guide is</p>
-
-        <h3 class="settings-group">Data</h3>
+        </div></details>
+        <details class="settings-section" id="settings-sec-data" open>
+        <summary class="settings-group">Data</summary>
+        <div class="settings-section-body">
         <button id="btn-reset-prefs" class="btn ghost btn-sm" type="button">Reset settings…</button>
         <p class="setting-hint">Restores Feel/Audio prefs · keeps coins, unlocks, scores &amp; gifts</p>
         <div id="reset-prefs-confirm" class="reset-prefs-confirm" hidden role="alertdialog" aria-label="Confirm reset">
@@ -395,11 +406,13 @@
             <button id="btn-reset-prefs-yes" class="btn secondary btn-sm" type="button">Yes, reset</button>
           </div>
         </div>
+        </div></details>
       </div>
 
       <details class="settings-changelog" id="settings-changelog">
         <summary>Changelog · recent</summary>
         <ul class="changelog-list" aria-label="Recent changes">
+          <li><strong>3.36</strong> — notch polish · combo meter · ground bounce juice · settings collapse</li>
           <li><strong>3.35</strong> — score font juice · medal shine · landscape layout · touch dead-zone fix</li>
           <li><strong>3.34</strong> — A2HS install flow · perfect haptic · Guide lang remember · UI polish</li>
           <li><strong>3.33</strong> — swipe dismiss · better A2HS · streak flame · wheel pointer bounce</li>
@@ -415,7 +428,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.35.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.36.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -488,6 +501,7 @@
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>3.30:</strong> flap whoosh juice · Settings changelog-lite · Guide refresh · performance pass.</li>
+          <li><strong>3.36:</strong> portrait notch polish · combo meter bar · soft ground bounce juice · settings section collapse.</li>
           <li><strong>3.35:</strong> score font juice · medal shine · better landscape layout · touch dead-zone fix.</li>
           <li><strong>3.34:</strong> better Install A2HS flow · soft vibration on PERFECT · Guide language remembered · micro UI polish.</li>
           <li><strong>3.33:</strong> swipe-to-dismiss panels · better A2HS install · run streak flame · mystery wheel pointer bounce.</li>

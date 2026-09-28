@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.35.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.36.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -188,6 +188,8 @@
   const hud = document.getElementById('hud');
   const scoreEl = document.getElementById('score-display');
   const comboEl = document.getElementById('combo-display');
+  const comboMeterEl = document.getElementById('combo-meter');
+  const comboMeterFillEl = document.getElementById('combo-meter-fill');
   const modeBadgeEl = document.getElementById('mode-badge');
   const powerHudEl = document.getElementById('power-hud');
   const livesHudEl = document.getElementById('lives-hud');
@@ -710,12 +712,44 @@
 
   function riskyActive() { return performance.now() < riskyUntil; }
 
+  
+  var COMBO_MILESTONES = [5, 10, 15, 20, 25, 30, 40, 50];
+
+function updateComboMeter(visible) {
+    if (!comboMeterEl || !comboMeterFillEl) return;
+    if (!visible || state !== 'playing') {
+      comboMeterEl.hidden = true;
+      return;
+    }
+    // Progress toward next COMBO milestone (pipe combo primary, else coin)
+    var c = Math.max(combo, coinCombo, nearMissStreak);
+    var next = 5;
+    for (var i = 0; i < COMBO_MILESTONES.length; i++) {
+      if (c < COMBO_MILESTONES[i]) { next = COMBO_MILESTONES[i]; break; }
+      next = COMBO_MILESTONES[i] + 5;
+    }
+    var prev = 0;
+    for (var j = 0; j < COMBO_MILESTONES.length; j++) {
+      if (COMBO_MILESTONES[j] <= c) prev = COMBO_MILESTONES[j];
+      else break;
+    }
+    var span = Math.max(1, next - prev);
+    var pct = Math.max(0, Math.min(100, ((c - prev) / span) * 100));
+    if (c <= 0) pct = 0;
+    comboMeterEl.hidden = false;
+    comboMeterFillEl.style.width = pct + '%';
+    comboMeterEl.classList.toggle('combo-meter-hot', c >= 5 || riskyActive());
+    comboMeterEl.setAttribute('aria-valuenow', String(c));
+    comboMeterEl.setAttribute('aria-valuemax', String(next));
+  }
+
   function updateComboUI() {
     if (!comboEl) return;
     if (performance.now() < bannerUntil && bannerText) {
       comboEl.hidden = false;
       comboEl.textContent = bannerText;
       comboEl.classList.add('combo-hot');
+      updateComboMeter(true);
       return;
     }
     var ccm = coinComboMult();
@@ -731,13 +765,13 @@
       else if (coinCombo >= 2) bits.push('COINS ' + coinCombo);
       comboEl.textContent = bits.join(' · ');
       comboEl.classList.toggle('combo-hot', ccm >= 5 || combo >= 5 || riskyActive());
+      updateComboMeter(true);
     } else {
       comboEl.hidden = true;
+      updateComboMeter(false);
     }
   }
 
-
-  var COMBO_MILESTONES = [5, 10, 15, 20, 25, 30, 40, 50];
 
   function isNightAmbience() {
     var a = typeof activeArea === 'function' ? activeArea() : envId;
@@ -2386,6 +2420,29 @@
     trimParticles();
   }
 
+  /** 3.36: soft ground bounce juice — ring + upward flecks. */
+  function spawnGroundBounceJuice(x, y, vy) {
+    if (reduceMotion) return;
+    particles.push({
+      x: x, y: y, vx: 0, vy: 0, life: 0.28, max: 0.28,
+      color: 'rgba(212,180,120,0.5)', r: 8, kind: 'ring', grow: 28 + Math.min(24, (vy || 0) / 20)
+    });
+    for (var i = 0; i < 5; i++) {
+      particles.push({
+        x: x + (rng() - 0.5) * 22,
+        y: y - 2,
+        vx: (rng() - 0.5) * 50,
+        vy: -40 - rng() * 60,
+        life: 0.3 + rng() * 0.2,
+        max: 0.5,
+        color: i % 2 ? 'rgba(255,217,61,0.55)' : 'rgba(194,160,92,0.65)',
+        r: 1.6 + rng() * 1.8,
+        kind: 'spark'
+      });
+    }
+    trimParticles();
+  }
+
   function spawnNearMissSparks(x, y) {
     var n = reduceMotion ? 3 : 16;
     for (var i = 0; i < n; i++) {
@@ -3763,15 +3820,25 @@
     bird.vy += g * sdt;
     if (bird.vy > term) bird.vy = term;
     bird.y += bird.vy * sdt;
-    // 3.23 soft landing dust when skimming ground
-    if (bird && bird.alive && state === 'playing' && !reduceMotion) {
+    // 3.23/3.36 soft landing dust + bounce juice when skimming ground
+    if (bird && bird.alive && state === 'playing') {
       var gY = H - GROUND_H;
       var distG = gY - (bird.y + bird.h / 2);
       if (distG < 14 && bird.vy > 40) {
         var nowD = performance.now();
         if (nowD - lastLandingDustAt > 180) {
           lastLandingDustAt = nowD;
-          spawnLandingDust(bird.x, gY - 2, bird.vy > 180 ? 12 : 7);
+          if (!reduceMotion) {
+            spawnLandingDust(bird.x, gY - 2, bird.vy > 180 ? 12 : 7);
+            spawnGroundBounceJuice(bird.x, gY - 2, bird.vy);
+          }
+          squashTarget = 0.78;
+          if (!reduceMotion) {
+            camKickY = Math.min(6, 2 + bird.vy / 120);
+            camKickZoom = 0.012;
+          }
+          // soft micro-bounce dampen (visual juice, not a save)
+          if (distG < 8 && bird.vy > 90) bird.vy *= 0.82;
         }
       }
     }
@@ -5134,6 +5201,29 @@
     var ov = document.getElementById('share-preview');
     if (ov) ov.hidden = true;
   });
+
+
+  // 3.36: remember settings section open/collapsed
+  (function bindSettingsSections() {
+    var KEY = 'urrjaa:settings-sections';
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (_) { saved = {}; }
+    document.querySelectorAll('.settings-section').forEach(function (d) {
+      var id = d.id || '';
+      if (id && Object.prototype.hasOwnProperty.call(saved, id)) {
+        if (saved[id]) d.setAttribute('open', '');
+        else d.removeAttribute('open');
+      }
+      d.addEventListener('toggle', function () {
+        try {
+          var cur = {};
+          try { cur = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (__ ) { cur = {}; }
+          cur[id] = d.open;
+          localStorage.setItem(KEY, JSON.stringify(cur));
+        } catch (___) {}
+      });
+    });
+  })();
 
   var a2hsOk = document.getElementById('a2hs-ok');
   if (a2hsOk) {

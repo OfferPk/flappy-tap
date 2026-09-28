@@ -1,19 +1,19 @@
 # Urr Jaa! STATUS
 
-## Current: **3.35.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.36.0-urrjaa** (2026-09-28 PKT)
 
-### This pack (NEW vs 3.11–3.34)
-- **Score font juice** — tabular nums, bigger bump, milestone gradient flash
-- **Medal shine** — sheen sweep + glow on earned medal
-- **Better landscape layout** — wider app, HUD scale, menu grid, scroll panels
-- **Touch dead-zone fix** — letterbox taps flap; play mode no longer blocks on `.screen`
-- Bugfixes: flap UI blocker list tightened; landscape `is-landscape` class
-- KEEP ALL ≤3.34 incl. **15s Mystery Spin once**, Close (X), …
+### This pack (NEW vs 3.11–3.35)
+- **Portrait notch polish** — `--hud-top` / notch pad so score & icons clear Dynamic Island
+- **Combo meter bar** — fill toward next milestone under combo HUD
+- **Soft ground bounce juice** — ring + flecks + squash + micro dampen on skim
+- **Settings section collapse** — Audio / Feel / Data details; open state remembered
+- Bugfixes: COMBO_MILESTONES order; settings section persistence
+- KEEP ALL ≤3.35 incl. **15s Mystery Spin once**, Close (X), …
 
-SW cache: `urrjaa-v44-20260928`
+SW cache: `urrjaa-v45-20260928`
 
-**Ship commit:** `d5f670f` · tag `v3.35.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.35.0-urrjaa  
+**Ship commit:** (pending) · tag `v3.36.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.36.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/
 
 

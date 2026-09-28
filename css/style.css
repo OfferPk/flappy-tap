@@ -17,6 +17,9 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+  /* 3.36: notch / Dynamic Island floor so HUD never clips */
+  --notch-pad: max(var(--safe-top), env(safe-area-inset-top, 0px));
+  --hud-top: calc(10px + var(--notch-pad));
 }
 
 html, body {
@@ -76,7 +79,7 @@ html.reduce-motion #app.shake { animation: none; }
 
 #score-display {
   position: absolute;
-  top: calc(12px + var(--safe-top));
+  top: var(--hud-top);
   left: 0;
   right: 0;
   text-align: center;
@@ -92,7 +95,7 @@ html.reduce-motion #app.shake { animation: none; }
 
 #combo-display {
   position: absolute;
-  top: calc(56px + var(--safe-top));
+  top: calc(44px + var(--hud-top));
   left: 0;
   right: 0;
   text-align: center;
@@ -3064,3 +3067,125 @@ html.reduce-motion .medal.medal-shine .medal-disc { animation: none; }
 html.is-landscape #app {
   max-width: min(100vw, 920px);
 }
+
+
+/* ——— v3.36: notch pad, combo meter, settings collapse ——— */
+.notch-pad {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--notch-pad);
+  background: #0b1020;
+  z-index: 100;
+  pointer-events: none;
+}
+@media (orientation: landscape) {
+  .notch-pad { height: max(0px, var(--safe-top)); opacity: 0.85; }
+}
+#btn-mute, #btn-pause {
+  top: var(--hud-top);
+}
+#mode-badge {
+  top: var(--hud-top);
+}
+#coin-hud {
+  top: calc(44px + var(--hud-top));
+}
+#timer-hud {
+  top: calc(44px + var(--hud-top));
+}
+#lives-hud {
+  top: calc(78px + var(--hud-top));
+}
+#power-hud {
+  top: calc(78px + var(--hud-top));
+}
+.screen {
+  padding-top: calc(16px + var(--notch-pad));
+}
+.panel-close {
+  top: calc(10px + var(--notch-pad));
+}
+
+.combo-meter {
+  position: absolute;
+  top: calc(68px + var(--hud-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(160px, 42vw);
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255,255,255,.18);
+  overflow: hidden;
+  z-index: 6;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,.35);
+}
+.combo-meter[hidden] { display: none !important; }
+.combo-meter-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4ecdc4, #ffd93d, #ff8a5c);
+  box-shadow: 0 0 8px rgba(255,217,61,.45);
+  transition: width 0.18s ease-out;
+}
+.combo-meter.combo-meter-hot {
+  border-color: rgba(255,138,92,.55);
+  box-shadow: 0 0 10px rgba(255,138,92,.35);
+}
+.combo-meter.combo-meter-hot .combo-meter-fill {
+  background: linear-gradient(90deg, #ffd93d, #ff8a5c, #ff6b6b);
+}
+html.reduce-motion .combo-meter-fill { transition: none; }
+@media (orientation: landscape) {
+  .combo-meter {
+    top: calc(58px + var(--hud-top));
+    width: min(140px, 28vw);
+    height: 4px;
+  }
+}
+
+.settings-section {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  margin: 0 0 10px;
+  background: rgba(0,0,0,.12);
+  overflow: hidden;
+}
+.settings-section > summary.settings-group {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.settings-section > summary.settings-group::-webkit-details-marker { display: none; }
+.settings-section > summary.settings-group::after {
+  content: '▾';
+  font-size: 0.85rem;
+  color: var(--muted);
+  transition: transform .18s ease;
+}
+.settings-section:not([open]) > summary.settings-group::after {
+  transform: rotate(-90deg);
+}
+.settings-section-body {
+  padding: 0 10px 12px;
+}
+.settings-section > summary.settings-group:focus-visible {
+  outline: 2px solid rgba(255,217,61,.75);
+  outline-offset: 2px;
+}
+html.reduce-motion .settings-section > summary.settings-group::after { transition: none; }
