@@ -6,22 +6,22 @@
   <meta name="theme-color" content="#4ecdc4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="description" content="Flappy Tap — offline one-tap arcade with power-ups, daily challenge, practice, skins" />
+  <meta name="description" content="Urr Jaa! — offline one-tap fly arcade. Pakistani birds, vehicles, cities. Tap to flap." />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <title>Flappy Tap</title>
+  <title>Urr Jaa!</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div id="app">
-    <canvas id="game" width="400" height="600" aria-label="Flappy Tap game"></canvas>
+    <canvas id="game" width="400" height="600" aria-label="Urr Jaa! game"></canvas>
 
-    <!-- HUD -->
     <div id="hud" class="overlay-layer" hidden>
       <div id="score-display">0</div>
       <div id="combo-display" hidden>COMBO 0</div>
       <div id="mode-badge" hidden></div>
+      <div id="coin-hud">🪙 0</div>
       <div id="power-hud" hidden></div>
       <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause" title="Pause">⏸</button>
       <button id="btn-mute" class="icon-btn" type="button" aria-label="Toggle sound" title="Sound">🔊</button>
@@ -29,21 +29,73 @@
 
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
-      <h1 class="logo">Flappy Tap</h1>
-      <p class="tagline">One tap. Stay airborne. · v2.0.0-complete</p>
-      <div class="skin-row" id="skin-picker"></div>
+      <h1 class="logo">Urr Jaa!</h1>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.0.0-urrjaa</p>
+      <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Daily: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
-        <button id="btn-play" class="btn primary" type="button">Play</button>
-        <button id="btn-daily" class="btn secondary" type="button">📅 Daily Challenge</button>
-        <button id="btn-practice" class="btn secondary" type="button">🛡 Practice (No Death)</button>
+        <button id="btn-play" class="btn primary" type="button">▶ Play</button>
+        <button id="btn-modes" class="btn secondary" type="button">🎮 Modes</button>
+        <button id="btn-garage" class="btn secondary" type="button">🐦 Garage</button>
+        <div class="btn-row">
+          <button id="btn-missions" class="btn ghost btn-sm" type="button">📋 Missions</button>
+          <button id="btn-collection" class="btn ghost btn-sm" type="button">📚 Album</button>
+        </div>
         <button id="btn-settings" class="btn ghost" type="button">⚙ Settings</button>
       </div>
-      <p class="hint">Tap or Space · Power-ups in gaps · Combo x2 at 5 · Esc pause</p>
-      <p class="best-line">Best: <span id="best-start">0</span> · Daily: <span id="daily-best-start">0</span></p>
+      <p class="hint">Tap / Space · Coins in gaps · Esc pause · 2s to learn</p>
       <p class="runs-line">Runs: <span id="total-runs">0</span></p>
     </div>
 
-    <!-- Death / Game Over -->
+    <!-- Modes -->
+    <div id="screen-modes" class="screen panel-screen" hidden>
+      <h2>Modes</h2>
+      <div class="btn-col">
+        <button class="btn primary" type="button" data-mode="classic">Classic Endless</button>
+        <button class="btn secondary" type="button" data-mode="daily">📅 Daily Challenge</button>
+        <button class="btn secondary" type="button" data-mode="practice">🛡 Practice (No Death)</button>
+        <button class="btn secondary" type="button" data-mode="challenge">🏔 Challenge 100m Clean</button>
+        <button class="btn secondary" type="button" data-mode="hard">🔥 Hard (Faster)</button>
+        <button class="btn secondary" type="button" data-mode="reverse">↕ Reverse Flap</button>
+        <button class="btn secondary" type="button" data-mode="giant">🦅 Giant Bird</button>
+        <button class="btn ghost" type="button" data-close="modes">Back</button>
+      </div>
+    </div>
+
+    <!-- Garage -->
+    <div id="screen-garage" class="screen panel-screen scroll-screen" hidden>
+      <h2>Garage</h2>
+      <p class="coins-line">🪙 <span id="garage-coins">0</span></p>
+      <h3 class="section-title">Birds</h3>
+      <div class="skin-row" id="garage-birds"></div>
+      <h3 class="section-title">Vehicles (pair)</h3>
+      <div class="skin-row" id="garage-vehicles"></div>
+      <h3 class="section-title">Environments</h3>
+      <div class="skin-row" id="garage-envs"></div>
+      <h3 class="section-title">Weather (visual)</h3>
+      <div class="chip-row" id="weather-row"></div>
+      <h3 class="section-title">Hats</h3>
+      <div class="skin-row" id="garage-hats"></div>
+      <h3 class="section-title">Trails</h3>
+      <div class="skin-row" id="garage-trails"></div>
+      <button class="btn primary" type="button" data-close="garage">Done</button>
+    </div>
+
+    <!-- Missions -->
+    <div id="screen-missions" class="screen panel-screen scroll-screen" hidden>
+      <h2>Daily Missions</h2>
+      <p class="hint">Local day · claim coin rewards</p>
+      <div id="missions-list" class="missions-list"></div>
+      <button class="btn primary" type="button" data-close="missions">Back</button>
+    </div>
+
+    <!-- Collection -->
+    <div id="screen-collection" class="screen panel-screen scroll-screen" hidden>
+      <h2>Collection Album</h2>
+      <div id="collection-list" class="collection-list"></div>
+      <button class="btn primary" type="button" data-close="collection">Back</button>
+    </div>
+
+    <!-- Death -->
     <div id="screen-death" class="screen" hidden>
       <h2>Game Over</h2>
       <div id="medal-display" class="medal" hidden>
@@ -51,7 +103,7 @@
         <span id="medal-label">Medal</span>
       </div>
       <p class="score-big">Score: <span id="final-score">0</span></p>
-      <p class="best-line"><span id="mode-death-label">Best</span>: <span id="best-death">0</span></p>
+      <p class="best-line"><span id="mode-death-label">Best</span>: <span id="best-death">0</span> · Run 🪙 <span id="run-coins">0</span></p>
       <div class="btn-col">
         <button id="btn-continue" class="btn reward" type="button">▶ Continue (Ad)</button>
         <button id="btn-retry" class="btn primary" type="button">Play Again</button>
@@ -98,7 +150,6 @@
       <button id="btn-settings-close" class="btn primary" type="button">Done</button>
     </div>
 
-    <!-- Toast -->
     <div id="toast" class="toast" hidden></div>
   </div>
 

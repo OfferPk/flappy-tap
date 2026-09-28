@@ -1,7 +1,7 @@
 {
-  "name": "flappy-tap",
-  "version": "2.0.0-complete",
-  "description": "Offline one-tap Flappy-style arcade — OWNER COMPLETE (PWA + Capacitor)",
+  "name": "urr-jaa",
+  "version": "3.0.0-urrjaa",
+  "description": "Urr Jaa! — offline one-tap fly arcade (PWA + Capacitor). Repo folder: flappy-tap.",
   "private": true,
   "scripts": {
     "start": "npx --yes serve -l 4174 .",
@@ -23,11 +23,13 @@
     "@capacitor/cli": "^6.2.0"
   },
   "keywords": [
+    "urr-jaa",
     "flappy",
     "pwa",
     "offline",
     "capacitor",
-    "arcade"
+    "arcade",
+    "pakistan"
   ],
   "author": "CEO BOT Games / Mia Smith",
   "license": "MIT"

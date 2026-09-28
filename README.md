@@ -1,18 +1,18 @@
-# Flappy Tap — Offline One-Tap Arcade
+# Urr Jaa! — Offline One-Tap Fly Arcade
 
-Vanilla HTML/CSS/JS Flappy-style game. **100% offline after first load.** No servers, no accounts, no live ops.
+**اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**v2.0.0-complete** — OWNER COMPLETE: full-run practice (ghost), pause, platinum medal, bird trail, Rocket skin unlock, sound/haptics settings, totalRuns, power-ups + daily + combo.
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.0.0-urrjaa**
+
+Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.
 
 ## Play & download
 
 | Platform | Link |
 |----------|------|
 | **Browser (PC / Android Chrome)** | https://offerpk.github.io/flappy-tap/ |
-| **Windows zip** | https://github.com/OfferPk/flappy-tap/releases/latest/download/flappy-tap-web-windows.zip |
+| **Windows zip** | https://github.com/OfferPk/flappy-tap/releases/latest/download/urr-jaa-web-windows.zip |
 | **Android** | Same browser link in Chrome (Add to Home Screen). APK not built yet (no JDK/SDK here). |
-
-Repo: https://github.com/OfferPk/flappy-tap
 
 ## Play locally (web)
 
@@ -22,89 +22,70 @@ npx --yes serve -l 4174 .
 # → http://localhost:4174
 ```
 
-Or:
-
-```bash
-npm start
-# / python3 -m http.server 4174
-```
-
-`file://` works for core play; PWA/service worker needs `http://`.
+Or `npm start` / `python3 -m http.server 4174`.
 
 ### Windows zip
 
-Extract `dist/flappy-tap-web-windows.zip` (also copied to `docs/`) → double-click **PLAY-WINDOWS.bat** or open `index.html`.
+Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-### GitHub Pages
-
-Static site is in `docs/` (same assets as `www/`). Parent agent publishes — this box does **not** git push.
-
-## Features
+## Features (v3.0.0-urrjaa)
 
 | Feature | Notes |
 |---------|--------|
-| One-tap flap | Click / touch / Space — fixed upward impulse (rate-clamped) |
-| Flappy physics | Fixed bird X; world scrolls; `vy += g·dt`; terminal velocity; forgiving hitboxes |
-| Pipes | Random gap Y; recycle off-screen; score when right edge passes bird |
-| **Power-ups** | Shield (1 hit), Slow-mo (3s), Magnet/coin (next pipe +2), timed **×2 score** |
-| **Daily challenge** | Fixed seed pipes for the calendar day; separate daily best |
-| **Practice** | **Full-run** invulnerable / ghost pipes (entire run, not timed) |
-| **Pause** | HUD pause button or **Esc** → Resume / Quit to menu |
-| **Combo** | Consecutive pipes (near-miss has **no** penalty) → score **×2** at streak 5 |
-| **Near-miss juice** | Sparks when barely clearing a gap |
-| **Bird trail** | Velocity trail particles (respects reduce-motion) |
-| **Settings** | Sound, Haptics stub, Sensitivity, Reduce-motion |
-| **Haptics stub** | `navigator.vibrate` when available; CSS screen shake on death |
-| Difficulty ramp | Speed ↑, gap ↓, spacing tighter with score (soft caps) |
-| Collision | AABB vs pipes + ground + ceiling → hit flash → brief freeze → Game Over |
-| Medals | Bronze 10 / Silver 25 / Gold 50 / **Platinum 100** |
-| Skins | Bird / Bike / Rickshaw + locked **Rocket** (score ≥40 or rewarded ad) |
-| Meta | Best + **totalRuns** in `localStorage` |
-| Juice | Parallax, trail, screen flash on death, combo text |
-| Ads (stubs) | Rewarded continue 1/run; rewarded skin unlock; interstitial between runs |
-| PWA | `manifest.json` + `sw.js` (cache **flappy-tap-v4-complete**) |
-| Sound | Tiny Web Audio beeps; mute + Settings Sound toggle |
+| One-tap flap | Click / touch / Space — fixed impulse, rate-clamped |
+| Gravity + pipes | Fixed bird X; world scrolls; forgiving hitboxes |
+| **Birds** | Sparrow (start) · Parrot · Eagle · Chick · Owl · Funny — garage unlock with coins |
+| **Vehicles** | Pairing comedy: Rickshaw, Cycle, Bike, Scooty, Bicycle, Chingchi, Taxi, Bus, Mehran, Tractor |
+| **Environments** | Normal City, Lahore, Islamabad, Karachi, Murree, Village, Desert, Night City — score milestones or shop |
+| **Weather** | Sunny / Rain / Fog / Night / Storm — **visual FX only** (no unfair difficulty) |
+| **Coins** | Collect in gaps · spend in garage |
+| **Coin combo** | Consecutive coins → COMBO **x2 / x5 / x10** score mult |
+| **Mystery boxes** | Occasional · random cosmetic · Collection album |
+| **Missions** | Daily local: fly meters, coins, obstacles, boxes, score 50 clean |
+| **PK obstacles** | Kite, rickshaw, cycle, bus, signboard, tree, construction, brick, wires, clothesline + toast “Oye bach ke!” |
+| **Modes** | Classic · Daily · Practice (no death) · Challenge 100m clean · Hard · Reverse flap · Giant bird |
+| Power-ups | Shield, Slow-mo, Magnet, timed ×2 (optional, not cluttering core) |
+| Pause / Settings | Esc or ⏸ · Sound, Haptics, Sensitivity, Reduce motion |
+| Medals | Bronze 10 / Silver 25 / Gold 50 / Platinum 100 |
+| Ads stubs | Rewarded continue · interstitial between runs — no AdMob IDs |
+| PWA | `manifest.json` + `sw.js` cache **urrjaa-v5-20260928** |
+| Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)
 
-Scaffold only — **no APK built here** (JDK/Android SDK not assumed).
-
 ```bash
 npm install
-npm run build:web          # → www/ (+ docs/)
-npx cap add android        # once
+npm run build:web
+npx cap add android   # once
 npm run cap:sync
-npx cap open android       # Android Studio on a machine with SDK
-# or: npm run android:build  # needs JDK 17+ and Android SDK
+npx cap open android
 ```
-
-`capacitor.config.json`: `appId` `com.ceobot.flappytap`, `webDir` `www`.
 
 ## Layout
 
 ```
-flappy-tap/
-  index.html
-  css/style.css
-  js/storage.js audio.js ads.js skins.js game.js
-  icons/  manifest.json  sw.js
-  www/          # Capacitor webDir (built)
-  docs/         # GitHub Pages static copy (+ windows zip)
-  dist/         # flappy-tap-web-windows.zip
-  scripts/build-web.js  pack-windows.js
-  package.json  capacitor.config.json
-  README.md     STATUS.md
+flappy-tap/          # repo path kept
+  index.html         # title Urr Jaa!
+  css/ style.css
+  js/ storage.js audio.js ads.js skins.js game.js
+  icons/ manifest.json sw.js
+  www/               # Capacitor webDir
+  docs/              # GitHub Pages + urr-jaa-web-windows.zip
+  dist/              # urr-jaa-web-windows.zip
+  package.json       # name urr-jaa, version 3.0.0-urrjaa
+  capacitor.config.json
+  README.md STATUS.md
 ```
 
 ## Scripts
 
 | Script | What |
 |--------|------|
-| `npm start` | Serve on port **4174** |
-| `npm run build:web` | Copy assets → `www/` and `docs/` |
-| `npm run pack:windows` | Build zip with `PLAY-WINDOWS.bat` → `dist/` + `docs/` |
+| `npm start` | Serve port **4174** |
+| `npm run build:web` | → `www/` + `docs/` |
+| `npm run pack:windows` | → `dist/urr-jaa-web-windows.zip` + docs copy |
 | `npm run check` | `node --check` on all `js/*.js` |
 
 ## Monetization
 
-Cow-cash **stubs only** in `js/ads.js`. Set `window.ADMOB_CONFIG` later if wiring a real plugin — until then Grant/Skip UI simulates rewarded / interstitial. No keystores, tokens, or `.env` secrets in this repo. Core play is free offline.
+Stubs only in `js/ads.js`. No secrets / AdMob IDs. Core play free offline.

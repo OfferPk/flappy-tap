@@ -1,79 +1,53 @@
-# STATUS — Flappy Tap v2.0.0-complete
+# STATUS — Urr Jaa! v3.0.0-urrjaa
 
-**Path:** `/workspace/games/flappy-tap`  
+**Path:** `/workspace/games/flappy-tap` (repo OfferPk/flappy-tap; UI title **Urr Jaa!**)  
 **Owner:** Mia Smith  
-**Updated:** 2026-09-28 ~13:00 Asia/Karachi (PKT)  
-**Version:** 2.0.0-complete
+**Updated:** 2026-09-28 ~15:15 Asia/Karachi (PKT)  
+**Version:** **3.0.0-urrjaa**  
+**SW cache:** `urrjaa-v5-20260928`  
+**Capacitor appId:** `com.offerpk.urrjaa`
 
 ## OWNER COMPLETE ✅
 
-### Core
-- [x] One-tap flap
-- [x] Gravity continuous
-- [x] Collide pipe / ground / ceiling = death
-- [x] Score +1 per pipe pair once (magnet/combo/×2 can multiply)
+### Rename
+- [x] Display name **Urr Jaa!** everywhere (logo, title, manifest, README, STATUS, Capacitor appName)
+- [x] package.json `name`: `urr-jaa` · version `3.0.0-urrjaa`
+- [x] Folder path kept `flappy-tap` (repo continuity)
+- [x] Capacitor `com.offerpk.urrjaa`
+- [x] Zip `urr-jaa-web-windows.zip`
 
-### Physics
-- [x] dt-clamped gravity
-- [x] Consistent flap impulse
-- [x] Terminal velocity
-- [x] Hitboxes ~10–15%+ forgiving vs sprite (skins.js `hitbox`)
+### Core (kept)
+- [x] Tap→flap, gravity, pipes/obstacles, score, death
+- [x] Practice / Daily
+- [x] Ads stubs · NO countdown · 2s learn
+- [x] Shield / slow-mo / pause / settings / medals / power-ups
 
-### Difficulty
-- [x] Gap shrink + speed ramp with soft caps
-- [x] Fair restart spawns
-
-### Modes
-- [x] Classic endless
-- [x] **Practice = full-run no-death / ghost pipes** (entire run; label “Practice (No Death)”)
-- [x] Daily seed run (local date seed + local daily best)
-
-### Power-ups
-- [x] Shield 1 hit
-- [x] Slow-mo
-- [x] Magnet/coin
-- [x] Timed ×2 score pickup (+ combo ×2 at streak 5)
-
-### Meta
-- [x] Skins: bird / bike / rickshaw + locked **Rocket** (4th)
-- [x] Medals bronze / silver / gold / **platinum** (≥100)
-- [x] Best + **totalRuns** localStorage (shown on menu)
-- [x] Settings: Sound, Haptics stub, Sensitivity, Reduce FX
-
-### Juice
-- [x] Parallax
-- [x] **Bird velocity trail** (respects reduce-motion)
-- [x] Screen flash on death
-- [x] Combo text
-
-### Monetization stubs
-- [x] Rewarded continue 1/run
-- [x] **Rewarded skin unlock** for Rocket (or score ≥40 gate)
-- [x] Interstitial between runs
-- [x] Core free offline — no AdMob IDs required
-
-### Screens
-- [x] Menu
-- [x] Skins picker + unlock flow
-- [x] Settings
-- [x] Play HUD
-- [x] Death / Results
-- [x] **Pause** (HUD ⏸ + Esc → Resume / Quit)
+### ADD — all playable
+- [x] Birds: Sparrow + Parrot, Eagle, Chick, Owl, Funny (garage/coins)
+- [x] Vehicles collection pairing: Rickshaw, Cycle, Bike, Scooty, Bicycle, Chingchi, Taxi, Bus, Mehran, Tractor
+- [x] Pakistani environments (bg): City, Lahore, Islamabad, Karachi, Murree, Village, Desert, Night City
+- [x] Weather visual: Sunny, Rain, Fog, Night, Storm (FX only)
+- [x] Coins in gaps + spend in garage
+- [x] Coin combo consecutive → x2 / x5 / x10
+- [x] Mystery boxes → random cosmetic + Collection album
+- [x] Missions daily/local (meters, coins, obstacles, boxes, clean 50)
+- [x] Funny PK obstacles + “Oye bach ke!” toast
+- [x] Modes: Classic · Challenge 100m · Hard · Reverse · Giant (+ Daily/Practice)
+- [x] Bird+Vehicle pairing visual comedy
 
 ### Ship
-- [x] Offline + PWA (`sw.js` cache **flappy-tap-v4-complete**)
-- [x] Capacitor scaffold (`webDir` www) — no APK
-- [x] Ads stubs only — no secrets / no AdMob IDs
-- [x] `www/` + `docs/` + `dist/flappy-tap-web-windows.zip` refreshed
-- [x] Version **2.0.0-complete** in package.json, README, STATUS, index tagline, SW
+- [x] Offline PWA (`urrjaa-v5-20260928`)
+- [x] Capacitor scaffold — no APK
+- [x] Ads stubs only — no secrets
+- [x] `www/` + `docs/` + `dist/urr-jaa-web-windows.zip`
+- [x] `npm run check` + smoke
 - [x] No git push from this box
 
 ## Out of scope ⏳
-
-- [ ] Real AdMob plugin + production ad unit IDs
-- [ ] Signed release APK/AAB — blocked (no JDK / Android SDK assumed)
-- [ ] iOS Capacitor target
-- [ ] GitHub Pages publish / release upload — **parent agent** (no push)
+- [ ] Real AdMob + production IDs
+- [ ] Signed APK/AAB (no JDK/SDK)
+- [ ] iOS Capacitor
+- [ ] GitHub Pages / release upload — **parent agent** (no push)
 
 ## How to open
 
@@ -83,10 +57,4 @@ npx --yes serve -l 4174 .
 # → http://localhost:4174
 ```
 
-Windows: extract `dist/flappy-tap-web-windows.zip` → `PLAY-WINDOWS.bat`.
-
-## Blockers
-
-1. APK not built on this box (no Java/SDK).  
-2. AdMob stubs until real app IDs are provided.  
-3. Pages/release publish deferred to parent (no git push).
+Windows: extract `dist/urr-jaa-web-windows.zip` → `PLAY-WINDOWS.bat`.

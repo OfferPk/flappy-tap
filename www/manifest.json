@@ -1,7 +1,7 @@
 {
-  "name": "Flappy Tap",
-  "short_name": "FlappyTap",
-  "description": "Offline one-tap Flappy-style arcade game",
+  "name": "Urr Jaa!",
+  "short_name": "Urr Jaa!",
+  "description": "Offline one-tap fly arcade — Pakistani birds, vehicles & cities",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",

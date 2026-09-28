@@ -1,5 +1,5 @@
-/* Offline-first service worker — cache shell only, no network required after install */
-const CACHE = 'flappy-tap-v4-complete';
+/* Offline-first service worker — Urr Jaa! */
+const CACHE = 'urrjaa-v5-20260928';
 const ASSETS = [
   './',
   './index.html',
