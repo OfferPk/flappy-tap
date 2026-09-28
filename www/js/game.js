@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.44.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.45.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -3726,6 +3726,17 @@ function updateComboMeter(visible) {
     var sdt = dt * timeScale;
     var scroll = currentSpeed * sdt * (state === 'playing' ? 1 : 0.35);
 
+    // 3.45 soft night ambience ticks while flying at night
+    if (state === 'playing' && isNightAmbience()) {
+      nightAmbAcc += dt;
+      if (nightAmbAcc > 1.8 + Math.random() * 1.4) {
+        nightAmbAcc = 0;
+        if (FTAudio && FTAudio.nightAmbienceTick) FTAudio.nightAmbienceTick();
+      }
+    } else {
+      nightAmbAcc = 0;
+    }
+
     squash += (squashTarget - squash) * Math.min(1, dt * 18);
     if (Math.abs(squash - squashTarget) < 0.02 && squashTarget !== 1) squashTarget = 1.08;
     if (squashTarget > 1 && Math.abs(squash - squashTarget) < 0.02) squashTarget = 1;
@@ -4264,6 +4275,7 @@ function updateComboMeter(visible) {
   var STAR_COIN_CHANCE = 0.12;
   var STAR_COIN_RUN_CAP = 3;
   var STAR_COIN_COOLDOWN_MS = 10000;
+  var nightAmbAcc = 0; // 3.45 night ambience SFX cadence
   function ensureStarfield() {
     if (starfieldCache && starfieldW === W && starfieldH === H) return starfieldCache;
     starfieldW = W; starfieldH = H;
@@ -4410,6 +4422,15 @@ function updateComboMeter(visible) {
       ctx.fill();
       drawSunFlare(moonX, moonY, moonR, weather, pal, 'night');
       drawStarfield();
+      // 3.45 soft night ambience haze
+      if (!reduceMotion) {
+        var haze = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+        haze.addColorStop(0, 'rgba(30,50,110,0.10)');
+        haze.addColorStop(0.55, 'rgba(20,30,70,0.04)');
+        haze.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = haze;
+        ctx.fillRect(0, 0, W, H * 0.55);
+      }
       // 3.13/3.40 night city window lights (tick cached ~2s)
       drawSky._nightTick = Math.floor(performance.now() / 2000);
       var gy = H - GROUND_H;
@@ -6068,7 +6089,7 @@ function updateComboMeter(visible) {
             ? 'Showing seasonal packs — unlock by date window or score'
             : garageFilter === 'fav'
               ? 'Showing pinned favorites — tap ★ on a skin to pin'
-              : 'Theme skins · pin ★ favorites · search below';
+              : '★ pin · double-tap equip · long-press preview';
       }
     }
     document.querySelectorAll('#screen-garage .skin-card').forEach(function (card) {
@@ -6314,6 +6335,11 @@ function updateComboMeter(visible) {
     garageLpId = null;
   }
 
+  function playEquipFanfareLight() {
+    if (FTAudio && FTAudio.fanfareLight) FTAudio.fanfareLight();
+    else if (FTAudio && FTAudio.coin) FTAudio.coin();
+  }
+
   function equipFromGarageLp() {
     if (!garageLpKind || !garageLpId) return;
     if (garageLpCard && garageLpCard.classList.contains('locked')) {
@@ -6333,6 +6359,11 @@ function updateComboMeter(visible) {
       if (rowKind !== garageLpKind) return;
       el.classList.toggle('selected', el.dataset.id === garageLpId && !el.classList.contains('locked'));
     });
+    playEquipFanfareLight();
+    if (garageLpCard) {
+      garageLpCard.classList.add('equip-flash');
+      setTimeout(function () { if (garageLpCard) garageLpCard.classList.remove('equip-flash'); }, 480);
+    }
     showToast('Equipped · ' + label, 1200, 'medal');
     if (typeof haptic === 'function') haptic('gift');
     closeGarageLongPreview();
@@ -6487,6 +6518,13 @@ function updateComboMeter(visible) {
     });
   }
   bindGarageLongPress();
+
+  // 3.45: double-tap skin card → light fanfare + toast
+  global.onGarageDoubleEquip = function (kind, id, label) {
+    playEquipFanfareLight();
+    showToast('Equipped · ' + (label || id), 1100, 'medal');
+    if (typeof haptic === 'function') haptic('gift');
+  };
 
   document.querySelectorAll('[data-close="garage"]').forEach(function (b) {
     b.addEventListener('click', function () { closeGarageLongPreview(); stopGaragePreview(); showMenu(); });

@@ -1450,6 +1450,21 @@
         container.querySelectorAll('.skin-card').forEach((el) => {
           el.classList.toggle('selected', el.dataset.id === item.id && !el.classList.contains('locked'));
         });
+        // 3.45: double-tap equip juice
+        const now = Date.now();
+        const key = kind + ':' + item.id;
+        if (renderPicker._lastTapKey === key && (now - (renderPicker._lastTapAt || 0)) < 380) {
+          renderPicker._lastTapKey = '';
+          renderPicker._lastTapAt = 0;
+          btn.classList.add('equip-flash');
+          setTimeout(function () { btn.classList.remove('equip-flash'); }, 480);
+          if (typeof global.onGarageDoubleEquip === 'function') {
+            global.onGarageDoubleEquip(kind, item.id, item.label || item.id);
+          }
+        } else {
+          renderPicker._lastTapKey = key;
+          renderPicker._lastTapAt = now;
+        }
       });
       container.appendChild(btn);
     });

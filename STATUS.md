@@ -1,5 +1,22 @@
 # Urr Jaa! STATUS
 
+## Current: **3.45.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.44)
+- **Equip fanfare light** — soft sparkle SFX + card flash on preview Equip / double-tap
+- **Double-tap equip** — second tap within ~380ms plays juice toast + fanfare
+- **Night ambience** — cricket/owl ticks in play + soft sky haze + deeper night bed
+- Polish / bugfixes — garage hint copy
+- KEEP ALL ≤3.44 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v54-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.45.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.45.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.44.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.43)

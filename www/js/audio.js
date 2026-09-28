@@ -263,6 +263,30 @@
     setTimeout(function () { tone(1319, 0.14, 'sine', 0.08); }, 250);
     setTimeout(function () { tone(1568, 0.12, 'triangle', 0.06); }, 340);
   }
+  /** 3.45: light equip fanfare — short soft sparkle */
+  function fanfareLight() {
+    if (muted) return;
+    tone(659, 0.045, 'sine', 0.055 * quietMul);
+    setTimeout(function () { tone(880, 0.05, 'triangle', 0.048 * quietMul); }, 45);
+    setTimeout(function () { tone(1175, 0.07, 'sine', 0.04 * quietMul); }, 95);
+  }
+  /** 3.45: soft night cricket / owl ambience blip */
+  function nightAmbienceTick() {
+    if (muted) return;
+    var base = 0.007 * quietMul;
+    var f = 1650 + Math.random() * 520;
+    tone(f, 0.028, 'sine', base);
+    if (Math.random() < 0.35) {
+      setTimeout(function () { tone(f * 0.82, 0.022, 'triangle', base * 0.85); }, 35 + Math.random() * 40);
+    }
+    if (Math.random() < 0.12) {
+      // rare soft owl-ish low hoot
+      setTimeout(function () {
+        tone(220 + Math.random() * 40, 0.09, 'sine', 0.012 * quietMul);
+        setTimeout(function () { tone(196, 0.07, 'triangle', 0.01 * quietMul); }, 70);
+      }, 80);
+    }
+  }
 
   let areaMusicTimer = null;
   let areaMusicId = null;
@@ -375,7 +399,7 @@
       mountains: [262, 330, 392, 523],
       village: [294, 370, 440],
       rain: [220, 247, 294],
-      night: [196, 247, 294, 370],
+      night: [196, 247, 294, 370, 220, 165], // 3.45 deeper night bed
       desert: [311, 370, 415, 466]
     };
     const notes = themes[areaId] || themes.city;
@@ -914,7 +938,7 @@
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     tick: tick, startSpinWhoosh: startSpinWhoosh, stopSpinWhoosh: stopSpinWhoosh, spinLand: spinLand,
-    thunder: thunder, fanfare: fanfare,
+    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, nightAmbienceTick: nightAmbienceTick,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
     playMenuMusic: playMenuMusic, stopMenuMusic: stopMenuMusic,
     setAreaMusicEnabled: setAreaMusicEnabled, isAreaMusicEnabled: isAreaMusicEnabled,
