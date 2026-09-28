@@ -1,0 +1,27 @@
+{
+  "name": "flappy-tap",
+  "version": "1.0.0",
+  "description": "Offline one-tap Flappy-style arcade — PWA + Capacitor scaffold",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes serve -l 4174 .",
+    "serve": "npx --yes serve -l 4174 .",
+    "build:web": "node scripts/build-web.js",
+    "pack:windows": "node scripts/pack-windows.js",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npm run build:web && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "android:build": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "start:py": "python3 -m http.server 4174"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  },
+  "keywords": ["flappy", "pwa", "offline", "capacitor", "arcade"],
+  "author": "CEO BOT Games / Mia Smith",
+  "license": "MIT"
+}

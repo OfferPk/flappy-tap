@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#4ecdc4" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Flappy Tap — offline one-tap arcade game" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>Flappy Tap</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" width="400" height="600" aria-label="Flappy Tap game"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="overlay-layer" hidden>
+      <div id="score-display">0</div>
+      <button id="btn-mute" class="icon-btn" type="button" aria-label="Toggle sound" title="Sound">🔊</button>
+    </div>
+
+    <!-- Start / Menu -->
+    <div id="screen-start" class="screen">
+      <h1 class="logo">Flappy Tap</h1>
+      <p class="tagline">One tap. Stay airborne.</p>
+      <div class="skin-row" id="skin-picker"></div>
+      <button id="btn-play" class="btn primary" type="button">Play</button>
+      <p class="hint">Tap or Space to flap</p>
+      <p class="best-line">Best: <span id="best-start">0</span></p>
+    </div>
+
+    <!-- Death / Game Over -->
+    <div id="screen-death" class="screen" hidden>
+      <h2>Game Over</h2>
+      <p class="score-big">Score: <span id="final-score">0</span></p>
+      <p class="best-line">Best: <span id="best-death">0</span></p>
+      <div class="btn-col">
+        <button id="btn-continue" class="btn reward" type="button">▶ Continue (Ad)</button>
+        <button id="btn-retry" class="btn primary" type="button">Play Again</button>
+        <button id="btn-menu" class="btn ghost" type="button">Menu</button>
+      </div>
+    </div>
+
+    <!-- Pause / Unlock toast -->
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/ads.js"></script>
+  <script src="js/skins.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
