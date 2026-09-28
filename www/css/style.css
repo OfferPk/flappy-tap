@@ -3590,3 +3590,24 @@ html.reduce-motion .skin-card.equip-flash { animation: none; }
   margin: 4px auto 6px;
   display: block;
 }
+
+/* ——— v3.48: clear undo + preview polish ——— */
+.toast-undo-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.toast-undo-clear {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,.45);
+  background: rgba(148,163,184,.14);
+  color: #e2e8f0;
+  font-weight: 800;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.toast-undo-clear:hover { background: rgba(248,113,113,.28); border-color: rgba(248,113,113,.5); color: #fecaca; }
+.toast-undo-clear[hidden] { display: none !important; }

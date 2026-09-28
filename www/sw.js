@@ -1,5 +1,5 @@
-/* Offline-first service worker — Urr Jaa! v3.47.0-urrjaa */
-const CACHE = 'urrjaa-v56-20260928';
+/* Offline-first service worker — Urr Jaa! v3.48.0-urrjaa */
+const CACHE = 'urrjaa-v57-20260928';
 const ASSETS = [
   './',
   './index.html',

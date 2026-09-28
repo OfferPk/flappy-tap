@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.47.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.48.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -328,6 +328,8 @@
       span.className = 'toast-undo-msg';
       span.textContent = msg;
       toastEl.appendChild(span);
+      var actions = document.createElement('span');
+      actions.className = 'toast-undo-actions';
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'toast-undo-btn';
@@ -339,7 +341,21 @@
         e.stopPropagation();
         undoLastEquip();
       });
-      toastEl.appendChild(btn);
+      actions.appendChild(btn);
+      var clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'toast-undo-clear';
+      clearBtn.id = 'toast-undo-clear';
+      clearBtn.textContent = 'Clear';
+      clearBtn.setAttribute('aria-label', 'Clear undo stack');
+      clearBtn.title = 'Clear all undo steps';
+      clearBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        clearEquipUndoStack();
+      });
+      actions.appendChild(clearBtn);
+      toastEl.appendChild(actions);
       toastEl.classList.add('toast-undo');
     } else {
       toastEl.textContent = msg;
@@ -1764,6 +1780,7 @@ function updateComboMeter(visible) {
   function showMenu() {
     stopGaragePreview();
     if (typeof closeGarageLongPreview === 'function') closeGarageLongPreview();
+    if (typeof clearEquipUndoStack === 'function') clearEquipUndoStack({ silent: true });
     setPauseBlur(false);
     state = 'menu';
     hideCoach();
@@ -5957,7 +5974,7 @@ function updateComboMeter(visible) {
       setTimeout(function () { if (FTAudio.nightAmbienceTick) FTAudio.nightAmbienceTick(); }, 220);
       setTimeout(function () { if (FTAudio.nightAmbienceTick) FTAudio.nightAmbienceTick(); }, 440);
     }
-    showToast('Night ambience preview · ' + lvl, 1100);
+    showToast('🌙 Night sample · ' + lvl + ' · cricket + owl', 1400, 'lucky');
   }
 
   if (nightAmbVolSel) {
@@ -6137,13 +6154,35 @@ function updateComboMeter(visible) {
     equipUndoStack = equipUndoStack.filter(function (u) { return u && u.until > now; });
   }
 
-  function refreshUndoToastButton() {
-    var btn = document.getElementById('toast-undo-btn');
-    if (!btn) return;
+  function clearEquipUndoStack(opts) {
+    opts = opts || {};
     pruneEquipUndoStack();
     var n = equipUndoStack.length;
-    btn.textContent = n > 1 ? ('Undo · ' + n) : 'Undo';
-    btn.setAttribute('aria-label', n > 1 ? ('Undo equip, ' + n + ' in stack') : 'Undo equip');
+    equipUndoStack = [];
+    if (opts.silent) return n;
+    if (toastEl) {
+      toastEl.hidden = true;
+      toastEl.classList.remove('toast-undo');
+      toastEl.textContent = '';
+    }
+    showToast(n ? ('Cleared undo · ' + n + ' step' + (n === 1 ? '' : 's')) : 'Undo stack empty', 1200, 'sync');
+    if (typeof haptic === 'function' && n) haptic('power');
+    return n;
+  }
+
+  function refreshUndoToastButton() {
+    var btn = document.getElementById('toast-undo-btn');
+    pruneEquipUndoStack();
+    var n = equipUndoStack.length;
+    if (btn) {
+      btn.textContent = n > 1 ? ('Undo · ' + n) : 'Undo';
+      btn.setAttribute('aria-label', n > 1 ? ('Undo equip, ' + n + ' in stack') : 'Undo equip');
+    }
+    var clearBtn = document.getElementById('toast-undo-clear');
+    if (clearBtn) {
+      clearBtn.hidden = n < 1;
+      clearBtn.textContent = n > 1 ? ('Clear · ' + n) : 'Clear';
+    }
   }
 
   function showEquipUndoToast(label) {
@@ -6702,7 +6741,13 @@ function updateComboMeter(visible) {
   };
 
   document.querySelectorAll('[data-close="garage"]').forEach(function (b) {
-    b.addEventListener('click', function () { closeGarageLongPreview(); stopGaragePreview(); showMenu(); });
+    b.addEventListener('click', function () {
+      closeGarageLongPreview();
+      stopGaragePreview();
+      // 3.48: leaving garage clears pending undo stack (silent)
+      if (typeof clearEquipUndoStack === 'function') clearEquipUndoStack({ silent: true });
+      showMenu();
+    });
   });
 
 

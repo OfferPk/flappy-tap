@@ -1,5 +1,21 @@
 # Urr Jaa! STATUS
 
+## Current: **3.48.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.47)
+- **Clear undo stack** — Clear on equip Undo toast · silent clear when leaving Garage
+- **Better night preview** — cricket chorus + wind pad + clearer owl sample
+- Polish / bugfixes — Clear · N label; preview toast copy
+- KEEP ALL ≤3.47 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v57-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.48.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.48.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.47.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.46)

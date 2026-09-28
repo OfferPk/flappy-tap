@@ -297,22 +297,40 @@
       }, 80);
     }
   }
-  /** 3.47: settings preview — denser cricket + guaranteed soft owl */
+  /** 3.47/3.48: settings preview — cricket chorus + wind pad + clear owl */
   function previewNightAmbience() {
     if (muted || nightAmbVolMul <= 0.001) return false;
-    var vol = quietMul * nightAmbVolMul;
-    function cricket() {
-      var f = 1650 + Math.random() * 520;
-      tone(f, 0.03, 'sine', 0.009 * vol);
-      setTimeout(function () { tone(f * 0.84, 0.024, 'triangle', 0.007 * vol); }, 40);
+    // floor so Quiet-at-night ducking still leaves an audible sample in Settings
+    var vol = Math.max(0.6, quietMul) * nightAmbVolMul;
+    function cricket(at, spread) {
+      setTimeout(function () {
+        var f = 1550 + Math.random() * (spread || 580);
+        tone(f, 0.032, 'sine', 0.01 * vol);
+        setTimeout(function () { tone(f * 0.86, 0.026, 'triangle', 0.0075 * vol); }, 36);
+        if (Math.random() < 0.55) {
+          setTimeout(function () { tone(f * 1.12, 0.02, 'sine', 0.0055 * vol); }, 70);
+        }
+      }, at);
     }
-    cricket();
-    setTimeout(cricket, 200);
-    setTimeout(cricket, 400);
+    // soft night wind bed
+    tone(90, 0.55, 'sine', 0.006 * vol);
+    setTimeout(function () { tone(110, 0.4, 'triangle', 0.0045 * vol); }, 80);
+    // cricket chorus
+    cricket(60, 500);
+    cricket(180, 620);
+    cricket(300, 480);
+    cricket(440, 700);
+    cricket(580, 520);
+    cricket(720, 600);
+    // clear two-note owl
     setTimeout(function () {
-      tone(230, 0.1, 'sine', 0.014 * vol);
-      setTimeout(function () { tone(196, 0.08, 'triangle', 0.011 * vol); }, 75);
-    }, 520);
+      tone(246, 0.12, 'sine', 0.016 * vol);
+      setTimeout(function () { tone(196, 0.14, 'triangle', 0.013 * vol); }, 90);
+      setTimeout(function () { tone(220, 0.08, 'sine', 0.008 * vol); }, 200);
+    }, 780);
+    // trailing cricket
+    cricket(980, 450);
+    cricket(1120, 520);
     return true;
   }
 
