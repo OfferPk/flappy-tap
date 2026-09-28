@@ -1,19 +1,19 @@
 # Urr Jaa! STATUS
 
-## Current: **3.34.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.35.0-urrjaa** (2026-09-28 PKT)
 
-### This pack (NEW vs 3.11–3.33)
-- **Better Install A2HS flow** — step chips · iOS Share how-to · Later snoozes session only · Install keeps prompt until choice
-- **Soft vibration on PERFECT** — gentle double-tap haptic on perfect pass
-- **Guide language remember** — EN / Roman Urdu / اردو tab persisted
-- **Micro UI polish** — guide tabs, A2HS steps, perfect toast, focus rings
-- Bugfixes: Guide no longer resets to English every open; A2HS Later ≠ permanent dismiss
-- KEEP ALL ≤3.33 incl. **15s Mystery Spin once**, Close (X), …
+### This pack (NEW vs 3.11–3.34)
+- **Score font juice** — tabular nums, bigger bump, milestone gradient flash
+- **Medal shine** — sheen sweep + glow on earned medal
+- **Better landscape layout** — wider app, HUD scale, menu grid, scroll panels
+- **Touch dead-zone fix** — letterbox taps flap; play mode no longer blocks on `.screen`
+- Bugfixes: flap UI blocker list tightened; landscape `is-landscape` class
+- KEEP ALL ≤3.34 incl. **15s Mystery Spin once**, Close (X), …
 
-SW cache: `urrjaa-v43-20260928`
+SW cache: `urrjaa-v44-20260928`
 
-**Ship commit:** `3c87e70` · tag `v3.34.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.34.0-urrjaa  
+**Ship commit:** (pending) · tag `v3.35.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.35.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/
 
 

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.34.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.35.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -589,6 +589,10 @@
 
   function resizeCanvas() {
     var app = document.getElementById('app');
+    if (!app) return;
+    var landscape = false;
+    try { landscape = window.matchMedia && window.matchMedia('(orientation: landscape)').matches; } catch (_) {}
+    document.documentElement.classList.toggle('is-landscape', !!landscape);
     var scale = Math.min(app.clientWidth / W, app.clientHeight / H);
     var dw = Math.floor(W * scale);
     var dh = Math.floor(H * scale);
@@ -1275,15 +1279,31 @@
       scale: opts.coin ? 1.15 : 1
     });
     if (scoreEl) {
-      scoreEl.classList.remove('score-bump');
+      scoreEl.classList.remove('score-bump', 'score-juice', 'score-juice-big', 'score-milestone');
       void scoreEl.offsetWidth;
-      scoreEl.classList.add('score-bump');
+      scoreEl.classList.add('score-bump', 'score-juice');
+      var big = !!opts.coin || (typeof amount === 'number' && amount >= 3) ||
+        (typeof amount === 'string' && /PERFECT|CLOSE|COMBO|x[3-9]/i.test(amount));
+      if (big) scoreEl.classList.add('score-juice-big');
     }
   }
 
   function setScore(n) {
+    var prev = score;
     score = n;
-    if (scoreEl) scoreEl.textContent = String(score);
+    if (scoreEl) {
+      scoreEl.textContent = String(score);
+      if (score > prev) {
+        var hitMilestone = (score >= 10 && prev < 10) || (score >= 25 && prev < 25) ||
+          (score >= 50 && prev < 50) || (score >= 100 && prev < 100) ||
+          (score >= 150 && prev < 150) || (score % 25 === 0);
+        scoreEl.classList.remove('score-bump', 'score-juice', 'score-juice-big', 'score-milestone');
+        void scoreEl.offsetWidth;
+        scoreEl.classList.add('score-bump', 'score-juice');
+        if ((score - prev) >= 3 || hitMilestone) scoreEl.classList.add('score-juice-big');
+        if (hitMilestone) scoreEl.classList.add('score-milestone');
+      }
+    }
     difficultyFor(score);
     if (!hitThisRun) cleanScorePeak = Math.max(cleanScorePeak, score);
   }
@@ -1293,7 +1313,7 @@
     if (!medalEl) return;
     if (!m || isPractice()) { medalEl.hidden = true; return; }
     medalEl.hidden = false;
-    medalEl.className = 'medal medal-' + m + ' medal-pop';
+    medalEl.className = 'medal medal-' + m + ' medal-pop medal-shine';
     if (medalLabelEl) {
       var names = { platinum: 'Platinum', gold: 'Gold', silver: 'Silver', bronze: 'Bronze', legend: 'Legend' };
       if (isOneLife()) {
@@ -4838,11 +4858,14 @@
   }
 
   var lastFlapTouchTs = 0;
-  /** 3.18: shared flap path — touchstart first (lower latency), pointer as fallback. */
+  /** 3.35: during play only block real controls — not whole .screen (letterbox dead-zone fix). */
+  var FLAP_UI_BLOCK = 'button, a, input, select, textarea, label, .icon-btn, .skin-card, #ad-stub-modal, .tab-btn, .mission-card, .chip, .garage-filter, .power-chip, .panel-close, #coach-marks, .a2hs, .toast, .offline-banner';
+  var FLAP_UI_BLOCK_MENU = FLAP_UI_BLOCK + ', .screen.panel-screen, .settings-screen, .pause-screen';
+  /** 3.18/3.35: shared flap path — touchstart first; #app letterbox also flaps. */
   function tryFlapFromInput(e) {
-    if (e.target && e.target.closest && e.target.closest(
-      'button, .skin-card, #ad-stub-modal, .screen, label, input, .tab-btn, .mission-card, .chip, .garage-filter, .power-chip, .icon-btn, #coach-marks'
-    )) return false;
+    var block = (state === 'playing') ? FLAP_UI_BLOCK : FLAP_UI_BLOCK_MENU;
+    if (e.target && e.target.closest && e.target.closest(block)) return false;
+    if (state !== 'playing' && state !== 'menu') return false;
     var now = performance.now();
     // 18ms debounce: blocks touch+pointer double-fire without delaying first tap
     if (now - lastFlapTouchTs < 18) return false;
@@ -4896,14 +4919,23 @@
   })();
 
   canvas.style.touchAction = 'none';
-  // 3.18: touchstart before pointerdown → lower mobile tap latency
+  var appElTouch = document.getElementById('app');
+  if (appElTouch) appElTouch.style.touchAction = 'none';
+  // 3.18/3.35: touchstart before pointerdown; #app catches letterbox dead-zones
   canvas.addEventListener('touchstart', function (e) {
     if (state === 'playing' || state === 'menu') tryFlapFromInput(e);
   }, { passive: false });
   canvas.addEventListener('pointerdown', onPointer, { passive: false });
-  document.getElementById('app').addEventListener('pointerdown', function (e) {
-    if (state === 'playing') tryFlapFromInput(e);
-  }, { passive: false });
+  if (appElTouch) {
+    appElTouch.addEventListener('touchstart', function (e) {
+      if (e.target === canvas || (canvas.contains && canvas.contains(e.target))) return;
+      if (state === 'playing' || state === 'menu') tryFlapFromInput(e);
+    }, { passive: false });
+    appElTouch.addEventListener('pointerdown', function (e) {
+      if (e.target === canvas || (canvas.contains && canvas.contains(e.target))) return;
+      if (state === 'playing' || state === 'menu') tryFlapFromInput(e);
+    }, { passive: false });
+  }
 
   function closePanelByKey(key) {
     key = key || '';

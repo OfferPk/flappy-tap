@@ -82,9 +82,12 @@ html.reduce-motion #app.shake { animation: none; }
   text-align: center;
   font-size: clamp(2rem, 8vw, 3rem);
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
   color: #fff;
-  text-shadow: 0 2px 0 #000, 0 4px 12px rgba(0,0,0,.35);
+  text-shadow: 0 2px 0 #000, 0 4px 12px rgba(0,0,0,.35), 0 0 18px rgba(78,205,196,.18);
   letter-spacing: 1px;
+  transition: color .15s ease, text-shadow .15s ease;
 }
 
 #combo-display {
@@ -562,7 +565,7 @@ html.reduce-motion #app.shake { animation: none; }
 /* ——— v3.1.0 juice ——— */
 @keyframes score-bump {
   0% { transform: scale(1); }
-  40% { transform: scale(1.22); }
+  35% { transform: scale(1.28); }
   100% { transform: scale(1); }
 }
 #score-display.score-bump {
@@ -2947,4 +2950,117 @@ html.reduce-motion .a2hs.a2hs-flow .a2hs-install-btn { animation: none; }
 .setting-row.check-row:hover {
   background: rgba(255,255,255,.04);
   border-radius: 8px;
+}
+
+
+/* ——— v3.35: score juice, medal shine, landscape, touch ——— */
+@keyframes score-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+#score-display.score-juice {
+  color: #fffef5;
+  text-shadow: 0 2px 0 #000, 0 0 14px rgba(255,217,61,.45), 0 4px 12px rgba(0,0,0,.35);
+}
+#score-display.score-juice-big {
+  animation: score-bump 0.34s cubic-bezier(.2,1.2,.3,1);
+  color: #ffe082;
+  text-shadow: 0 2px 0 #000, 0 0 20px rgba(255,217,61,.7), 0 0 36px rgba(78,205,196,.35);
+}
+#score-display.score-milestone {
+  animation: score-milestone-pop 0.55s cubic-bezier(.2,1.15,.3,1);
+  background: linear-gradient(90deg, #fff, #ffe082, #4ecdc4, #fff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 0 #000) drop-shadow(0 0 10px rgba(255,217,61,.5));
+}
+@keyframes score-milestone-pop {
+  0% { transform: scale(1); background-position: 0% center; }
+  40% { transform: scale(1.35); background-position: 100% center; }
+  100% { transform: scale(1); background-position: 0% center; }
+}
+html.reduce-motion #score-display.score-juice-big,
+html.reduce-motion #score-display.score-milestone { animation: none; -webkit-text-fill-color: #ffe082; color: #ffe082; }
+
+.medal-disc {
+  position: relative;
+  overflow: hidden;
+}
+.medal-shine-sheen {
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.55) 48%, transparent 62%);
+  transform: translateX(-120%) rotate(8deg);
+  pointer-events: none;
+}
+.medal.medal-shine .medal-shine-sheen {
+  animation: medal-shine-sweep 1.4s ease-out 0.15s 1;
+}
+.medal.medal-shine .medal-disc {
+  animation: medal-glow-pulse 1.6s ease-in-out 1;
+}
+@keyframes medal-shine-sweep {
+  0% { transform: translateX(-130%) rotate(8deg); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateX(130%) rotate(8deg); opacity: 0; }
+}
+@keyframes medal-glow-pulse {
+  0%, 100% { filter: brightness(1); }
+  40% { filter: brightness(1.18); }
+}
+.medal-gold.medal-shine .medal-disc {
+  box-shadow: 0 4px 22px rgba(255,217,61,.65), inset 0 -3px 8px rgba(0,0,0,.2), 0 0 16px rgba(255,217,61,.35);
+}
+.medal-platinum.medal-shine .medal-disc {
+  box-shadow: 0 4px 26px rgba(126,200,232,.7), inset 0 -3px 8px rgba(0,0,0,.15), 0 0 18px rgba(201,160,255,.45);
+}
+html.reduce-motion .medal.medal-shine .medal-shine-sheen,
+html.reduce-motion .medal.medal-shine .medal-disc { animation: none; }
+
+@media (orientation: landscape) {
+  #app {
+    max-width: min(100vw, 920px);
+    height: 100%;
+    max-height: 100dvh;
+  }
+  #score-display {
+    font-size: clamp(1.55rem, 5.5vh, 2.4rem);
+    top: calc(8px + var(--safe-top));
+  }
+  #combo-display { top: calc(40px + var(--safe-top)); font-size: 0.8rem; }
+  #hud .icon-btn { transform: scale(0.92); }
+  #screen-start .menu-tools {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    max-width: min(520px, 92%);
+  }
+  #screen-start .btn-row,
+  #screen-start .menu-primary {
+    max-width: min(420px, 90%);
+  }
+  .screen.panel-screen,
+  .screen.settings-screen {
+    padding-top: calc(12px + var(--safe-top));
+    padding-bottom: calc(12px + var(--safe-bottom));
+  }
+  .screen.scroll-screen {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .death-card, .run-summary, .settings-card {
+    max-width: min(520px, 92%);
+  }
+  .a2hs {
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    width: min(94%, 480px);
+  }
+}
+html.is-landscape #app {
+  max-width: min(100vw, 920px);
 }
