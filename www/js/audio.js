@@ -291,10 +291,11 @@
     if (now < voiceDuckUntil) duck = 0.42;
     else if (voiceDuckMul < 0.99) duck = Math.max(0.42, voiceDuckMul);
     var g = base * comboMul * duck;
-    // 3.54: CLOSE slightly brighter/softer; keep clear warm
+    // 3.54/3.55: CLOSE brighter/softer; clear warm; tiny pitch settle by kind
     var f0 = kind === 'close' ? 820 : 740;
     var f1 = kind === 'close' ? 1120 : 990;
     if (kind === 'close') g *= 0.92;
+    else g *= 0.96; // normal clear a hair softer than combo lift alone
     var j = (Math.random() - 0.5) * 28;
     tone(f0 + j, 0.038, 'sine', g);
     setTimeout(function () {
