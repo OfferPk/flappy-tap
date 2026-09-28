@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.10.0-urrjaa — deeper pseudo-3D (wings/head/mouth) + smaller body hitboxes.
+ * Urr Jaa! v3.11.0-urrjaa — richer 3D wing lag / blink / tail / vehicle lean; keeps ≤3.10.
  * Canvas-drawn; wings/hats/mouth are visual-only (hitbox ignores them).
  */
 (function (global) {
@@ -250,9 +250,13 @@
     const c = BIRD_COLORS[id] || BIRD_COLORS.sparrow;
     const s = scale == null ? 1 : scale;
     const wingFlap = opts.wingFlap || 0; // radians-ish, ~-1..1
+    const wingLag = opts.wingLag != null ? opts.wingLag : -wingFlap * 0.85;
+    const tipFlutter = opts.tipFlutter || 0;
     const headTilt = opts.headTilt || 0;
     const headBob = opts.headBob || 0;
     const mouthOpen = Math.max(0, Math.min(1, opts.mouthOpen || 0));
+    const tailWag = opts.tailWag || 0;
+    const eyeBlink = Math.max(0, Math.min(1, opts.eyeBlink || 0));
     const animT = opts.animT || 0;
     ctx.scale(s, s);
 
@@ -262,7 +266,11 @@
     ctx.ellipse(1, 13, 14, 3.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Tail silhouette first (behind body)
+    // Tail silhouette first (behind body) — wag with velocity / idle (3.11)
+    ctx.save();
+    ctx.translate(-12, 2);
+    ctx.rotate(tailWag * 0.35);
+    ctx.translate(12, -2);
     ctx.fillStyle = shadeColor(c.wing, -18);
     ctx.beginPath();
     if (id === 'cheel' || id === 'falcon') {
@@ -290,8 +298,10 @@
       }
     }
 
-    // FAR wing (behind body) — opposite phase for independent motion
-    drawWing(ctx, c, -wingFlap * 0.85, true);
+    ctx.restore(); // end tail wag group
+
+    // FAR wing (behind body) — lagged phase + tip flutter (3.11)
+    drawWing(ctx, c, wingLag, true, tipFlutter * 0.7);
 
     // Body ellipsoid with top-lit 2.5D shading
     const bodyGrad = ctx.createRadialGradient(-4, -5, 2, 0, 0, 18);
@@ -359,8 +369,8 @@
       ctx.beginPath(); ctx.moveTo(-10,2); ctx.quadraticCurveTo(-2,8,8,4); ctx.stroke();
     }
 
-    // NEAR wing (in front) — primary flap, independent
-    drawWing(ctx, c, wingFlap, false);
+    // NEAR wing (in front) — primary flap + tip flutter (3.11)
+    drawWing(ctx, c, wingFlap, false, tipFlutter);
 
     // Moveable head group: tilts / bobs with velocity look-direction + chirp bob
     ctx.save();
@@ -417,11 +427,20 @@
       // pupils look slightly with tilt
       const look = headTilt * 3;
       ctx.fillStyle = c.pupil || '#111'; ctx.beginPath(); ctx.arc(2+look,-1,2,0,Math.PI*2); ctx.arc(9+look,-1,2,0,Math.PI*2); ctx.fill();
+      if (eyeBlink > 0.05) {
+        ctx.fillStyle = shadeColor(c.body, -10);
+        ctx.beginPath(); ctx.ellipse(1, -1, 4.6, 4.5 * eyeBlink, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(8, -1, 4.6, 4.5 * eyeBlink, 0, 0, Math.PI * 2); ctx.fill();
+      }
     } else {
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(5,-2,4.4,0,Math.PI*2); ctx.fill();
       const look = headTilt * 2.5;
       ctx.fillStyle = c.eye; ctx.beginPath(); ctx.arc(6.2+look,-2,2,0,Math.PI*2); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(6.9+look,-2.7,.65,0,Math.PI*2); ctx.fill();
+      if (eyeBlink > 0.05) {
+        ctx.fillStyle = shadeColor(c.body, -8);
+        ctx.beginPath(); ctx.ellipse(5.5, -2, 4.6, 4.4 * eyeBlink, 0, 0, Math.PI * 2); ctx.fill();
+      }
     }
     if (c.shades) {
       ctx.fillStyle = '#111'; ctx.fillRect(0,-5,13,4.5); ctx.fillStyle = '#4ecdc4'; ctx.fillRect(1,-4,4.5,2.5); ctx.fillRect(7.5,-4,4.5,2.5);
@@ -469,18 +488,19 @@
     ctx.restore();
   }
 
-  function drawWing(ctx, c, flap, far) {
+  function drawWing(ctx, c, flap, far, tipFlutter) {
+    tipFlutter = tipFlutter || 0;
     ctx.save();
-    // Pivot near shoulder — stronger 3.9 flap (scaleY + rotate + tip lift)
+    // Pivot near shoulder — 3.11 flap (scaleY + rotate + tip lift + flutter)
     const px = far ? -5 : -2;
     const py = far ? 0 : 1;
     ctx.translate(px, py);
-    const ang = flap * (far ? 0.75 : 1.15);
-    ctx.rotate(-0.38 + ang * 0.48);
-    const sy = Math.max(0.22, Math.cos(ang * 1.05));
-    ctx.scale(far ? 0.94 : 1.05, sy * (far ? 0.86 : 1));
-    // Tip rises on upstroke
-    ctx.translate(0, -Math.sin(Math.max(0, ang)) * (far ? 1.5 : 2.8));
+    const ang = flap * (far ? 0.78 : 1.22) + tipFlutter * (far ? 0.35 : 0.55);
+    ctx.rotate(-0.38 + ang * 0.52);
+    const sy = Math.max(0.20, Math.cos(ang * 1.08));
+    ctx.scale(far ? 0.94 : 1.08, sy * (far ? 0.86 : 1));
+    // Tip rises on upstroke + micro flutter
+    ctx.translate(0, -Math.sin(Math.max(0, ang)) * (far ? 1.7 : 3.1) - tipFlutter * (far ? 0.6 : 1.1));
     if (far) ctx.globalAlpha = 0.72;
 
     const wingGrad = ctx.createLinearGradient(-12, -6, 8, 8);
@@ -510,11 +530,16 @@
     ctx.beginPath();
     ctx.moveTo(-4, 0); ctx.quadraticCurveTo(-11, 3, -16, 2);
     ctx.stroke();
-    // Tip highlight + secondary vane
+    // Tip highlight + secondary vane + tertiary flutter vane (3.11)
     ctx.fillStyle = 'rgba(255,255,255,.26)';
     ctx.beginPath(); ctx.ellipse(-14, -2, 3.2, 1.7, -0.4, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,.12)';
     ctx.beginPath(); ctx.ellipse(-8, 3, 4, 1.4, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.28)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(-5, -3); ctx.quadraticCurveTo(-12, -6 - tipFlutter * 2, -18, -1);
+    ctx.stroke();
 
     ctx.restore();
   }
@@ -627,9 +652,11 @@
     opts = opts || {};
     const wheelRot = opts.wheelRot || 0;
     const bob = opts.vehBob || 0;
+    const lean = opts.vehLean || 0;
     const animT = opts.animT || 0;
     ctx.save();
     ctx.translate(0, 14 + bob);
+    ctx.rotate(lean); // pitch with bird rise/fall (3.11)
     // Slight perspective foreshortening (2.5D)
     ctx.scale(0.85, 0.82);
     ctx.transform(1, 0, -0.08, 1, 0, 0);
@@ -690,6 +717,14 @@
       ctx.fillStyle = 'rgba(255,255,255,.28)';
       ctx.beginPath(); ctx.ellipse(0, -19 + canopyBob, 7, 1.4, 0, 0, Math.PI * 2); ctx.fill();
       wheel(-8, 10, 6); wheel(14, 10, 6);
+      // Exhaust puff (3.11)
+      if (!opts.reduceMotion) {
+        const ex = 0.5 + 0.5 * Math.sin(animT * 11);
+        ctx.globalAlpha = 0.25 + ex * 0.35;
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath(); ctx.ellipse(-22 - ex * 4, 2, 3 + ex * 2, 2 + ex, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
     } else if (vid === 'cycle' || vid === 'bicycle') {
       const col = vid === 'bicycle' ? '#27ae60' : '#1abc9c';
       ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.lineJoin = 'round';
@@ -716,6 +751,13 @@
       ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(8,-2); ctx.lineTo(14,-11); ctx.lineTo(18,-9); ctx.stroke();
       wheel(-10, 8, 6); wheel(12, 8, 6);
       if (vid === 'scooty') { ctx.fillStyle = '#fff'; ctx.fillRect(6,-7,5,3); }
+      if (!opts.reduceMotion) {
+        const ex = 0.5 + 0.5 * Math.sin(animT * 13);
+        ctx.globalAlpha = 0.22 + ex * 0.3;
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath(); ctx.ellipse(-18 - ex * 3, 4, 2.5 + ex * 2, 1.8 + ex, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
     } else if (vid === 'taxi' || vid === 'mehran') {
       const body = vid === 'taxi' ? '#f1c40f' : '#ecf0f1';
       ctx.fillStyle = bodyShade(body, -22, -14, 22, 8);

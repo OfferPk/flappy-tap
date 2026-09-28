@@ -30,11 +30,11 @@
 
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
-      <h1 class="logo">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.10.0-urrjaa</p>
+      <h1 class="logo logo-shimmer">Urr Jaa!</h1>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.11.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
-        <button id="btn-play" class="btn primary" type="button">▶ Play</button>
+        <button id="btn-play" class="btn primary btn-play-pulse" type="button">▶ Play</button>
         <button id="btn-modes" class="btn secondary" type="button">🎮 Modes</button>
         <button id="btn-garage" class="btn secondary" type="button">🐦 Garage</button>
         <div class="btn-row">
@@ -145,10 +145,13 @@
       <section class="spin-history" aria-label="Mystery spin history">
         <div class="spin-history-head">
           <h3>📦 Mystery box History</h3>
-          <span id="spin-history-total" class="spin-history-total">No wins yet</span>
+          <div class="spin-history-meta">
+            <span id="spin-history-count" class="spin-history-count"></span>
+            <span id="spin-history-total" class="spin-history-total">No wins yet</span>
+          </div>
         </div>
         <ul id="spin-history-list" class="spin-history-list">
-          <li class="spin-history-empty">No spins yet — collect 10 🎁 to spin!</li>
+          <li class="spin-history-empty"><span class="spin-empty-ico" aria-hidden="true">🎰</span><span>No spins yet — collect <strong>10 🎁</strong> to spin!</span></li>
         </ul>
       </section>
     </div>
@@ -162,9 +165,14 @@
         <span id="medal-label">Medal</span>
       </div>
       <p class="score-big">Score: <span id="final-score">0</span></p>
+      <div class="grade-wrap" aria-label="Run grade">
+        <span class="grade-label">Grade</span>
+        <strong id="run-grade" class="run-grade grade-e" title="Play a run">—</strong>
+      </div>
       <div id="run-summary" class="run-summary">
         <div class="sum-row"><span>🏆 Best</span><strong id="best-death">0</strong></div>
         <div class="sum-row"><span>🛫 Distance</span><strong><span id="run-distance">0</span> m</strong></div>
+        <div class="sum-row"><span>⏱️ Flight</span><strong id="run-time">0s</strong></div>
         <div class="sum-row"><span>🪙 Coins</span><strong id="run-coins">0</strong></div>
         <div class="sum-row"><span>⚡ Near Misses</span><strong id="run-nearmiss">0</strong></div>
         <div class="sum-row"><span>🔥 Best Combo</span><strong id="run-combo">0</strong></div>
@@ -272,7 +280,8 @@
           <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice &amp; more.</li>
           <li><strong>Mystery Rewards:</strong> every <strong>10 boxes = 1 spin</strong> (444–999 coins). History saves past spins.</li>
           <li><strong>Skill:</strong> edge pass = CLOSE; center pass = PERFECT.</li>
-          <li><strong>Feel:</strong> Classic is forgiving; Hard and One Life stay strict.</li>
+          <li><strong>Feel:</strong> Classic is smoother &amp; forgiving; Hard and One Life stay strict.</li>
+          <li><strong>Run grade:</strong> S–E on the summary — PERFECT &amp; CLOSE boost it.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant packs unlock by local date windows or score milestones — no server seasons.</li>
@@ -288,7 +297,8 @@
           <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice wagaira.</li>
           <li><strong>Mystery:</strong> har <strong>10 boxes = 1 spin</strong> (444–999 coins). History past spins save karta hai.</li>
           <li><strong>Skill:</strong> edge ke paas CLOSE; gap ke center mein PERFECT.</li>
-          <li><strong>Feel:</strong> Classic narm hai; Hard aur One Life strict hain.</li>
+          <li><strong>Feel:</strong> Classic aur narm/smooth; Hard aur One Life strict.</li>
+          <li><strong>Run grade:</strong> Summary pe S–E — PERFECT aur CLOSE se grade up.</li>
           <li><strong>Settings:</strong> Sound mute se voice band nahi — Desi voice alag toggle.</li>
           <li><strong>Collection:</strong> naye birds (Mynah, Bulbul, Cheel, Mor…) aur areas (Hunza, Gwadar, Canal…) coins ya score se unlock.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant — local date window ya score milestone. Server seasons nahi.</li>
@@ -304,7 +314,8 @@
           <li><strong>موڈز:</strong> کلاسک، ہارڈ، ٹائم اٹیک، ڈیلی، پریکٹس وغیرہ۔</li>
           <li><strong>مسٹری:</strong> ہر <strong>۱۰ باکس = ۱ اسپن</strong> (۴۴۴–۹۹۹ سکے)۔</li>
           <li><strong>مہارت:</strong> کنارے کے قریب CLOSE، درمیان سے گزریں تو PERFECT۔</li>
-          <li><strong>آسانی:</strong> کلاسک نرم ہے؛ ہارڈ اور ون لائف سخت ہیں۔</li>
+          <li><strong>آسانی:</strong> کلاسک نرم اور ہموار ہے؛ ہارڈ اور ون لائف سخت ہیں۔</li>
+          <li><strong>گریڈ:</strong> رن سمری پر S–E — پرفیکٹ اور کلوز سے گریڈ بہتر۔</li>
           <li><strong>سیٹنگز:</strong> ساؤنڈ میوٹ سے آواز بند نہیں — دیسی وائس الگ۔</li>
           <li><strong>کلیکشن:</strong> نئے پرندے اور علاقے سکے یا اسکور سے کھلیں۔</li>
           <li><strong>سیزنل (آف لائن):</strong> آزادی / عید / سردی / بسنت — مقامی تاریخ یا اسکور۔ کوئی سرور سیزن نہیں۔</li>

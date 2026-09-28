@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.10.0-urrjaa — Mystery spin history + rAF wheel spin fix; keeps ≤3.9 features.
+ * Urr Jaa! v3.11.0-urrjaa — Classic feel polish + richer 3D motion + Mystery/juice UI; keeps ≤3.10.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all prior features — polish difficulty/collision/character anim only.
+ * KEEP all prior features — feel / characters / mystery / juice / guide polish.
  */
 (function () {
   'use strict';
@@ -16,12 +16,12 @@
   const GROUND_H = 72;
   const BIRD_X = W * 0.32;
   const GRAVITY = 1850;
-  const FLAP_IMPULSE = -420;
+  const FLAP_IMPULSE = -430;      // snappier tap response (3.11)
   const TERMINAL_V = 620;
-  const FLAP_COOLDOWN = 0.08;
+  const FLAP_COOLDOWN = 0.07;     // tighter tap cadence (3.11)
   const PIPE_W = 64;
-  const BASE_SPEED = 142;
-  const BASE_GAP = 186;          // Classic: roomier reactable gaps (3.9)
+  const BASE_SPEED = 138;        // Classic baseline a touch calmer (3.11); Hard uses modeSpeedMul
+  const BASE_GAP = 194;          // Classic: roomier reactable gaps (3.11)
   const BASE_SPAWN = 228;
   const SPEED_CAP = 260;
   const GAP_FLOOR = 128;
@@ -29,8 +29,8 @@
   const SPEED_PER_SCORE = 1.55;
   const GAP_SHRINK_PER = 0.58;
   const SPAWN_SHRINK_PER = 0.82;
-  const HITBOX_INSET = 0.28;     // extra soft inset on top of smaller body hitbox (3.9)
-  const CORNER_TOL = 16;         // obstacle corner forgiveness (px) — more grace
+  const HITBOX_INSET = 0.30;     // extra soft inset on top of smaller body hitbox (3.11)
+  const CORNER_TOL = 18;         // obstacle corner forgiveness (px) — Classic grace (3.11)
   const LUCKY_COOLDOWN_MS = 2000;
   const MEDAL_BRONZE = 10;
   const MEDAL_SILVER = 25;
@@ -240,14 +240,16 @@
     if (!toastEl) return;
     toastEl.textContent = msg;
     toastEl.hidden = false;
-    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift');
-    if (kind === 'close' || kind === 'lucky' || kind === 'gift') toastEl.classList.add('toast-' + kind);
+    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal');
+    if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal') {
+      toastEl.classList.add('toast-' + kind);
+    }
     void toastEl.offsetWidth;
     toastEl.classList.add('toast-pop');
     clearTimeout(showToast._t);
     showToast._t = setTimeout(function () {
       toastEl.hidden = true;
-      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift');
+      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal');
     }, ms || 1600);
   }
 
@@ -408,10 +410,11 @@
     if (!isForgivingMode() || !FTStorage.getAvgRunDuration) return { gap: 1, speed: 1, traffic: 1, power: 1 };
     var avg = FTStorage.getAvgRunDuration();
     if (!avg || avg <= 0) return { gap: 1, speed: 1, traffic: 1, power: 1 };
-    if (avg < 18) return { gap: 1.20, speed: 0.86, traffic: 0.55, power: 1.45 }; // short → ease
-    if (avg < 30) return { gap: 1.12, speed: 0.91, traffic: 0.72, power: 1.28 };
-    if (avg > 80) return { gap: 0.94, speed: 1.07, traffic: 1.18, power: 0.9 }; // long → gently harden
-    if (avg > 55) return { gap: 0.97, speed: 1.03, traffic: 1.08, power: 0.95 };
+    // 3.11: slightly stronger ease for struggling players; soft harden for long survivors
+    if (avg < 18) return { gap: 1.24, speed: 0.84, traffic: 0.48, power: 1.50 }; // short → ease
+    if (avg < 30) return { gap: 1.15, speed: 0.89, traffic: 0.68, power: 1.32 };
+    if (avg > 80) return { gap: 0.95, speed: 1.06, traffic: 1.15, power: 0.92 }; // long → gently harden
+    if (avg > 55) return { gap: 0.98, speed: 1.02, traffic: 1.06, power: 0.96 };
     return { gap: 1, speed: 1, traffic: 1, power: 1 };
   }
 
@@ -424,7 +427,7 @@
     var t = runElapsedSec();
     var m = { gap: 1, speed: 1, spawn: 1, traffic: 1, simple: false, power: 1 };
     if (isHard()) {
-      // Slightly less brutal than pre-3.9, still aggressive
+      // Hard unchanged aggression (3.11 keeps Hard strict)
       m.gap = 0.95; m.speed = 1.02; m.spawn = 0.95; m.traffic = 1.15; m.simple = false;
       return m;
     }
@@ -433,20 +436,20 @@
       if (t < 8) { m.gap = 1.08; m.speed = 0.94; m.spawn = 1.06; m.traffic = 0.7; }
       return m;
     }
-    // First ~18s: slow, wide, simple, almost no hard vehicle combos (3.9 longer ease-in)
-    if (t < 18) {
-      var ease = t < 10 ? 1 : (1 - (t - 10) / 16); // soft blend toward normal by ~18s
-      m.gap = 1.22 + 0.14 * ease; m.speed = 0.78 - 0.08 * ease; m.spawn = 1.12 + 0.1 * ease;
-      m.traffic = 0.12 + 0.2 * (1 - ease); m.simple = true; m.power = 1.35 + 0.15 * ease;
+    // First ~20s: slow, wide, simple (3.11 smoother Classic survival ramp)
+    if (t < 20) {
+      var ease = t < 12 ? 1 : (1 - (t - 12) / 16); // soft blend toward normal by ~20s
+      m.gap = 1.26 + 0.14 * ease; m.speed = 0.76 - 0.08 * ease; m.spawn = 1.14 + 0.1 * ease;
+      m.traffic = 0.10 + 0.18 * (1 - ease); m.simple = true; m.power = 1.38 + 0.15 * ease;
       phaseSimple = true;
       return m;
     }
     phaseSimple = false;
-    if (sc < 10) { m.gap = 1.20; m.speed = 0.84; m.spawn = 1.12; m.traffic = 0.32; m.simple = true; m.power = 1.28; }
-    else if (sc < 25) { m.gap = 1.12; m.speed = 0.90; m.spawn = 1.08; m.traffic = 0.50; m.simple = true; m.power = 1.15; }
-    else if (sc < 45) { m.gap = 1.02; m.speed = 0.98; m.spawn = 1.02; m.traffic = 0.78; }
-    else if (sc < 75) { m.gap = 0.96; m.speed = 1.05; m.spawn = 0.96; m.traffic = 1.02; }
-    else { m.gap = 0.90; m.speed = 1.12; m.spawn = 0.90; m.traffic = 1.2; }
+    if (sc < 10) { m.gap = 1.22; m.speed = 0.82; m.spawn = 1.14; m.traffic = 0.28; m.simple = true; m.power = 1.30; }
+    else if (sc < 25) { m.gap = 1.14; m.speed = 0.88; m.spawn = 1.10; m.traffic = 0.46; m.simple = true; m.power = 1.18; }
+    else if (sc < 45) { m.gap = 1.04; m.speed = 0.96; m.spawn = 1.04; m.traffic = 0.74; }
+    else if (sc < 75) { m.gap = 0.97; m.speed = 1.04; m.spawn = 0.97; m.traffic = 1.00; }
+    else { m.gap = 0.91; m.speed = 1.11; m.spawn = 0.91; m.traffic = 1.18; }
     return m;
   }
 
@@ -531,7 +534,7 @@
     var cal = calibMods();
     var frGap = 1, frSpd = 1, frSpawn = 1;
     if (firstRunProtect()) {
-      frGap = 1.24; frSpd = 0.82; frSpawn = 1.18;
+      frGap = 1.28; frSpd = 0.80; frSpawn = 1.20;
     }
     var speed = (BASE_SPEED + sc * SPEED_PER_SCORE) * sm * turboMul * wMul * phase.speed * cal.speed * frSpd;
     var gap = (BASE_GAP - sc * GAP_SHRINK_PER) * gm * phase.gap * cal.gap * frGap;
@@ -669,45 +672,68 @@
   }
 
   function cosmeticsOpts() {
-    var sx = squash < 1 ? 1.12 : (squash > 1 ? 0.92 : 1);
+    var sx = squash < 1 ? 1.14 : (squash > 1 ? 0.90 : 1);
     var sy = squash;
     var t = performance.now() / 1000;
     var now = performance.now();
     var wingFlap = 0;
+    var wingLag = 0;
     var headTilt = 0;
     var headBob = 0;
     var mouthOpen = 0;
+    var tailWag = 0;
+    var eyeBlink = 0;
     var wheelRot = 0;
     var vehBob = 0;
+    var vehLean = 0;
+    var tipFlutter = 0;
     if (!reduceMotion) {
       var vy = (bird && typeof bird.vy === 'number') ? bird.vy : 0;
       var rising = Math.max(0, -vy / 380);
       var falling = Math.max(0, vy / 520);
-      // Burst flap after tap (squash compress) + continuous flight flap — stronger 3.9 motion
+      // Burst flap after tap + continuous flight — richer 3.11 independent wing phase
       var burst = (squash < 0.95) ? 1 : 0;
-      var flapHz = 8.5 + rising * 14 + burst * 18;
-      var flapAmp = 0.38 + rising * 0.72 + burst * 0.62;
+      var flapHz = 9.2 + rising * 15 + burst * 20;
+      var flapAmp = 0.42 + rising * 0.78 + burst * 0.68;
       if (state === 'playing' || state === 'dying') {
         wingFlap = Math.sin(t * flapHz) * flapAmp;
-        // Independent near/far already handled in skins; add glide tuck when diving
-        if (falling > 0.35 && burst === 0) wingFlap *= 0.42;
-        headTilt = Math.max(-0.62, Math.min(0.68, vy / 420));
-        headBob = Math.sin(t * 11) * (0.4 + rising * 0.8) + (burst ? Math.sin(t * 22) * 1.2 : 0);
+        wingLag = Math.sin(t * flapHz - 0.55) * flapAmp * 0.92; // far wing lag
+        tipFlutter = Math.sin(t * (flapHz * 2.4)) * (0.12 + rising * 0.18 + burst * 0.22);
+        if (falling > 0.35 && burst === 0) {
+          wingFlap *= 0.38;
+          wingLag *= 0.5;
+          tipFlutter *= 0.55;
+        }
+        headTilt = Math.max(-0.68, Math.min(0.72, vy / 400));
+        headBob = Math.sin(t * 12) * (0.48 + rising * 0.9) + (burst ? Math.sin(t * 24) * 1.35 : 0);
+        tailWag = Math.sin(t * 9.5) * (0.25 + falling * 0.55) + (burst ? 0.35 : 0) + vy / 900;
+        vehLean = Math.max(-0.22, Math.min(0.22, vy / 900));
       } else {
-        // Menu idle: gentle wing + head bob
-        wingFlap = Math.sin(t * 6.2) * 0.32;
-        headTilt = Math.sin(t * 2.4) * 0.14;
-        headBob = Math.sin(t * 3.5) * 0.55;
+        // Menu idle: gentle wing + head bob + occasional blink/mouth
+        wingFlap = Math.sin(t * 6.5) * 0.36;
+        wingLag = Math.sin(t * 6.5 - 0.7) * 0.30;
+        tipFlutter = Math.sin(t * 14) * 0.08;
+        headTilt = Math.sin(t * 2.4) * 0.16;
+        headBob = Math.sin(t * 3.5) * 0.62;
+        tailWag = Math.sin(t * 4.2) * 0.18;
+        vehLean = Math.sin(t * 1.8) * 0.04;
       }
-      // Mouth open during chirp window (tap / near-miss / gift)
+      // Eye blink every ~2.8s for ~0.12s
+      var blinkCycle = (t % 2.85);
+      eyeBlink = (blinkCycle > 2.72) ? Math.min(1, (blinkCycle - 2.72) / 0.06) : 0;
+      if (blinkCycle > 2.78) eyeBlink = Math.max(0, 1 - (blinkCycle - 2.78) / 0.07);
+      // Mouth open during chirp window (tap / near-miss / gift) + idle micro-chirp
       if (now < mouthChirpUntil) {
         var rem = (mouthChirpUntil - now) / 280;
         mouthOpen = Math.max(0, Math.min(1, rem > 0.55 ? 1 : rem * 1.6));
       } else if (burst) {
-        mouthOpen = 0.35; // slight open on flap squash
+        mouthOpen = 0.42; // slight open on flap squash
+      } else {
+        var idleChirp = (t % 5.6);
+        if (idleChirp > 5.2 && idleChirp < 5.45) mouthOpen = 0.22 * Math.sin((idleChirp - 5.2) / 0.25 * Math.PI);
       }
-      wheelRot = t * (5 + (currentSpeed || 142) / 36);
-      vehBob = Math.sin(t * 7.5) * 1.15 + Math.sin(t * 3.1) * 0.35;
+      wheelRot = t * (5.5 + (currentSpeed || 138) / 32);
+      vehBob = Math.sin(t * 8.2) * 1.35 + Math.sin(t * 3.4) * 0.45 + (burst ? 1.1 : 0);
     }
     var vehTheme = null;
     if (birdId === 'jungle') vehTheme = 'jungle';
@@ -720,12 +746,17 @@
       squashX: reduceMotion ? 1 : sx,
       squashY: reduceMotion ? 1 : sy,
       wingFlap: wingFlap,
+      wingLag: wingLag,
+      tipFlutter: tipFlutter,
       headTilt: headTilt,
       headBob: headBob,
       mouthOpen: mouthOpen,
+      tailWag: tailWag,
+      eyeBlink: eyeBlink,
       animT: t,
       wheelRot: wheelRot,
       vehBob: vehBob,
+      vehLean: vehLean,
       reduceMotion: reduceMotion,
       vehicleTheme: vehTheme
     };
@@ -1045,6 +1076,16 @@
     return isNew && !isPractice();
   }
 
+  function runGradeFor(sc, perfects, nears, secs) {
+    var pts = (sc | 0) + (perfects | 0) * 4 + (nears | 0) * 2 + Math.min(40, Math.floor((secs || 0) / 3));
+    if (pts >= 160) return { letter: 'S', tier: 's', tip: 'Shabaash — legendary flight!' };
+    if (pts >= 100) return { letter: 'A', tier: 'a', tip: 'Wah ji — strong run' };
+    if (pts >= 60) return { letter: 'B', tier: 'b', tip: 'Solid — keep chaining PERFECT' };
+    if (pts >= 30) return { letter: 'C', tier: 'c', tip: 'Getting there — watch the edges' };
+    if (pts >= 12) return { letter: 'D', tier: 'd', tip: 'Warm-up done — try again' };
+    return { letter: 'E', tier: 'e', tip: 'Oye — flap again!' };
+  }
+
   function showDeath() {
     state = 'dead';
     hideAllScreens();
@@ -1082,7 +1123,7 @@
     if (isRecord) {
       FTAudio.record();
       voiceCue('shabaash');
-      showToast('Shabaash! New record!', 2200);
+      showToast('Shabaash! New record!', 2200, 'medal');
     } else {
       voiceCue('haye_oye');
     }
@@ -1093,6 +1134,20 @@
       btnContinue.textContent = continuedThisRun ? 'Continue used' : '▶ Continue (Ad)';
     }
     if (runGiftsEl) runGiftsEl.textContent = runBoxes > 0 ? ('+' + runBoxes) : '0';
+    var flightSec = runStartTs ? Math.max(0, (performance.now() - runStartTs) / 1000) : 0;
+    var runTimeEl = document.getElementById('run-time');
+    if (runTimeEl) {
+      var m = Math.floor(flightSec / 60);
+      var sec = Math.floor(flightSec % 60);
+      runTimeEl.textContent = m > 0 ? (m + 'm ' + sec + 's') : (sec + 's');
+    }
+    var gradeEl = document.getElementById('run-grade');
+    if (gradeEl) {
+      var g = runGradeFor(score, runPerfects, runNearMisses, flightSec);
+      gradeEl.textContent = g.letter;
+      gradeEl.className = 'run-grade grade-' + g.tier;
+      gradeEl.title = g.tip;
+    }
     if (btnMysteryAd) {
       btnMysteryAd.hidden = isPractice();
       btnMysteryAd.disabled = mysteryAdUsed;
@@ -1309,10 +1364,10 @@
     var top = bird.y - halfH;
     var cornerTol = CORNER_TOL;
     if (isForgivingMode()) {
-      if (firstRunProtect()) cornerTol = CORNER_TOL + 6;
-      else cornerTol = CORNER_TOL + 2;
+      if (firstRunProtect()) cornerTol = CORNER_TOL + 8;
+      else cornerTol = CORNER_TOL + 4; // 3.11: more Classic corner grace
     } else {
-      cornerTol = Math.max(10, CORNER_TOL - 3); // Hard/Challenge/OneLife: milder than pre-3.9 but stricter
+      cornerTol = Math.max(10, CORNER_TOL - 5); // Hard/Challenge/OneLife stay strict
     }
     // Ground / ceiling — soft near-edge on forgiving modes
     var groundY = H - GROUND_H;
@@ -1326,7 +1381,7 @@
       if (isForgivingMode() && overC < cornerTol * 0.85) return 'soft';
       return 'hard';
     }
-    var insetMul = isForgivingMode() ? 0.72 : 0.48;
+    var insetMul = isForgivingMode() ? 0.82 : 0.48; // 3.11: Classic softer body inset
     var inset = Math.max(4, Math.round(Math.min(bird.w, bird.h) * HITBOX_INSET * insetMul));
     var bx = left + inset, by0 = top + inset, bw = bird.w - inset * 2, bh = bird.h - inset * 2;
     var softHit = false;
@@ -1359,7 +1414,7 @@
           // Shallow graze only → soft; deep overlap → hard
           var overlapX = Math.min(bx + bw, tx + tw) - Math.max(bx, tx);
           var overlapY = Math.min(by0 + bh, ty + th) - Math.max(by0, ty);
-          if (overlapX <= cornerTol + 6 || overlapY <= cornerTol + 4) softHit = true;
+          if (overlapX <= cornerTol + 8 || overlapY <= cornerTol + 6) softHit = true;
           else return 'hard';
         } else return 'hard';
       }
@@ -1379,9 +1434,9 @@
     if (nearest) {
       var g = nearest.gap != null ? nearest.gap : currentGap;
       var cy = nearest.gapY + g / 2;
-      bird.y += (cy - bird.y) * 0.45;
-      if (bird.vy > 80) bird.vy *= 0.35;
-      if (bird.vy < -120) bird.vy *= 0.5;
+      bird.y += (cy - bird.y) * 0.58; // 3.11: stronger center recover
+      if (bird.vy > 80) bird.vy *= 0.28;
+      if (bird.vy < -120) bird.vy *= 0.42;
     } else {
       if (bird.y + bird.h / 2 >= H - GROUND_H) bird.y = H - GROUND_H - bird.h / 2 - 4;
       if (bird.y - bird.h / 2 <= 0) bird.y = bird.h / 2 + 4;
@@ -1413,7 +1468,7 @@
     beginDeath();
   }
 
-  var MAX_PARTICLES = 72;
+  var MAX_PARTICLES = 96;
 
   function trimParticles() {
     if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
@@ -1433,6 +1488,42 @@
     // ring pop for clearer CLOSE feedback
     if (!reduceMotion) {
       particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.28, max: 0.28, color: 'rgba(255,217,61,.55)', r: 10, kind: 'ring', grow: 38 });
+    }
+    trimParticles();
+  }
+
+  function spawnPerfectStars(x, y) {
+    if (reduceMotion) return;
+    var cols = ['#ffd93d', '#fff', '#7dd3fc', '#f9a8d4', '#86efac'];
+    for (var i = 0; i < 10; i++) {
+      var a = (Math.PI * 2 * i) / 10 + rng() * 0.2;
+      var sp = 40 + rng() * 90;
+      particles.push({
+        x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40,
+        life: 0.55, max: 0.75, color: cols[i % cols.length],
+        r: 3.2 + rng() * 2.2, kind: 'star', rot: rng() * Math.PI
+      });
+    }
+    particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.3, max: 0.3, color: 'rgba(125,211,252,.55)', r: 8, kind: 'ring', grow: 42 });
+    trimParticles();
+  }
+
+  function spawnConfettiBurst(x, y, n) {
+    if (reduceMotion) return;
+    var cols = ['#ff6b6b', '#ffd93d', '#4ecdc4', '#c084fc', '#60a5fa', '#f472b6'];
+    n = n || 18;
+    for (var i = 0; i < n; i++) {
+      particles.push({
+        x: x, y: y,
+        vx: (rng() - 0.5) * 220,
+        vy: -60 - rng() * 160,
+        life: 0.7 + rng() * 0.4, max: 1.1,
+        color: cols[i % cols.length],
+        r: 2.2 + rng() * 2.4,
+        kind: 'confetti',
+        rot: rng() * Math.PI,
+        spin: (rng() - 0.5) * 14
+      });
     }
     trimParticles();
   }
@@ -1630,33 +1721,62 @@
     }
   }
 
+  function spinRarityClass(coins) {
+    var c = coins | 0;
+    if (c >= 999) return 'rarity-jackpot';
+    if (c >= 888) return 'rarity-legendary';
+    if (c >= 777) return 'rarity-epic';
+    if (c >= 666) return 'rarity-rare';
+    if (c >= 555) return 'rarity-uncommon';
+    return 'rarity-common';
+  }
+  function spinRarityLabel(coins) {
+    var c = coins | 0;
+    if (c >= 999) return 'JACKPOT';
+    if (c >= 888) return 'LEGENDARY';
+    if (c >= 777) return 'EPIC';
+    if (c >= 666) return 'RARE';
+    if (c >= 555) return 'NICE';
+    return 'WIN';
+  }
+
   function refreshSpinHistoryUI() {
     var list = document.getElementById('spin-history-list');
     var totalEl = document.getElementById('spin-history-total');
+    var countEl = document.getElementById('spin-history-count');
     var hist = FTStorage.getSpinHistory ? FTStorage.getSpinHistory() : [];
     var total = FTStorage.getSpinHistoryTotal ? FTStorage.getSpinHistoryTotal() : 0;
     if (totalEl) totalEl.textContent = total > 0 ? (total.toLocaleString() + ' 🪙 won') : 'No wins yet';
+    if (countEl) countEl.textContent = hist.length ? (hist.length + ' spin' + (hist.length === 1 ? '' : 's')) : '';
     if (!list) return;
     list.innerHTML = '';
     if (!hist.length) {
       var empty = document.createElement('li');
       empty.className = 'spin-history-empty';
-      empty.textContent = 'No spins yet — collect 10 🎁 to spin!';
+      empty.innerHTML = '<span class="spin-empty-ico" aria-hidden="true">🎰</span><span>No spins yet — collect <strong>10 🎁</strong> to spin!</span>';
       list.appendChild(empty);
       return;
     }
     hist.slice(0, 20).forEach(function (entry, i) {
       var li = document.createElement('li');
-      li.className = 'spin-history-item' + (i === 0 ? ' latest' : '');
+      var coins = entry.coins | 0;
+      li.className = 'spin-history-item ' + spinRarityClass(coins) + (i === 0 ? ' latest' : '');
+      var left = document.createElement('div');
+      left.className = 'spin-hist-left';
       var amt = document.createElement('strong');
       amt.className = 'spin-hist-coins';
-      amt.textContent = '+' + (entry.coins | 0) + ' 🪙';
+      amt.textContent = '+' + coins + ' 🪙';
+      var badge = document.createElement('span');
+      badge.className = 'spin-hist-badge';
+      badge.textContent = spinRarityLabel(coins);
+      left.appendChild(amt);
+      left.appendChild(badge);
       var meta = document.createElement('span');
       meta.className = 'spin-hist-meta';
       var order = (entry.n | 0) ? ('#' + (entry.n | 0)) : ('#' + (hist.length - i));
       var ago = formatSpinAgo(entry.ts | 0);
       meta.textContent = order + (ago ? ' · ' + ago : '');
-      li.appendChild(amt);
+      li.appendChild(left);
       li.appendChild(meta);
       list.appendChild(li);
     });
@@ -1665,13 +1785,21 @@
   function openGiftsScreen() {
     hideAllScreens();
     if (screenGifts) screenGifts.hidden = false;
+    // Don't cancel mid-spin if returning during spin-all queue; only clean idle
+    if (!wheelSpinning && !spinQueueActive) {
+      cancelWheelAnim();
+      if (spinWheelEl) {
+        spinWheelEl.style.transform = 'rotate(' + wheelAngle + 'deg) translateZ(0)';
+        spinWheelEl.style.webkitTransform = 'rotate(' + wheelAngle + 'deg) translateZ(0)';
+      }
+    }
     refreshGiftsUI();
-    if (spinResultEl) {
+    if (spinResultEl && !wheelSpinning) {
       spinResultEl.classList.remove('win-flash');
       spinResultEl.textContent = 'Tap Spin — land on 444 · 555 · 666 · 777 · 888 · 999';
     }
     var wrap = document.getElementById('wheel-wrap');
-    if (wrap) { wrap.classList.remove('wheel-spinning', 'wheel-win'); }
+    if (wrap && !wheelSpinning) { wrap.classList.remove('wheel-spinning', 'wheel-win'); }
   }
 
   var wheelSpinning = false;
@@ -1684,6 +1812,11 @@
     var lock = busy || !!wheelSpinning || !!spinQueueActive;
     if (btnSpinOnce) btnSpinOnce.disabled = lock || s < 1;
     if (btnSpinAll) btnSpinAll.disabled = lock || s < 1;
+    document.querySelectorAll('[data-close="gifts"]').forEach(function (b) {
+      b.disabled = !!lock;
+      if (lock) b.setAttribute('aria-busy', 'true');
+      else b.removeAttribute('aria-busy');
+    });
   }
 
   /** Full dramatic spin duration for Spin once (~7s). Reduce-motion stays near-instant. */
@@ -1774,8 +1907,15 @@
         wheelSpinning = false;
         if (wheelWrapEl) {
           wheelWrapEl.classList.remove('wheel-spinning');
+          wheelWrapEl.classList.remove('wheel-win');
+          void wheelWrapEl.offsetWidth;
           wheelWrapEl.classList.add('wheel-win');
         }
+        // Land flash on card / history
+        if (spinResultEl) spinResultEl.classList.add('land-pulse');
+        setTimeout(function () {
+          if (spinResultEl) spinResultEl.classList.remove('land-pulse');
+        }, 700);
         if (done) done();
       }
     }
@@ -1801,8 +1941,9 @@
     flashSpinResult('Wheel spinning… hold tight! 🎰');
     animateWheelTo(r.coins, function () {
       if (!alreadyGranted && FTStorage.grantSpinCoins) FTStorage.grantSpinCoins(r.coins);
-      showMysteryResult('SPIN!', '+' + r.coins + ' coins');
+      showMysteryResult(spinRarityLabel(r.coins) + '!', '+' + r.coins + ' coins');
       flashSpinResult('You won +' + r.coins + ' 🪙 · ' + (FTStorage.getGiftBoxes ? FTStorage.getGiftBoxes() : r.giftsLeft) + ' gifts left');
+      showToast('+' + r.coins + ' 🪙 ' + spinRarityLabel(r.coins), 1600, r.coins >= 888 ? 'medal' : 'gift');
       refreshGiftsUI();
       updateCoinHud();
       setSpinButtonsBusy(false);
@@ -1917,6 +2058,7 @@
           life: 0.55, max: 0.7, color: '#ff6b6b', r: 3, kind: 'spark'
         });
       }
+      spawnConfettiBurst(bird.x, bird.y, 12);
     }
   }
 
@@ -1936,6 +2078,8 @@
       tag = 'PERFECT!';
       if (FTAudio.perfect) FTAudio.perfect();
       showBanner('PERFECT!', 800);
+      showToast('PERFECT!', 900, 'perfect');
+      spawnPerfectStars(bird.x, bird.y);
       voiceCue('wah_ji');
     }
     // Near-miss bonus score already tracked separately; if just near-missed this pipe, bump
@@ -2051,8 +2195,18 @@
       } else {
         pt.x += pt.vx * dt;
         pt.y += pt.vy * dt;
-        if (pt.kind !== 'trail') pt.vy += 140 * dt;
-        else pt.vx *= 0.98;
+        if (pt.kind === 'confetti') {
+          pt.vy += 90 * dt;
+          pt.rot = (pt.rot || 0) + (pt.spin || 6) * dt;
+          pt.vx *= 0.99;
+        } else if (pt.kind === 'star') {
+          pt.vy += 60 * dt;
+          pt.rot = (pt.rot || 0) + 3 * dt;
+        } else if (pt.kind !== 'trail') {
+          pt.vy += 140 * dt;
+        } else {
+          pt.vx *= 0.98;
+        }
       }
       if (pt.life <= 0) particles.splice(i, 1);
     }
@@ -2101,6 +2255,8 @@
     }
 
     var g = GRAVITY * sensitivity * (birdPass().gravityMul || 1);
+    // 3.11: Classic/Daily/Practice slightly floatier; Hard/Challenge/OneLife unchanged
+    if (isForgivingMode()) g *= 0.93;
     var term = TERMINAL_V * Math.max(0.85, sensitivity);
     bird.vy += g * sdt;
     if (bird.vy > term) bird.vy = term;
@@ -2461,6 +2617,37 @@
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (pt.kind === 'star') {
+        ctx.globalAlpha = a;
+        ctx.fillStyle = pt.color;
+        ctx.save();
+        ctx.translate(pt.x, pt.y);
+        ctx.rotate((pt.rot || 0) + (1 - a) * 2);
+        var r = Math.max(0.8, pt.r * (0.7 + 0.3 * a));
+        ctx.beginPath();
+        for (var si = 0; si < 5; si++) {
+          var ang = (si * Math.PI * 2) / 5 - Math.PI / 2;
+          var r1 = r, r2 = r * 0.4;
+          ctx.lineTo(Math.cos(ang) * r1, Math.sin(ang) * r1);
+          ctx.lineTo(Math.cos(ang + Math.PI / 5) * r2, Math.sin(ang + Math.PI / 5) * r2);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (pt.kind === 'confetti') {
+        ctx.globalAlpha = a * 0.95;
+        ctx.fillStyle = pt.color;
+        ctx.save();
+        ctx.translate(pt.x, pt.y);
+        ctx.rotate(pt.rot || 0);
+        ctx.fillRect(-pt.r, -pt.r * 0.4, pt.r * 2, pt.r * 0.8);
+        ctx.restore();
         ctx.globalAlpha = 1;
         continue;
       }
@@ -3147,7 +3334,14 @@
   if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen(); });
   if (btnCollectionGifts) btnCollectionGifts.addEventListener('click', function () { openGiftsScreen(); });
   document.querySelectorAll('[data-close="gifts"]').forEach(function (b) {
-    b.addEventListener('click', function () { showMenu(); });
+    b.addEventListener('click', function () {
+      // 3.11: don't abandon mid-spin (charges already spent; grant happens on land)
+      if (wheelSpinning || spinQueueActive) {
+        showToast('Wait for the wheel to land…', 1400, 'gift');
+        return;
+      }
+      showMenu();
+    });
   });
   if (btnSpinOnce) btnSpinOnce.addEventListener('click', function () { doSpinOnce(); });
   if (btnSpinAll) btnSpinAll.addEventListener('click', function () { doSpinAll(); });
