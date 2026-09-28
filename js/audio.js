@@ -13,6 +13,8 @@
   let muted = false;
   let quietMul = 1; // 3.18 night quiet duck (1 = full)
   let nightAmbVolMul = 1; // 3.46 night ambience volume scale
+  let voiceDuckMul = 1; // 3.49 duck ambience during Desi voice
+  let voiceDuckUntil = 0;
   let voiceOn = true;
   let speechUnlocked = false;
   let cachedVoice = null;
@@ -281,9 +283,33 @@
     return nightAmbVolMul;
   }
   function getNightAmbienceVolumeMul() { return nightAmbVolMul; }
+  /** 3.49: soft-duck night ambience while Desi voice / chirp plays */
+  function duckAmbienceForVoice(ms) {
+    voiceDuckMul = 0.18;
+    voiceDuckUntil = nowMs() + Math.max(600, ms || 1400);
+  }
+  function ambienceEffectiveMul() {
+    var now = nowMs();
+    if (now >= voiceDuckUntil) voiceDuckMul = 1;
+    var duck = voiceDuckMul;
+    // also duck while speechSynthesis is actively speaking
+    try {
+      if (speechAvailable() && global.speechSynthesis &&
+          (global.speechSynthesis.speaking || global.speechSynthesis.pending)) {
+        duck = Math.min(duck, 0.15);
+      }
+    } catch (e) { /* ignore */ }
+    return quietMul * nightAmbVolMul * duck;
+  }
   function nightAmbienceTick() {
     if (muted || nightAmbVolMul <= 0.001) return;
-    var vol = quietMul * nightAmbVolMul;
+    // skip while voice is mid-utterance
+    try {
+      if (speechAvailable() && global.speechSynthesis && global.speechSynthesis.speaking) return;
+    } catch (e2) { /* ignore */ }
+    if (nowMs() < voiceDuckUntil && voiceDuckMul < 0.25) return;
+    var vol = ambienceEffectiveMul();
+    if (vol <= 0.0005) return;
     var base = 0.007 * vol;
     var f = 1650 + Math.random() * 520;
     tone(f, 0.028, 'sine', base);
@@ -659,11 +685,18 @@
       u.rate = 1.1;
       u.pitch = 1.05;
       u.volume = 1;
+      u.onstart = function () { duckAmbienceForVoice(1600); };
+      u.onend = function () { voiceDuckUntil = Math.min(voiceDuckUntil, nowMs() + 180); };
       u.onerror = function (ev) {
         var err = ev && ev.error;
         if (err === 'canceled' || err === 'interrupted') return;
-        if (fallbackId && VOICE_CHIRPS[fallbackId]) VOICE_CHIRPS[fallbackId]();
+        voiceDuckUntil = Math.min(voiceDuckUntil, nowMs() + 120);
+        if (fallbackId && VOICE_CHIRPS[fallbackId]) {
+          duckAmbienceForVoice(900);
+          VOICE_CHIRPS[fallbackId]();
+        }
       };
+      duckAmbienceForVoice(1500);
       global.speechSynthesis.speak(u);
       speechUnlocked = true;
       return true;
@@ -935,6 +968,7 @@
     let spoke = false;
     if (phrase) spoke = speakPhrase(phrase, playId);
     if (!spoke) {
+      duckAmbienceForVoice(1000);
       if (VOICE_CHIRPS[playId]) VOICE_CHIRPS[playId]();
       else if (VOICE_CHIRPS[id]) VOICE_CHIRPS[id]();
       else VOICE_CHIRPS.oye_hoye();
@@ -984,7 +1018,7 @@
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     tick: tick, startSpinWhoosh: startSpinWhoosh, stopSpinWhoosh: stopSpinWhoosh, spinLand: spinLand,
-    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, nightAmbienceTick: nightAmbienceTick, setNightAmbienceVolume: setNightAmbienceVolume, getNightAmbienceVolumeMul: getNightAmbienceVolumeMul, previewNightAmbience: previewNightAmbience,
+    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, nightAmbienceTick: nightAmbienceTick, setNightAmbienceVolume: setNightAmbienceVolume, getNightAmbienceVolumeMul: getNightAmbienceVolumeMul, previewNightAmbience: previewNightAmbience, duckAmbienceForVoice: duckAmbienceForVoice, ambienceEffectiveMul: ambienceEffectiveMul,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
     playMenuMusic: playMenuMusic, stopMenuMusic: stopMenuMusic,
     setAreaMusicEnabled: setAreaMusicEnabled, isAreaMusicEnabled: isAreaMusicEnabled,

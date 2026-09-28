@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.48.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.49.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -321,7 +321,7 @@
   function showToast(msg, ms, kind) {
     if (!toastEl) return;
     toastEl.hidden = false;
-    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync', 'toast-undo');
+    toastEl.classList.remove('toast-pop', 'toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync', 'toast-undo', 'toast-undo-confirm');
     if (kind === 'undo') {
       toastEl.textContent = '';
       var span = document.createElement('span');
@@ -352,14 +352,46 @@
       clearBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        clearEquipUndoStack();
+        requestClearEquipUndoStack();
       });
       actions.appendChild(clearBtn);
       toastEl.appendChild(actions);
       toastEl.classList.add('toast-undo');
     } else {
       toastEl.textContent = msg;
-      if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal' || kind === 'claim' || kind === 'sync') {
+      if (kind === 'undo-confirm') {
+        toastEl.textContent = '';
+        var cspan = document.createElement('span');
+        cspan.className = 'toast-undo-msg';
+        cspan.textContent = msg;
+        toastEl.appendChild(cspan);
+        var cact = document.createElement('span');
+        cact.className = 'toast-undo-actions';
+        var yes = document.createElement('button');
+        yes.type = 'button';
+        yes.className = 'toast-undo-clear toast-undo-confirm-yes';
+        yes.id = 'toast-undo-confirm-yes';
+        yes.textContent = 'Yes, clear';
+        yes.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          clearEquipUndoStack({ confirmed: true });
+        });
+        var no = document.createElement('button');
+        no.type = 'button';
+        no.className = 'toast-undo-btn toast-undo-confirm-no';
+        no.id = 'toast-undo-confirm-no';
+        no.textContent = 'Keep';
+        no.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          cancelClearEquipUndo();
+        });
+        cact.appendChild(yes);
+        cact.appendChild(no);
+        toastEl.appendChild(cact);
+        toastEl.classList.add('toast-undo', 'toast-undo-confirm');
+      } else if (kind === 'close' || kind === 'lucky' || kind === 'gift' || kind === 'perfect' || kind === 'medal' || kind === 'claim' || kind === 'sync') {
         toastEl.classList.add('toast-' + kind);
       }
     }
@@ -368,8 +400,8 @@
     clearTimeout(showToast._t);
     showToast._t = setTimeout(function () {
       toastEl.hidden = true;
-      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync', 'toast-undo');
-      if (kind === 'undo') toastEl.textContent = '';
+      toastEl.classList.remove('toast-close', 'toast-lucky', 'toast-gift', 'toast-perfect', 'toast-medal', 'toast-claim', 'toast-sync', 'toast-undo', 'toast-undo-confirm');
+      if (kind === 'undo' || kind === 'undo-confirm') toastEl.textContent = '';
     }, ms || 1600);
   }
 
@@ -6154,15 +6186,44 @@ function updateComboMeter(visible) {
     equipUndoStack = equipUndoStack.filter(function (u) { return u && u.until > now; });
   }
 
+  function requestClearEquipUndoStack() {
+    pruneEquipUndoStack();
+    var n = equipUndoStack.length;
+    if (n < 1) {
+      showToast('Undo stack empty', 900);
+      return;
+    }
+    // 3.49: confirm clear-all (always ask when clearing from toast)
+    showToast('Clear all ' + n + ' undo step' + (n === 1 ? '' : 's') + '?', 5500, 'undo-confirm');
+    if (typeof haptic === 'function') haptic('power');
+  }
+
+  function cancelClearEquipUndo() {
+    pruneEquipUndoStack();
+    if (!equipUndoStack.length) {
+      showToast('Kept — nothing to undo', 900);
+      return;
+    }
+    var top = equipUndoStack[equipUndoStack.length - 1];
+    // refresh window
+    top.until = performance.now() + EQUIP_UNDO_MS;
+    showEquipUndoToast(top.label || top.newId || 'skin');
+  }
+
   function clearEquipUndoStack(opts) {
     opts = opts || {};
     pruneEquipUndoStack();
     var n = equipUndoStack.length;
+    // Non-silent clear from UI requires confirm path unless confirmed/silent
+    if (!opts.silent && !opts.confirmed && n > 0) {
+      requestClearEquipUndoStack();
+      return 0;
+    }
     equipUndoStack = [];
     if (opts.silent) return n;
     if (toastEl) {
       toastEl.hidden = true;
-      toastEl.classList.remove('toast-undo');
+      toastEl.classList.remove('toast-undo', 'toast-undo-confirm');
       toastEl.textContent = '';
     }
     showToast(n ? ('Cleared undo · ' + n + ' step' + (n === 1 ? '' : 's')) : 'Undo stack empty', 1200, 'sync');

@@ -1,5 +1,21 @@
 # Urr Jaa! STATUS
 
+## Current: **3.49.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.48)
+- **Clear-all confirm** — Clear on undo toast asks Yes, clear / Keep
+- **Ambience duck during voice** — night cricket/owl softens or pauses while Desi voice plays
+- Polish / bugfixes — silent clear on menu still instant; confirm UI styling
+- KEEP ALL ≤3.48 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v58-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.49.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.49.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.48.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.47)

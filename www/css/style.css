@@ -3611,3 +3611,17 @@ html.reduce-motion .skin-card.equip-flash { animation: none; }
 }
 .toast-undo-clear:hover { background: rgba(248,113,113,.28); border-color: rgba(248,113,113,.5); color: #fecaca; }
 .toast-undo-clear[hidden] { display: none !important; }
+
+/* ——— v3.49: clear-all confirm ——— */
+.toast.toast-undo-confirm {
+  border-color: rgba(248,113,113,.55);
+  background: linear-gradient(135deg, rgba(69,10,10,.94), rgba(30,41,59,.96));
+}
+.toast-undo-confirm-yes {
+  border-color: rgba(248,113,113,.65) !important;
+  background: rgba(248,113,113,.28) !important;
+  color: #fecaca !important;
+}
+.toast-undo-confirm-no {
+  border-color: rgba(125,211,252,.5) !important;
+}
