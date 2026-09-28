@@ -1,0 +1,10 @@
+node_modules/
+android/
+ios/
+.pack-staging/
+.build-preserve-*
+*.keystore
+*.jks
+.env
+.env.*
+!.env.example
