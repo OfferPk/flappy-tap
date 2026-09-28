@@ -1,8 +1,8 @@
 /**
- * Urr Jaa! v3.15.0-urrjaa — Power VFX, Challenge select, One Life HUD, coin balance, unlock teaser, gift haptic,
- * landscape safe-area, universal panel Close (X), bugfixes.
+ * Urr Jaa! v3.16.0-urrjaa — Mystery wheel 15s Spin once (smooth decelerate), Spin-all 15/8/5s tiering.
+ * KEEP all prior features — Power VFX, Challenge select, One Life HUD, Close (X), economy, ≤3.15 systems.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all prior features — different pack from 3.11–3.14.
+ * KEEP all prior features — different pack from 3.11–3.15.
  */
 (function () {
   'use strict';
@@ -2094,13 +2094,13 @@
     return true;
   }
 
-  /** Full dramatic spin duration for Spin once (~7s). Reduce-motion stays near-instant. */
-  var SPIN_ONCE_MS = 7000;
-  /** Spin-all sequential: short when many, full 7s when only one charge. */
+  /** Full dramatic spin duration for Spin once (15s). Reduce-motion stays near-instant. */
+  var SPIN_ONCE_MS = 15000;
+  /** Spin-all sequential: 15s when 1 charge; 8s when ≤3 planned; 5s when many. */
   function spinAllDurationMs(remaining, planned) {
     if (planned <= 1) return SPIN_ONCE_MS;
-    if (planned <= 3) return 3200;
-    return 1800;
+    if (planned <= 3) return 8000;
+    return 5000;
   }
 
   /**
@@ -2109,7 +2109,7 @@
    * `.wheel-spinning .spin-wheel { filter:… }` forced a new compositor layer
    * mid-transition, and `html.reduce-motion .spin-wheel { transition:none !important }`
    * could kill it. Drive rotation with requestAnimationFrame + ease-out instead
-   * so Spin once always shows continuous rotation (~7s) then decelerates into the segment.
+   * so Spin once always shows continuous rotation (15s) then decelerates into the segment.
    */
   var wheelAnimRaf = 0;
   function cancelWheelAnim() {
@@ -2137,7 +2137,7 @@
     var reduce = !!reduceMotion || document.documentElement.classList.contains('reduce-motion');
     var dur = reduce ? 80 : (durationMs != null ? durationMs : SPIN_ONCE_MS);
     // More full rotations for longer spins → clearer “wheel of fortune” feel
-    var turns = reduce ? 1 : (dur >= 6000 ? 12 : (dur >= 3000 ? 7 : (dur >= 1500 ? 4 : 3)));
+    var turns = reduce ? 1 : (dur >= 12000 ? 20 : (dur >= 6000 ? 14 : (dur >= 3000 ? 7 : (dur >= 1500 ? 4 : 3))));
     var currentMod = ((wheelAngle % 360) + 360) % 360;
     var delta = (desiredMod - currentMod + 360) % 360;
     var startAngle = wheelAngle;
@@ -2228,7 +2228,7 @@
     }, SPIN_ONCE_MS);
   }
 
-  /** Sequential spins: full ~7s when 1 charge; shorter sequential when many. Grant after each land. */
+  /** Sequential spins: full 15s when 1 charge; 8s/5s tiering when many. Grant after each land. */
   function doSpinAll() {
     if (wheelSpinning || spinQueueActive) return;
     var charges = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;

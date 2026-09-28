@@ -1,5 +1,23 @@
 # Urr Jaa! STATUS
 
+## Current: **3.16.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.15)
+- **Mystery wheel Spin once = 15s** — rAF + easeOutQuint; smooth decelerate into segment, then grant reward
+- **Spin all tiering:** 15s (1 charge) / 8s (≤3 planned) / 5s (many) — longer than prior 7s/3.2s/1.8s
+- More full rotations on long spins (20 turns @ ≥12s)
+- KEEP ALL ≤3.15 systems (Power VFX, Challenge select, One Life HUD, Close X, economy, …)
+
+SW cache: `urrjaa-v25-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.16.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.16.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
+
 ## Current: **3.15.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.14)
