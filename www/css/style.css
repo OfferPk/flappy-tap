@@ -2766,3 +2766,96 @@ html.reduce-motion .wheel-wrap.wheel-jackpot .wheel-rim { animation: none; }
 .offline-banner.offline-show {
   animation: a2hs-in .3s ease-out, offline-ready-pulse 2.4s ease-in-out 0.4s infinite;
 }
+
+
+/* ——— v3.33: A2HS, streak flame, pointer bounce, swipe hint ——— */
+.a2hs {
+  gap: 0.55rem;
+  align-items: flex-start;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 27, 75, 0.94));
+  border: 1px solid rgba(78, 205, 196, 0.55);
+  box-shadow: 0 0 24px rgba(78, 205, 196, 0.28), 0 8px 24px rgba(0,0,0,.35);
+}
+.a2hs-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.a2hs-copy { flex: 1; line-height: 1.35; }
+.a2hs-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.a2hs-install-btn {
+  background: linear-gradient(135deg, #4ecdc4, #44a08d) !important;
+  color: #0b1220 !important;
+  font-weight: 700;
+  border: none !important;
+}
+.a2hs.a2hs-can-install {
+  border-color: rgba(255, 217, 61, 0.65);
+  box-shadow: 0 0 28px rgba(255, 217, 61, 0.22), 0 8px 24px rgba(0,0,0,.35);
+}
+.a2hs.a2hs-can-install .a2hs-icon { animation: a2hs-icon-bob 1.2s ease-in-out infinite; }
+@keyframes a2hs-icon-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+html.reduce-motion .a2hs.a2hs-can-install .a2hs-icon { animation: none; }
+
+.streak-flame, .streak-flame-icon {
+  display: inline-block;
+  transform-origin: 50% 90%;
+}
+.streak-flame.warm, .streak-flame-icon.warm {
+  animation: streak-flame-flicker 0.9s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(255, 140, 66, 0.55));
+}
+.streak-flame.hot, .streak-flame.claimable,
+.streak-flame-icon.claimable {
+  animation: streak-flame-flicker 0.55s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 80, 40, 0.75));
+}
+@keyframes streak-flame-flicker {
+  0%, 100% { transform: scale(1) rotate(-4deg); }
+  40% { transform: scale(1.12) rotate(5deg); }
+  70% { transform: scale(0.96) rotate(-2deg); }
+}
+.btn.streak-flame-btn {
+  border-color: rgba(255, 140, 66, 0.45);
+}
+.btn.streak-flame-btn.btn-streak-ready {
+  background: linear-gradient(135deg, rgba(255, 140, 66, 0.28), rgba(255, 217, 61, 0.18));
+  box-shadow: 0 0 12px rgba(255, 120, 40, 0.35);
+}
+html.reduce-motion .streak-flame,
+html.reduce-motion .streak-flame-icon { animation: none !important; }
+
+.wheel-wrap.pointer-bounce .wheel-pointer {
+  animation: pointer-bounce-land 0.72s cubic-bezier(.2,1.4,.35,1);
+  transform-origin: 50% 10%;
+}
+@keyframes pointer-bounce-land {
+  0% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+  22% { transform: translateX(-50%) translateY(7px) rotate(8deg); }
+  40% { transform: translateX(-50%) translateY(-4px) rotate(-10deg); }
+  58% { transform: translateX(-50%) translateY(3px) rotate(5deg); }
+  76% { transform: translateX(-50%) translateY(-2px) rotate(-3deg); }
+  100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+}
+html.reduce-motion .wheel-wrap.pointer-bounce .wheel-pointer { animation: none; }
+
+html.swipe-dismiss-on .panel-screen:not([hidden])::before,
+html.swipe-dismiss-on .settings-screen:not([hidden])::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 6px auto 2px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.28);
+  opacity: 0.85;
+}

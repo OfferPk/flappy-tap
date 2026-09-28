@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.32.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.33.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -240,6 +240,7 @@
   const voiceToggleChk = document.getElementById('voice-toggle');
   const quietNightChk = document.getElementById('quiet-night-toggle');
   const areaMusicChk = document.getElementById('area-music-toggle');
+  const swipeDismissChk = document.getElementById('swipe-dismiss-toggle');
   const confettiIntensitySel = document.getElementById('confetti-intensity');
   const largeButtonsChk = document.getElementById('large-buttons-toggle');
   const ghostOpacitySlider = document.getElementById('ghost-opacity-slider');
@@ -1523,22 +1524,55 @@
   }
 
   var A2HS_SESSION_KEY = 'urrjaa:a2hs';
+  var deferredA2hsPrompt = null;
+
+  function isA2hsInstalled() {
+    try {
+      if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+      if (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches) return true;
+      if (typeof navigator !== 'undefined' && navigator.standalone === true) return true;
+    } catch (_) {}
+    return false;
+  }
 
   function updateA2hsTip() {
     var a2hs = document.getElementById('a2hs');
     if (!a2hs) return;
+    if (isA2hsInstalled()) {
+      a2hs.hidden = true;
+      a2hs.classList.remove('a2hs-visible', 'a2hs-can-install');
+      return;
+    }
     try {
       if (sessionStorage.getItem(A2HS_SESSION_KEY) === '1' || localStorage.getItem(A2HS_SESSION_KEY) === '1') {
         a2hs.hidden = true;
         return;
       }
     } catch (_) { /* private mode */ }
-    // 3.13: show after a few runs so first visit stays clean
+    // 3.33: show from first completed run; highlight when install prompt available
     var runs = FTStorage.getRunCount ? FTStorage.getRunCount() : 0;
-    var show = screenStart && !screenStart.hidden && runs >= 2;
+    var show = screenStart && !screenStart.hidden && runs >= 1;
     a2hs.hidden = !show;
+    a2hs.classList.toggle('a2hs-can-install', !!(show && deferredA2hsPrompt));
     if (show) a2hs.classList.add('a2hs-visible');
+    var installBtn = document.getElementById('a2hs-install');
+    if (installBtn) installBtn.hidden = !deferredA2hsPrompt;
+    var okBtn = document.getElementById('a2hs-ok');
+    if (okBtn && deferredA2hsPrompt) okBtn.textContent = 'Later';
+    else if (okBtn) okBtn.textContent = 'Got it';
   }
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredA2hsPrompt = e;
+    updateA2hsTip();
+  });
+  window.addEventListener('appinstalled', function () {
+    deferredA2hsPrompt = null;
+    try { localStorage.setItem(A2HS_SESSION_KEY, '1'); } catch (_) {}
+    updateA2hsTip();
+    showToast('✓ Installed · offline-ready', 1600);
+  });
 
   function hideAllScreens() {
 
@@ -1564,6 +1598,7 @@
     hideAllScreens();
     screenStart.hidden = false;
     hud.hidden = true;
+    syncStreakBtn();
     if (FTAudio.stopAreaMusic) FTAudio.stopAreaMusic();
     lastAreaMusic = null;
     if (FTAudio.playMenuMusic) FTAudio.playMenuMusic();
@@ -2915,9 +2950,12 @@
         }
         if (wheelWrapEl) {
           wheelWrapEl.classList.remove('wheel-spinning');
-          wheelWrapEl.classList.remove('wheel-win');
+          wheelWrapEl.classList.remove('wheel-win', 'pointer-bounce');
           void wheelWrapEl.offsetWidth;
-          wheelWrapEl.classList.add('wheel-win');
+          wheelWrapEl.classList.add('wheel-win', 'pointer-bounce');
+          setTimeout(function () {
+            if (wheelWrapEl) wheelWrapEl.classList.remove('pointer-bounce');
+          }, 900);
         }
         // Land flash on card / history
         if (spinResultEl) spinResultEl.classList.add('land-pulse');
@@ -4866,6 +4904,66 @@
     return false;
   }
 
+
+  /* ——— 3.33: optional swipe-down to dismiss panels ——— */
+  var swipeDismissOn = true;
+  function syncSwipeDismissPref() {
+    swipeDismissOn = !(FTStorage.isSwipeDismiss) || !!FTStorage.isSwipeDismiss();
+    if (swipeDismissChk) swipeDismissChk.checked = swipeDismissOn;
+    document.documentElement.classList.toggle('swipe-dismiss-on', !!swipeDismissOn);
+  }
+  (function bindSwipeDismiss() {
+    var startY = 0, startX = 0, tracking = false, fromEdge = false;
+    var panelsSel = '.panel-screen, .settings-screen, .pause-screen';
+    function onStart(e) {
+      if (!swipeDismissOn || reduceMotion) return;
+      if (state === 'playing') return;
+      var t = e.touches && e.touches[0];
+      if (!t) return;
+      var panel = e.target && e.target.closest ? e.target.closest(panelsSel) : null;
+      if (!panel || panel.hidden) return;
+      // don't steal from scrollable lists / buttons / wheel
+      if (e.target.closest && e.target.closest('button, a, input, select, textarea, .spin-wheel, .wheel-rim, .collection-filters')) return;
+      startY = t.clientY;
+      startX = t.clientX;
+      fromEdge = startY < 72; // top strip / header
+      tracking = true;
+    }
+    function onMove(e) {
+      if (!tracking) return;
+      var t = e.touches && e.touches[0];
+      if (!t) return;
+      var dy = t.clientY - startY;
+      var dx = Math.abs(t.clientX - startX);
+      if (dy > 28 && dy > dx * 1.2 && fromEdge) {
+        // visual hint
+        var panel = document.querySelector('.panel-screen:not([hidden]), .settings-screen:not([hidden]), .pause-screen:not([hidden])');
+        if (panel) panel.style.transform = 'translateY(' + Math.min(120, dy * 0.45) + 'px)';
+      }
+    }
+    function onEnd(e) {
+      if (!tracking) return;
+      tracking = false;
+      var t = (e.changedTouches && e.changedTouches[0]) || null;
+      var panel = document.querySelector('.panel-screen:not([hidden]), .settings-screen:not([hidden]), .pause-screen:not([hidden])');
+      if (panel) panel.style.transform = '';
+      if (!t) return;
+      var dy = t.clientY - startY;
+      var dx = Math.abs(t.clientX - startX);
+      if (fromEdge && dy > 90 && dy > dx * 1.35) {
+        closeTopOverlayOrPanel();
+      }
+    }
+    document.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend', onEnd, { passive: true });
+    document.addEventListener('touchcancel', function () {
+      tracking = false;
+      var panel = document.querySelector('.panel-screen:not([hidden]), .settings-screen:not([hidden]), .pause-screen:not([hidden])');
+      if (panel) panel.style.transform = '';
+    }, { passive: true });
+  })();
+
   function closeTopOverlayOrPanel() {
     var share = document.getElementById('share-preview');
     if (share && !share.hidden) { share.hidden = true; return true; }
@@ -4969,6 +5067,25 @@
       if (tip) tip.hidden = true;
     });
   }
+  var a2hsInstall = document.getElementById('a2hs-install');
+  if (a2hsInstall) {
+    a2hsInstall.addEventListener('click', function () {
+      if (!deferredA2hsPrompt) {
+        showToast('Use browser menu → Add to Home Screen', 1800);
+        return;
+      }
+      var ev = deferredA2hsPrompt;
+      deferredA2hsPrompt = null;
+      ev.prompt().then(function () {
+        return ev.userChoice;
+      }).then(function (choice) {
+        if (choice && choice.outcome === 'accepted') {
+          try { localStorage.setItem(A2HS_SESSION_KEY, '1'); } catch (_) {}
+        }
+        updateA2hsTip();
+      }).catch(function () { updateA2hsTip(); });
+    });
+  }
   btnContinue.addEventListener('click', async function () {
     if (continuedThisRun || isPractice() || isOneLife()) return;
     btnContinue.disabled = true;
@@ -5065,6 +5182,7 @@
     }
     if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
     if (areaMusicChk) areaMusicChk.checked = !!(FTStorage.isAreaMusic && FTStorage.isAreaMusic());
+    if (swipeDismissChk) swipeDismissChk.checked = !(FTStorage.isSwipeDismiss) || !!FTStorage.isSwipeDismiss();
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
     if (soundToggleChk) soundToggleChk.checked = !FTStorage.isMuted();
     if (confettiIntensitySel && FTStorage.getConfettiIntensity) confettiIntensitySel.value = FTStorage.getConfettiIntensity();
@@ -5082,6 +5200,8 @@
   function applyResetPreferences() {
     if (FTStorage.resetPreferences) FTStorage.resetPreferences();
     syncSettingsFormFromStorage();
+    syncAreaMusicPref();
+    syncSwipeDismissPref();
     if (resetPrefsConfirmEl) resetPrefsConfirmEl.hidden = true;
     showToast('Settings reset (coins & unlocks kept)', 1600);
   }
@@ -5165,6 +5285,12 @@
     syncAreaMusicPref();
     showToast(on ? 'Area / menu music ON' : 'Area / menu music OFF', 1000);
     if (on && state === 'menu' && FTAudio.playMenuMusic) FTAudio.playMenuMusic();
+  });
+  if (swipeDismissChk) swipeDismissChk.addEventListener('change', function () {
+    var on = !!swipeDismissChk.checked;
+    if (FTStorage.setSwipeDismiss) FTStorage.setSwipeDismiss(on);
+    syncSwipeDismissPref();
+    showToast(on ? 'Swipe-down dismiss ON' : 'Swipe-down dismiss OFF', 1000);
   });
   if (confettiIntensitySel) confettiIntensitySel.addEventListener('change', function () {
     var v = FTStorage.setConfettiIntensity ? FTStorage.setConfettiIntensity(confettiIntensitySel.value) : confettiIntensitySel.value;
@@ -5880,11 +6006,19 @@
     html += '</div></div>';
     return html;
   }
+  function syncStreakBtn() {
+    if (!btnStreak || !FTStorage.getStreak) return;
+    var st = FTStorage.getStreak();
+    btnStreak.classList.toggle('streak-flame-btn', st.day >= 2 || !!st.canClaim);
+    btnStreak.classList.toggle('btn-streak-ready', !!st.canClaim);
+    btnStreak.innerHTML = '<span class="streak-flame-icon' + (st.canClaim ? ' claimable' : (st.day >= 3 ? ' warm' : '')) + '" aria-hidden="true">🔥</span> Streak';
+  }
   function refreshStreak() {
     if (!streakBody) return;
     var st = FTStorage.getStreak();
     var fire = st.day >= 5 ? '🔥🔥' : (st.day >= 3 ? '🔥' : '✨');
-    var html = '<p class="hint streak-status">' + fire + ' Day <strong>' + st.day + '</strong> of 7' +
+    var flameCls = 'streak-flame' + (st.day >= 5 ? ' hot' : (st.day >= 3 ? ' warm' : '')) + (st.canClaim ? ' claimable' : '');
+    var html = '<p class="hint streak-status"><span class="' + flameCls + '" aria-hidden="true">🔥</span> Day <strong>' + st.day + '</strong> of 7' +
       (st.claimed ? ' · claimed today' : ' · claim ready!') + '</p>';
     html += '<div class="streak-progress" aria-hidden="true"><span style="width:' +
       Math.round((Math.max(0, st.day - (st.claimed ? 0 : 1)) / 7) * 100) + '%"></span></div>';
@@ -5907,6 +6041,11 @@
       btn.disabled = !st.canClaim;
       btn.classList.toggle('btn-streak-ready', !!st.canClaim);
       btn.textContent = st.claimed ? 'Claimed today' : ('Claim Day ' + st.day + ' 🔥');
+    }
+    if (btnStreak) {
+      btnStreak.classList.toggle('streak-flame-btn', st.day >= 2 || !!st.canClaim);
+      btnStreak.classList.toggle('btn-streak-ready', !!st.canClaim);
+      btnStreak.innerHTML = '<span class="streak-flame-icon' + (st.canClaim ? ' claimable' : (st.day >= 3 ? ' warm' : '')) + '" aria-hidden="true">🔥</span> Streak';
     }
   }
   if (btnStreak) btnStreak.addEventListener('click', function () {
@@ -6116,6 +6255,8 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   window.addEventListener('online', updateOfflineBanner);
   window.addEventListener('offline', updateOfflineBanner);
   updateOfflineBanner();
+  syncSwipeDismissPref();
+  syncStreakBtn();
   showMenu();
   loop(performance.now());
   runBootSequence();

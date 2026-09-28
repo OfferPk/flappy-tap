@@ -1,19 +1,19 @@
 # Urr Jaa! STATUS
 
-## Current: **3.32.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.33.0-urrjaa** (2026-09-28 PKT)
 
-### This pack (NEW vs 3.11–3.31)
-- **Better music fade** — menu/area beds ramp in/out instead of hard cut
-- **Collection filter chips** — All / Owned / Locked with polished chip styling
-- **LUCKY save camera nudge** — soft cam kick + zoom toward safety
-- **Offline-ready toast** — post-boot confirmation + back-online toast
-- Bugfixes (music mute/disable hard-stop; area music respects toggle mid-loop)
-- KEEP ALL ≤3.31 incl. **15s Mystery Spin once**, Close (X), …
+### This pack (NEW vs 3.11–3.32)
+- **Swipe-to-dismiss panels** — optional Settings toggle; swipe down from panel top to close
+- **Better A2HS** — Install button via beforeinstallprompt · standalone detect · clearer tip
+- **Run streak flame icon** — animated flame on Streak button + status when hot/claimable
+- **Mystery wheel pointer bounce** — pointer bounces on land
+- Bugfixes: resetPreferences restores area music / haptic intensity / swipe dismiss
+- KEEP ALL ≤3.32 incl. **15s Mystery Spin once**, Close (X), …
 
-SW cache: `urrjaa-v41-20260928`
+SW cache: `urrjaa-v42-20260928`
 
-**Ship commit:** `f4adcd7` · tag `v3.32.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.32.0-urrjaa  
+**Ship commit:** (pending) · tag `v3.33.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.33.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/
 
 

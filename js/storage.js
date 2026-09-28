@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.31.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.33.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -19,6 +19,7 @@
     mute: PREFIX + 'mute',
     quietNight: PREFIX + 'quiet-night',
     areaMusic: PREFIX + 'area-music',
+    swipeDismiss: PREFIX + 'swipe-dismiss',
     topRuns: PREFIX + 'top-runs',
     streakLog: PREFIX + 'streak-log',
     confettiIntensity: PREFIX + 'confetti-intensity',
@@ -930,6 +931,8 @@
   /** 3.31: area/menu music stub (default ON). */
   function isAreaMusic() { return get(KEYS.areaMusic, '1') === '1'; }
   function setAreaMusic(on) { set(KEYS.areaMusic, on ? '1' : '0'); }
+  function isSwipeDismiss() { return get(KEYS.swipeDismiss, '1') === '1'; }
+  function setSwipeDismiss(on) { set(KEYS.swipeDismiss, on ? '1' : '0'); }
   function getRunCount() { return parseInt(get(KEYS.runs, '0'), 10) || 0; }
   function bumpRunCount() {
     const n = getRunCount() + 1;
@@ -1241,8 +1244,11 @@
     set(KEYS.practiceGhostOpacity, '0.38');
     set(KEYS.quietNight, '1');
     set(KEYS.haptics, '1');
+    set(KEYS.hapticIntensity, 'normal');
     set(KEYS.garageSort, 'owned');
     set(KEYS.mute, '0');
+    set(KEYS.areaMusic, '1');
+    set(KEYS.swipeDismiss, '1');
     // keep voice Pack default on
     set(KEYS.voicePack, '1');
     return true;
@@ -1253,7 +1259,7 @@
     getBestCombo, setBestCombo, getLeaderboards,
     getSkin, setSkin, getBird, setBird, getVehicle, setVehicle,
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
-    isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
+    isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, isSwipeDismiss, setSwipeDismiss, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
     msUntilDailyReset, formatDailyCountdown, resetPreferences,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,
