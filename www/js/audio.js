@@ -273,13 +273,26 @@
     setTimeout(function () { tone(880, 0.05, 'triangle', 0.048 * quietMul); }, 45);
     setTimeout(function () { tone(1175, 0.07, 'sine', 0.04 * quietMul); }, 95);
   }
-  /** 3.51: soft pipe-clear blip (lighter than score / perfect). */
-  function pipeClear() {
+  /** 3.51/3.52: soft pipe-clear blip — volume mix (combo lift, voice duck, throttle).
+   *  Note: tone() already applies quietMul — do NOT multiply again. */
+  var _pipeClearLastAt = 0;
+  function pipeClear(opts) {
     if (muted) return;
+    var now = nowMs();
+    if (now - _pipeClearLastAt < 72) return; // avoid stacked clears
+    _pipeClearLastAt = now;
+    opts = opts || {};
+    var combo = opts.combo | 0;
+    if (combo < 1) combo = 1;
+    var base = 0.032;
+    var comboMul = 1 + Math.min(0.28, (combo - 1) * 0.035);
+    var duck = 1;
+    if (now < voiceDuckUntil) duck = 0.42;
+    else if (voiceDuckMul < 0.99) duck = Math.max(0.42, voiceDuckMul);
+    var g = base * comboMul * duck;
     var j = (Math.random() - 0.5) * 28;
-    var g = 0.038 * quietMul;
-    tone(740 + j, 0.04, 'sine', g);
-    setTimeout(function () { tone(990 + j * 0.5, 0.055, 'triangle', g * 0.85); }, 38);
+    tone(740 + j, 0.038, 'sine', g);
+    setTimeout(function () { tone(990 + j * 0.5, 0.05, 'triangle', g * 0.82); }, 36);
   }
   /** 3.45/3.46: soft night cricket / owl ambience blip · volume gated */
   function setNightAmbienceVolume(level) {
