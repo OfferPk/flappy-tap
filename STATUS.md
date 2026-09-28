@@ -12,7 +12,7 @@
 
 SW cache: `urrjaa-v45-20260928`
 
-**Ship commit:** (pending) · tag `v3.36.0-urrjaa`  
+**Ship commit:** `0554098` · tag `v3.36.0-urrjaa`  
 **Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.36.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/
 
