@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.3.1-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album.
+ * Urr Jaa! v3.4.0-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album, gift boxes, spin wheel.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -59,7 +59,9 @@
     albumClaimed: PREFIX + 'album-claimed',
     bestPerfect: PREFIX + 'best-perfect',
     nearMissTotal: PREFIX + 'nearmiss-total',
-    perfectTotal: PREFIX + 'perfect-total'
+    perfectTotal: PREFIX + 'perfect-total',
+    // v3.4
+    giftBoxes: PREFIX + 'gift-boxes'
   };
 
   const BIRDS = {
@@ -521,8 +523,10 @@
     } else if (reward.type === 'mystery') {
       const n = 20 + Math.floor(Math.random() * 30);
       addCoins(n);
+      addGiftBoxes(1);
       result.coins = n;
       result.type = 'mystery';
+      result.gifts = 1;
     }
     return result;
   }
@@ -733,8 +737,10 @@
       addFragments(m.reward || 2);
       result.fragments = m.reward || 2;
     } else if (m.rewardType === 'mystery') {
+      addGiftBoxes(m.reward || 1);
       result.mystery = true;
       result.type = 'mystery';
+      result.gifts = m.reward || 1;
     } else {
       addCoins(m.reward || 20);
       result.coins = m.reward || 20;
@@ -818,6 +824,63 @@
   }
 
 
+
+  // --- Gift Collection + Spin Wheel (v3.4) ---
+  // Collecting 📦/🎁 during play adds inventory; every 10 boxes = 1 spin.
+  // Wheel rewards ONLY coins: 444 / 555 / 666 / 777 / 888 / 999
+  const GIFTS_PER_SPIN = 10;
+  const WHEEL_REWARDS = [444, 555, 666, 777, 888, 999];
+
+  function getGiftBoxes() {
+    return parseInt(get(KEYS.giftBoxes, '0'), 10) || 0;
+  }
+  function setGiftBoxes(n) {
+    const v = Math.max(0, n | 0);
+    set(KEYS.giftBoxes, v);
+    return v;
+  }
+  function addGiftBoxes(n) {
+    return setGiftBoxes(getGiftBoxes() + (n | 0));
+  }
+  function spendGiftBoxes(n) {
+    n = n | 0;
+    if (n <= 0) return true;
+    if (getGiftBoxes() < n) return false;
+    setGiftBoxes(getGiftBoxes() - n);
+    return true;
+  }
+  function getSpinCharges() {
+    return Math.floor(getGiftBoxes() / GIFTS_PER_SPIN);
+  }
+  function rollWheelCoins(rngFn) {
+    const rnd = typeof rngFn === 'function' ? rngFn : Math.random;
+    const i = Math.floor(rnd() * WHEEL_REWARDS.length);
+    return WHEEL_REWARDS[Math.max(0, Math.min(WHEEL_REWARDS.length - 1, i))];
+  }
+  /** Spend 10 gifts for one spin. Returns { coins, giftsLeft, spinsLeft } or null. */
+  function spinWheelOnce(rngFn) {
+    if (getGiftBoxes() < GIFTS_PER_SPIN) return null;
+    if (!spendGiftBoxes(GIFTS_PER_SPIN)) return null;
+    const coins = rollWheelCoins(rngFn);
+    addCoins(coins);
+    return { coins: coins, giftsLeft: getGiftBoxes(), spinsLeft: getSpinCharges(), count: 1 };
+  }
+  /** Spend all complete sets of 10. Returns { totalCoins, results[], giftsLeft, spinsLeft } or null. */
+  function spinWheelAll(rngFn) {
+    const n = getSpinCharges();
+    if (n <= 0) return null;
+    const results = [];
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      const r = spinWheelOnce(rngFn);
+      if (!r) break;
+      results.push(r.coins);
+      total += r.coins;
+    }
+    if (!results.length) return null;
+    return { totalCoins: total, results: results, giftsLeft: getGiftBoxes(), spinsLeft: getSpinCharges(), count: results.length };
+  }
+
   function checkEnvMilestones(bestScore) {
     const gates = [
       [15, 'lahore'], [25, 'bridge'], [30, 'islamabad'], [40, 'mountains'],
@@ -862,6 +925,8 @@
     albumCompletionPct, getAlbumClaimed, claimAlbumReward,
     getBestPerfect, setBestPerfect, bumpNearMissTotal, bumpPerfectTotal,
     rollBoxRarity, BOX_RARITIES,
+    getGiftBoxes, setGiftBoxes, addGiftBoxes, spendGiftBoxes, getSpinCharges,
+    spinWheelOnce, spinWheelAll, rollWheelCoins, WHEEL_REWARDS, GIFTS_PER_SPIN,
     BIRDS, VEHICLES, ENVS, HATS, TRAILS
   };
 })(window);

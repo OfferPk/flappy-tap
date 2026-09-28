@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.3.1-urrjaa — forgiving feel (30–60s survival), Desi speechSynthesis voice, calibration.
+ * Urr Jaa! v3.4.0-urrjaa — gift collection inventory + coin spin wheel; no post-run rarity popup.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -216,6 +216,16 @@
   const mysteryRarityEl = document.getElementById('mystery-rarity');
   const mysteryRewardEl = document.getElementById('mystery-reward');
   const btnMysteryOk = document.getElementById('btn-mystery-ok');
+  const screenGifts = document.getElementById('screen-gifts');
+  const btnGifts = document.getElementById('btn-gifts');
+  const btnCollectionGifts = document.getElementById('btn-collection-gifts');
+  const giftsCountEl = document.getElementById('gifts-count');
+  const spinsCountEl = document.getElementById('spins-count');
+  const spinWheelEl = document.getElementById('spin-wheel');
+  const spinResultEl = document.getElementById('spin-result');
+  const btnSpinOnce = document.getElementById('btn-spin-once');
+  const btnSpinAll = document.getElementById('btn-spin-all');
+  const runGiftsEl = document.getElementById('run-gifts');
 
   function showToast(msg, ms) {
     if (!toastEl) return;
@@ -797,7 +807,7 @@
 
   function allScreens() {
     return [screenStart, screenDeath, screenSettings, screenPause, screenGarage, screenModes,
-      screenMissions, screenCollection, screenBoards, screenStreak];
+      screenMissions, screenCollection, screenGifts, screenBoards, screenStreak];
   }
 
   function hideAllScreens() {
@@ -880,10 +890,11 @@
       btnContinue.disabled = continuedThisRun || !allow || oneLifeLocked;
       btnContinue.textContent = continuedThisRun ? 'Continue used' : '▶ Continue (Ad)';
     }
+    if (runGiftsEl) runGiftsEl.textContent = runBoxes > 0 ? ('+' + runBoxes) : '0';
     if (btnMysteryAd) {
       btnMysteryAd.hidden = isPractice();
       btnMysteryAd.disabled = mysteryAdUsed;
-      btnMysteryAd.textContent = mysteryAdUsed ? 'Mystery used' : '🎁 Mystery Box (Ad)';
+      btnMysteryAd.textContent = mysteryAdUsed ? 'Gift claimed' : '🎁 +1 Gift (Ad)';
     }
     if (btnRetry) {
       btnRetry.textContent = isOneLife() ? 'HOME' : 'RETRY';
@@ -1252,72 +1263,113 @@
     updateCoinHud();
   }
 
-  function showMysteryResult(rarity, text) {
+  /** Show spin/gift result modal — ONLY when user spins from Gifts screen (never auto after death). */
+  function showMysteryResult(title, text) {
     if (mysteryOverlay && mysteryRarityEl && mysteryRewardEl) {
-      mysteryRarityEl.textContent = rarity.label || rarity;
-      mysteryRarityEl.className = 'mystery-rarity rarity-' + (rarity.id || 'common');
+      mysteryRarityEl.textContent = title || 'SPIN!';
+      mysteryRarityEl.className = 'mystery-rarity rarity-rare';
       mysteryRewardEl.textContent = text;
       mysteryOverlay.hidden = false;
       mysteryOverlay.classList.remove('mystery-pop');
       void mysteryOverlay.offsetWidth;
       mysteryOverlay.classList.add('mystery-pop');
     } else {
-      showToast((rarity.label || '') + '! ' + text, 2200);
+      showToast((title || '') + ' ' + text, 2200);
     }
   }
 
+  /** v3.4: mystery rewards add gifts to inventory — no rarity/duplicate popup. */
   function grantMysteryReward(rngFn) {
-    var rarity = FTStorage.rollBoxRarity ? FTStorage.rollBoxRarity(rngFn || rng) : { id: 'common', label: 'COMMON', coinsMin: 10, coinsMax: 20, fragDup: 1 };
     if (FTAudio.mystery) FTAudio.mystery();
-    if (rarity.id === 'legendary' && FTAudio.legendary) FTAudio.legendary();
     haptic('power');
-    var pool = [
-      { kind: 'bird', ids: ['parrot', 'chick', 'owl', 'eagle'] },
-      { kind: 'vehicle', ids: ['cycle', 'scooty', 'bicycle', 'rickshaw', 'truck', 'taxi'] },
-      { kind: 'hat', ids: ['sunglasses', 'cap', 'hat', 'helmet', 'scarf', 'crown'] },
-      { kind: 'trail', ids: ['smoke', 'stars', 'fire', 'rainbow', 'star'] },
-      { kind: 'env', ids: ['lahore', 'village', 'bridge', 'mountains', 'desert', 'night'] },
-      { kind: 'coins', ids: null }
-    ];
-    // Higher rarity → more likely cosmetic
-    var wantCoins = (rngFn || rng)() < (rarity.id === 'legendary' ? 0.15 : rarity.id === 'epic' ? 0.25 : 0.45);
-    var text = '';
-    if (wantCoins) {
-      var n = rarity.coinsMin + Math.floor((rngFn || rng)() * (rarity.coinsMax - rarity.coinsMin + 1));
-      FTStorage.addCoins(n);
-      runCoins += n;
-      text = '+' + n + ' coins';
-    } else {
-      var pick = pool[Math.floor((rngFn || rng)() * (pool.length - 1))]; // skip pure coins slot bias
-      if (pick.kind === 'coins') pick = pool[0];
-      var id = pick.ids[Math.floor((rngFn || rng)() * pick.ids.length)];
-      var unlocked = false;
-      if (pick.kind === 'bird' && !FTStorage.isBirdUnlocked(id)) { FTStorage.unlockBird(id); unlocked = true; }
-      else if (pick.kind === 'vehicle' && !FTStorage.isVehicleUnlocked(id)) { FTStorage.unlockVehicle(id); unlocked = true; }
-      else if (pick.kind === 'hat' && !FTStorage.isHatUnlocked(id)) { FTStorage.unlockHat(id); unlocked = true; }
-      else if (pick.kind === 'trail' && !FTStorage.isTrailUnlocked(id)) { FTStorage.unlockTrail(id); unlocked = true; }
-      else if (pick.kind === 'env' && !FTStorage.isEnvUnlocked(id)) { FTStorage.unlockEnv(id); unlocked = true; }
-      FTStorage.addToCollection(pick.kind === 'hat' ? 'accessory' : pick.kind, id);
-      if (unlocked) {
-        text = 'New ' + pick.kind + ': ' + id;
-        voiceCue('wah_ji');
-      } else {
-        // Duplicate → Fragments
-        var fr = rarity.fragDup || 1;
-        FTStorage.addFragments(fr);
-        text = 'Duplicate → +' + fr + ' Fragments';
-      }
-    }
-    showMysteryResult(rarity, text);
+    FTStorage.addGiftBoxes(1);
+    showToast('+1 Gift 🎁', 1200);
     updateCoinHud();
-    return { rarity: rarity, text: text };
+    return { gifts: 1, text: '+1 Gift' };
   }
 
   function openMysteryBox(box) {
     box.taken = true;
     runBoxes += 1;
     FTAudio.powerup();
-    grantMysteryReward(rng);
+    if (FTAudio.mystery) FTAudio.mystery();
+    haptic('coin');
+    FTStorage.addGiftBoxes(1);
+    showToast('+1 Gift 🎁', 900);
+    popScore(1, box.x, box.y - 10);
+  }
+
+  function refreshGiftsUI() {
+    var g = FTStorage.getGiftBoxes ? FTStorage.getGiftBoxes() : 0;
+    var s = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
+    if (giftsCountEl) giftsCountEl.textContent = String(g);
+    if (spinsCountEl) spinsCountEl.textContent = String(s);
+    if (btnSpinOnce) btnSpinOnce.disabled = s < 1;
+    if (btnSpinAll) {
+      btnSpinAll.disabled = s < 1;
+      btnSpinAll.textContent = s > 1 ? ('Spin all (' + s + ')') : 'Spin all';
+    }
+  }
+
+  function openGiftsScreen() {
+    hideAllScreens();
+    if (screenGifts) screenGifts.hidden = false;
+    refreshGiftsUI();
+    if (spinResultEl) spinResultEl.textContent = 'Spin for 444 · 555 · 666 · 777 · 888 · 999 🪙';
+  }
+
+  var wheelSpinning = false;
+  function animateWheelTo(coins, done) {
+    if (!spinWheelEl) { if (done) done(); return; }
+    var rewards = (FTStorage.WHEEL_REWARDS || [444, 555, 666, 777, 888, 999]);
+    var idx = rewards.indexOf(coins);
+    if (idx < 0) idx = 0;
+    // 6 equal segments; pointer at top; rotate so chosen segment lands under pointer
+    var seg = 360 / rewards.length;
+    // At rest, reward 0 sits under the top pointer; clockwise brings idx under pointer.
+    var target = 360 * 4 + ((360 - idx * seg) % 360);
+    wheelSpinning = true;
+    spinWheelEl.style.transition = 'none';
+    spinWheelEl.style.transform = 'rotate(0deg)';
+    void spinWheelEl.offsetWidth;
+    spinWheelEl.style.transition = 'transform 2.2s cubic-bezier(0.15, 0.85, 0.2, 1)';
+    spinWheelEl.style.transform = 'rotate(' + target + 'deg)';
+    setTimeout(function () {
+      wheelSpinning = false;
+      if (done) done();
+    }, 2300);
+  }
+
+  function doSpinOnce() {
+    if (wheelSpinning) return;
+    var r = FTStorage.spinWheelOnce ? FTStorage.spinWheelOnce(Math.random) : null;
+    if (!r) { showToast('Need 10 gifts for a spin'); refreshGiftsUI(); return; }
+    if (FTAudio.mystery) FTAudio.mystery();
+    animateWheelTo(r.coins, function () {
+      showMysteryResult('SPIN!', '+' + r.coins + ' coins');
+      if (spinResultEl) spinResultEl.textContent = 'You won +' + r.coins + ' 🪙 · ' + r.giftsLeft + ' gifts left';
+      refreshGiftsUI();
+      updateCoinHud();
+      voiceCue('wah_ji');
+    });
+  }
+
+  function doSpinAll() {
+    if (wheelSpinning) return;
+    var charges = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
+    if (charges < 1) { showToast('Need 10 gifts for a spin'); return; }
+    var r = FTStorage.spinWheelAll ? FTStorage.spinWheelAll(Math.random) : null;
+    if (!r) { showToast('Need 10 gifts for a spin'); refreshGiftsUI(); return; }
+    if (FTAudio.mystery) FTAudio.mystery();
+    var last = r.results[r.results.length - 1];
+    animateWheelTo(last, function () {
+      var detail = r.results.map(function (c) { return '+' + c; }).join(' · ');
+      showMysteryResult('SPIN ×' + r.count, '+' + r.totalCoins + ' coins total');
+      if (spinResultEl) spinResultEl.textContent = detail + ' = +' + r.totalCoins + ' 🪙';
+      refreshGiftsUI();
+      updateCoinHud();
+      voiceCue('shabaash');
+    });
   }
 
   function beginDeath() {
@@ -2241,7 +2293,7 @@
       card.className = 'mission-card' + (m.done ? ' done' : '') + (m.claimed ? ' claimed' : '');
       var pct = Math.min(100, Math.floor((m.progress / m.target) * 100));
       var rewardLabel = m.rewardType === 'fragment' ? (m.reward + ' ✦ frag') :
-        m.rewardType === 'mystery' ? 'Mystery box' : ('🪙 ' + m.reward);
+        m.rewardType === 'mystery' ? '🎁 Gift box' : ('🪙 ' + m.reward);
       card.innerHTML =
         '<div class="mission-title">' + m.label + '</div>' +
         '<div class="mission-bar"><span style="width:' + pct + '%"></span></div>' +
@@ -2256,8 +2308,8 @@
         var r = FTStorage.claimMission(m.id);
         if (r) {
           if (r.mystery) {
-            grantMysteryReward(Math.random);
-            showToast('Mission: Mystery box!');
+            showToast('Mission: +' + (r.gifts || 1) + ' Gift 🎁');
+            if (FTAudio.mystery) FTAudio.mystery();
           } else if (r.fragments) showToast('+' + r.fragments + ' fragments!');
           else showToast('+' + r.coins + ' coins!');
           refreshMissions(); updateCoinHud();
@@ -2300,7 +2352,9 @@
     collectionList.appendChild(summary);
     var prog = document.createElement('p');
     prog.className = 'hint';
-    prog.textContent = 'Album ' + pct + '% · Fragments ✦ ' + frags + ' (10/20 unlock)';
+    var giftsOwned = FTStorage.getGiftBoxes ? FTStorage.getGiftBoxes() : 0;
+    var spinsAvail = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
+    prog.textContent = 'Album ' + pct + '% · Fragments ✦ ' + frags + ' · 🎁 ' + giftsOwned + ' (' + spinsAvail + ' spins)';
     collectionList.appendChild(prog);
     var tiers = document.createElement('div');
     tiers.className = 'btn-row';
@@ -2421,7 +2475,7 @@
       showToast('Day ' + r.day + ': rare skin ' + r.unlocked + '!');
       voiceCue('shabaash');
     } else if (r.type === 'mystery') {
-      showToast('Day ' + r.day + ': mystery +' + r.coins + ' 🪙');
+      showToast('Day ' + r.day + ': +' + r.coins + ' 🪙 + gift 🎁');
       voiceCue('wah_ji');
     } else {
       showToast('Day ' + r.day + ': +' + r.coins + ' coins');
@@ -2447,10 +2501,21 @@
     if (res && res.rewarded) {
       mysteryAdUsed = true;
       btnMysteryAd.disabled = true;
-      btnMysteryAd.textContent = 'Mystery used';
+      btnMysteryAd.textContent = 'Gift claimed';
       grantMysteryReward(Math.random);
-    } else showToast('Mystery skipped');
+      if (runGiftsEl) {
+        var cur = parseInt(runGiftsEl.textContent.replace(/\D/g, ''), 10) || 0;
+        runGiftsEl.textContent = '+' + (cur + 1);
+      }
+    } else showToast('Gift skipped');
   });
+  if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen(); });
+  if (btnCollectionGifts) btnCollectionGifts.addEventListener('click', function () { openGiftsScreen(); });
+  document.querySelectorAll('[data-close="gifts"]').forEach(function (b) {
+    b.addEventListener('click', function () { showMenu(); });
+  });
+  if (btnSpinOnce) btnSpinOnce.addEventListener('click', function () { doSpinOnce(); });
+  if (btnSpinAll) btnSpinAll.addEventListener('click', function () { doSpinAll(); });
 
   // Boot
   birdId = FTStorage.getBird();

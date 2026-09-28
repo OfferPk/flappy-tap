@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.3.1-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.4.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,7 +29,7 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.3.1-urrjaa)
+## Features (v3.4.0-urrjaa)
 
 | Feature | Notes |
 |---------|--------|
@@ -38,6 +38,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Near-miss | **CLOSE!** · 3 consecutive → **RISKY x3** |
 | **Perfect Pass** | Gap center → **PERFECT!** (+3) · Near-miss pass (+5) · Normal (+1) |
 | Coin combo | Continuous ladder **x1→x5** · miss resets · near-miss/RISKY boost |
+| **Gift Collection** | In-run 📦/🎁 → inventory (no death popup). **10 gifts = 1 spin**. Wheel: **444–999** coins. Spin once / Spin all |
 | Power-ups | Shield · Turbo · Coin Magnet · Slow-mo 3s · Ghost |
 | Bird passives | Sparrow control · Parrot +5% coin · Owl night · Eagle near-miss (mild, free) |
 | Weather | Clear · Rain · Fog · Storm · Night · Sunset (light speed/visibility) |
@@ -77,7 +78,7 @@ flappy-tap/          # repo path kept
   www/               # Capacitor webDir
   docs/              # GitHub Pages + urr-jaa-web-windows.zip
   dist/              # urr-jaa-web-windows.zip
-  package.json       # name urr-jaa, version 3.3.1-urrjaa
+  package.json       # name urr-jaa, version 3.4.0-urrjaa
   capacitor.config.json
   README.md STATUS.md
 ```

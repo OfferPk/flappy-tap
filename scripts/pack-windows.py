@@ -29,7 +29,7 @@ copytree(root / 'icons', staging / 'icons')
     b'@echo off\r\ncd /d "%~dp0"\r\nstart "" "index.html"\r\n'
 )
 (staging / 'README-PLAY.txt').write_text(
-    'Urr Jaa! — offline web build (v3.3.1-urrjaa)\r\n'
+    'Urr Jaa! — offline web build (v3.4.0-urrjaa)\r\n'
     'Windows: double-click PLAY-WINDOWS.bat (or open index.html in Chrome/Edge)\r\n'
     'Android: open the GitHub Pages link in Chrome (Add to Home Screen for PWA)\r\n'
     'Controls: tap / click / Space to flap — NO countdown\r\n'

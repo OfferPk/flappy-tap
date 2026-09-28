@@ -31,7 +31,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.3.1-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.4.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary" type="button">▶ Play</button>
@@ -40,6 +40,9 @@
         <div class="btn-row">
           <button id="btn-missions" class="btn ghost btn-sm" type="button">📋 Missions</button>
           <button id="btn-collection" class="btn ghost btn-sm" type="button">📚 Album</button>
+        </div>
+        <div class="btn-row">
+          <button id="btn-gifts" class="btn ghost btn-sm" type="button">🎁 Gifts</button>
         </div>
         <div class="btn-row">
           <button id="btn-boards" class="btn ghost btn-sm" type="button">🏆 Boards</button>
@@ -89,7 +92,7 @@
     <!-- Missions -->
     <div id="screen-missions" class="screen panel-screen scroll-screen" hidden>
       <h2>Daily Missions</h2>
-      <p class="hint">3 missions / day · coins · mystery · fragments</p>
+      <p class="hint">3 missions / day · coins · gifts · fragments</p>
       <div id="missions-list" class="missions-list"></div>
       <button class="btn primary" type="button" data-close="missions">Back</button>
     </div>
@@ -97,8 +100,33 @@
     <!-- Collection -->
     <div id="screen-collection" class="screen panel-screen scroll-screen" hidden>
       <h2>Collection Album</h2>
+      <button id="btn-collection-gifts" class="btn reward btn-sm" type="button">🎁 Gift Collection &amp; Spin</button>
       <div id="collection-list" class="collection-list"></div>
       <button class="btn primary" type="button" data-close="collection">Back</button>
+    </div>
+
+    <!-- Gift Collection + Spin Wheel -->
+    <div id="screen-gifts" class="screen panel-screen scroll-screen" hidden>
+      <h2>🎁 Gift Collection</h2>
+      <p class="hint">Boxes during play go here. Every <strong>10 gifts = 1 spin</strong>. Wheel pays coins only.</p>
+      <p class="coins-line">🎁 Owned: <span id="gifts-count">0</span> · Spins: <span id="spins-count">0</span></p>
+      <div class="wheel-wrap">
+        <div id="spin-wheel" class="spin-wheel" aria-hidden="true">
+          <div class="wheel-seg" data-i="0"><span>444</span></div>
+          <div class="wheel-seg" data-i="1"><span>555</span></div>
+          <div class="wheel-seg" data-i="2"><span>666</span></div>
+          <div class="wheel-seg" data-i="3"><span>777</span></div>
+          <div class="wheel-seg" data-i="4"><span>888</span></div>
+          <div class="wheel-seg" data-i="5"><span>999</span></div>
+        </div>
+        <div class="wheel-pointer">▼</div>
+      </div>
+      <p id="spin-result" class="spin-result hint">Spin for 444 · 555 · 666 · 777 · 888 · 999 🪙</p>
+      <div class="btn-col">
+        <button id="btn-spin-once" class="btn primary" type="button">Spin once (10 🎁)</button>
+        <button id="btn-spin-all" class="btn secondary" type="button">Spin all</button>
+        <button class="btn ghost" type="button" data-close="gifts">Back</button>
+      </div>
     </div>
 
     <!-- Death / Run Summary -->
@@ -117,11 +145,12 @@
         <div class="sum-row"><span>Near Misses</span><strong id="run-nearmiss">0</strong></div>
         <div class="sum-row"><span>Best Combo</span><strong id="run-combo">0</strong></div>
         <div class="sum-row"><span>Perfect Passes</span><strong id="run-perfect">0</strong></div>
+        <div class="sum-row" id="run-gifts-row"><span>Gifts</span><strong id="run-gifts">0</strong></div>
         <div class="sum-row muted-row"><span id="mode-death-label">Mode</span><strong id="mode-death-value">Classic</strong></div>
       </div>
       <div class="btn-col">
         <button id="btn-continue" class="btn reward" type="button">▶ Continue (Ad)</button>
-        <button id="btn-mystery-ad" class="btn reward" type="button">🎁 Mystery Box (Ad)</button>
+        <button id="btn-mystery-ad" class="btn reward" type="button">🎁 +1 Gift (Ad)</button>
         <button id="btn-retry" class="btn primary" type="button">RETRY</button>
         <div class="btn-row">
           <button id="btn-death-collection" class="btn secondary btn-sm" type="button">COLLECTION</button>
@@ -130,11 +159,11 @@
       </div>
     </div>
 
-    <!-- Mystery rarity overlay -->
+    <!-- Spin result overlay (gifts screen only — never auto after death) -->
     <div id="mystery-overlay" class="mystery-overlay" hidden>
       <div class="mystery-card">
-        <div id="mystery-rarity" class="mystery-rarity">COMMON</div>
-        <div id="mystery-reward" class="mystery-reward">+10 coins</div>
+        <div id="mystery-rarity" class="mystery-rarity">SPIN!</div>
+        <div id="mystery-reward" class="mystery-reward">+444 coins</div>
         <button id="btn-mystery-ok" class="btn primary" type="button">Nice!</button>
       </div>
     </div>
