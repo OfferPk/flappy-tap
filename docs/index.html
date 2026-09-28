@@ -31,7 +31,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.9.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.10.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary" type="button">▶ Play</button>
@@ -113,7 +113,7 @@
     <!-- Mystery Rewards + Spin Wheel (v3.4.1) -->
     <div id="screen-gifts" class="screen panel-screen scroll-screen" hidden>
       <h2>Mystery Rewards</h2>
-      <p class="hint mystery-intro">Collect 📦 while flying. Every <strong>10 gifts unlocks 1 spin</strong> worth <strong>444–999</strong> 🪙.</p>
+      <p class="hint mystery-intro">Collect 📦 while flying. Every <strong>10 gifts unlocks 1 spin</strong> worth <strong>444–999</strong> 🪙. Past spins stay in <strong>History</strong> below.</p>
       <div class="mystery-stats" aria-live="polite">
         <div class="mstat"><span class="mstat-val" id="gifts-count">0</span><span class="mstat-lbl">🎁 Gifts</span></div>
         <div class="mstat highlight"><span class="mstat-val" id="spins-count">0</span><span class="mstat-lbl">🎰 Spins</span></div>
@@ -142,6 +142,15 @@
         <button id="btn-spin-all" class="btn secondary" type="button">Spin all</button>
         <button class="btn ghost" type="button" data-close="gifts">Back</button>
       </div>
+      <section class="spin-history" aria-label="Mystery spin history">
+        <div class="spin-history-head">
+          <h3>📦 Mystery box History</h3>
+          <span id="spin-history-total" class="spin-history-total">No wins yet</span>
+        </div>
+        <ul id="spin-history-list" class="spin-history-list">
+          <li class="spin-history-empty">No spins yet — collect 10 🎁 to spin!</li>
+        </ul>
+      </section>
     </div>
 
     <!-- Death / Run Summary -->
@@ -261,7 +270,7 @@
           <li>Grab <strong>gifts</strong> 📦 — they stack in Mystery Rewards.</li>
           <li><strong>Power-ups:</strong> Shield, Turbo, Magnet, Slow-mo, Ghost (brief).</li>
           <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice &amp; more.</li>
-          <li><strong>Mystery Rewards:</strong> every <strong>10 boxes = 1 spin</strong> (444–999 coins).</li>
+          <li><strong>Mystery Rewards:</strong> every <strong>10 boxes = 1 spin</strong> (444–999 coins). History saves past spins.</li>
           <li><strong>Skill:</strong> edge pass = CLOSE; center pass = PERFECT.</li>
           <li><strong>Feel:</strong> Classic is forgiving; Hard and One Life stay strict.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
@@ -277,7 +286,7 @@
           <li><strong>Gifts</strong> 📦 collect karo — Mystery Rewards mein stack hote hain.</li>
           <li><strong>Power-ups:</strong> Shield, Turbo, Magnet, Slow-mo, Ghost (thori der).</li>
           <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice wagaira.</li>
-          <li><strong>Mystery:</strong> har <strong>10 boxes = 1 spin</strong> (444–999 coins).</li>
+          <li><strong>Mystery:</strong> har <strong>10 boxes = 1 spin</strong> (444–999 coins). History past spins save karta hai.</li>
           <li><strong>Skill:</strong> edge ke paas CLOSE; gap ke center mein PERFECT.</li>
           <li><strong>Feel:</strong> Classic narm hai; Hard aur One Life strict hain.</li>
           <li><strong>Settings:</strong> Sound mute se voice band nahi — Desi voice alag toggle.</li>

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.9.0-urrjaa — deeper pseudo-3D (wings/head/mouth) + smaller body hitboxes.
+ * Urr Jaa! v3.10.0-urrjaa — deeper pseudo-3D (wings/head/mouth) + smaller body hitboxes.
  * Canvas-drawn; wings/hats/mouth are visual-only (hitbox ignores them).
  */
 (function (global) {

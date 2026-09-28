@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.9.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards.
+ * Urr Jaa! v3.10.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -62,7 +62,9 @@
     nearMissTotal: PREFIX + 'nearmiss-total',
     perfectTotal: PREFIX + 'perfect-total',
     // v3.4
-    giftBoxes: PREFIX + 'gift-boxes'
+    giftBoxes: PREFIX + 'gift-boxes',
+    // v3.10
+    spinHistory: PREFIX + 'spin-history'
   };
 
   const BIRDS = {
@@ -893,9 +895,56 @@
     const coins = rollWheelCoins(rngFn);
     return { coins: coins, giftsLeft: getGiftBoxes(), spinsLeft: getSpinCharges(), count: 1, granted: false };
   }
+  const SPIN_HISTORY_MAX = 40;
+
+  function getSpinHistory() {
+    try {
+      const raw = get(KEYS.spinHistory, '[]');
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      return arr.filter((e) => e && typeof e === 'object' && (e.coins | 0) > 0).map((e, i) => ({
+        coins: e.coins | 0,
+        ts: (e.ts | 0) || 0,
+        n: (e.n | 0) || (arr.length - i)
+      }));
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function setSpinHistory(arr) {
+    const clean = (Array.isArray(arr) ? arr : []).slice(0, SPIN_HISTORY_MAX).map((e) => ({
+      coins: e.coins | 0,
+      ts: e.ts | 0,
+      n: e.n | 0
+    }));
+    set(KEYS.spinHistory, JSON.stringify(clean));
+    return clean;
+  }
+
+  /** Record a landed spin (newest first). Returns updated history. */
+  function recordSpinHistory(coins) {
+    coins = coins | 0;
+    if (coins <= 0) return getSpinHistory();
+    const prev = getSpinHistory();
+    const lastN = prev.length ? (prev[0].n | 0) : 0;
+    prev.unshift({ coins: coins, ts: Date.now(), n: lastN + 1 });
+    return setSpinHistory(prev);
+  }
+
+  function getSpinHistoryTotal() {
+    return getSpinHistory().reduce((s, e) => s + (e.coins | 0), 0);
+  }
+
+  function clearSpinHistory() {
+    set(KEYS.spinHistory, '[]');
+    return [];
+  }
+
   function grantSpinCoins(coins) {
     coins = coins | 0;
     if (coins <= 0) return getCoins();
+    recordSpinHistory(coins);
     return addCoins(coins);
   }
   /** Spend 10 gifts, roll, and grant immediately (compat / non-animated callers). */
@@ -1042,6 +1091,7 @@
     rollBoxRarity, BOX_RARITIES,
     getGiftBoxes, setGiftBoxes, addGiftBoxes, spendGiftBoxes, getSpinCharges,
     beginWheelSpin, grantSpinCoins, spinWheelOnce, spinWheelAll, rollWheelCoins, WHEEL_REWARDS, GIFTS_PER_SPIN,
+    getSpinHistory, recordSpinHistory, getSpinHistoryTotal, clearSpinHistory, SPIN_HISTORY_MAX,
     BIRDS, VEHICLES, ENVS, HATS, TRAILS, SEASONALS
   };
 })(window);

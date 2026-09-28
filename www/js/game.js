@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.9.0-urrjaa — deeper pseudo-3D (wings/head/mouth) + relaxed collision feel; keeps ≤3.8 features.
+ * Urr Jaa! v3.10.0-urrjaa — Mystery spin history + rAF wheel spin fix; keeps ≤3.9 features.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all prior features — polish difficulty/collision/character anim only.
  */
@@ -1612,6 +1612,54 @@
       btnSpinAll.disabled = busy || s < 1;
       btnSpinAll.textContent = s > 1 ? ('Spin all (' + s + ')') : 'Spin all';
     }
+    refreshSpinHistoryUI();
+  }
+
+  function formatSpinAgo(ts) {
+    ts = ts | 0;
+    if (!ts) return '';
+    var sec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (sec < 45) return 'just now';
+    if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
+    if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
+    if (sec < 86400 * 7) return Math.floor(sec / 86400) + 'd ago';
+    try {
+      return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function refreshSpinHistoryUI() {
+    var list = document.getElementById('spin-history-list');
+    var totalEl = document.getElementById('spin-history-total');
+    var hist = FTStorage.getSpinHistory ? FTStorage.getSpinHistory() : [];
+    var total = FTStorage.getSpinHistoryTotal ? FTStorage.getSpinHistoryTotal() : 0;
+    if (totalEl) totalEl.textContent = total > 0 ? (total.toLocaleString() + ' 🪙 won') : 'No wins yet';
+    if (!list) return;
+    list.innerHTML = '';
+    if (!hist.length) {
+      var empty = document.createElement('li');
+      empty.className = 'spin-history-empty';
+      empty.textContent = 'No spins yet — collect 10 🎁 to spin!';
+      list.appendChild(empty);
+      return;
+    }
+    hist.slice(0, 20).forEach(function (entry, i) {
+      var li = document.createElement('li');
+      li.className = 'spin-history-item' + (i === 0 ? ' latest' : '');
+      var amt = document.createElement('strong');
+      amt.className = 'spin-hist-coins';
+      amt.textContent = '+' + (entry.coins | 0) + ' 🪙';
+      var meta = document.createElement('span');
+      meta.className = 'spin-hist-meta';
+      var order = (entry.n | 0) ? ('#' + (entry.n | 0)) : ('#' + (hist.length - i));
+      var ago = formatSpinAgo(entry.ts | 0);
+      meta.textContent = order + (ago ? ' · ' + ago : '');
+      li.appendChild(amt);
+      li.appendChild(meta);
+      list.appendChild(li);
+    });
   }
 
   function openGiftsScreen() {
@@ -1647,21 +1695,44 @@
     return 1800;
   }
 
-  /** Animate wheel so `coins` segment lands under the top pointer (smooth decelerate). */
+  /**
+   * Animate wheel so `coins` segment lands under the top pointer.
+   * ROOT-CAUSE FIX (3.10): CSS transition on #spin-wheel was unreliable —
+   * `.wheel-spinning .spin-wheel { filter:… }` forced a new compositor layer
+   * mid-transition, and `html.reduce-motion .spin-wheel { transition:none !important }`
+   * could kill it. Drive rotation with requestAnimationFrame + ease-out instead
+   * so Spin once always shows continuous rotation (~7s) then decelerates into the segment.
+   */
+  var wheelAnimRaf = 0;
+  function cancelWheelAnim() {
+    if (wheelAnimRaf) {
+      cancelAnimationFrame(wheelAnimRaf);
+      wheelAnimRaf = 0;
+    }
+  }
+  function wheelEaseOut(t) {
+    // Fast start, long decelerate into the winning segment (easeOutQuint)
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    var u = 1 - t;
+    return 1 - u * u * u * u * u;
+  }
   function animateWheelTo(coins, done, durationMs) {
     if (!spinWheelEl) { if (done) done(); return; }
+    cancelWheelAnim();
     var rewards = (FTStorage.WHEEL_REWARDS || [444, 555, 666, 777, 888, 999]);
     var idx = rewards.indexOf(coins);
     if (idx < 0) idx = 0;
     var seg = 360 / rewards.length;
     // Segment centers: idx 0 at 0° (top). Clockwise rotation brings idx under pointer.
     var desiredMod = (360 - idx * seg) % 360;
-    var reduce = document.documentElement.classList.contains('reduce-motion');
+    var reduce = !!reduceMotion || document.documentElement.classList.contains('reduce-motion');
     var dur = reduce ? 80 : (durationMs != null ? durationMs : SPIN_ONCE_MS);
     // More full rotations for longer spins → clearer “wheel of fortune” feel
-    var turns = reduce ? 1 : (dur >= 6000 ? 10 : (dur >= 3000 ? 7 : (dur >= 1500 ? 4 : 3)));
+    var turns = reduce ? 1 : (dur >= 6000 ? 12 : (dur >= 3000 ? 7 : (dur >= 1500 ? 4 : 3)));
     var currentMod = ((wheelAngle % 360) + 360) % 360;
     var delta = (desiredMod - currentMod + 360) % 360;
+    var startAngle = wheelAngle;
     var target = wheelAngle + turns * 360 + delta;
     wheelSpinning = true;
     setSpinButtonsBusy(true);
@@ -1672,24 +1743,43 @@
     if (spinResultEl && !reduce && dur >= 5000) {
       flashSpinResult('Spinning… 🎰');
     }
+    // Kill any leftover CSS transition — rAF owns transform exclusively
     spinWheelEl.style.transition = 'none';
-    spinWheelEl.style.transform = 'rotate(' + wheelAngle + 'deg)';
-    void spinWheelEl.offsetWidth;
-    // Long ease-out: fast start, smooth decelerate into the winning segment
-    var easing = dur >= 5000
-      ? 'cubic-bezier(0.12, 0.75, 0.08, 1)'
-      : 'cubic-bezier(0.08, 0.82, 0.08, 1)';
-    spinWheelEl.style.transition = 'transform ' + (dur / 1000) + 's ' + easing;
-    spinWheelEl.style.transform = 'rotate(' + target + 'deg)';
-    wheelAngle = target;
-    setTimeout(function () {
-      wheelSpinning = false;
-      if (wheelWrapEl) {
-        wheelWrapEl.classList.remove('wheel-spinning');
-        wheelWrapEl.classList.add('wheel-win');
+    spinWheelEl.style.webkitTransition = 'none';
+    spinWheelEl.style.transform = 'rotate(' + startAngle + 'deg) translateZ(0)';
+    spinWheelEl.style.webkitTransform = 'rotate(' + startAngle + 'deg) translateZ(0)';
+    var t0 = performance.now();
+    var lastTickSeg = Math.floor(startAngle / (seg / 2));
+    function frame(now) {
+      var p = Math.min(1, (now - t0) / Math.max(1, dur));
+      var e = reduce ? p : wheelEaseOut(p);
+      var ang = startAngle + (target - startAngle) * e;
+      spinWheelEl.style.transform = 'rotate(' + ang + 'deg) translateZ(0)';
+      spinWheelEl.style.webkitTransform = 'rotate(' + ang + 'deg) translateZ(0)';
+      // Soft tick as segments pass the pointer (audio optional)
+      var tickSeg = Math.floor(ang / (seg / 2));
+      if (tickSeg !== lastTickSeg) {
+        lastTickSeg = tickSeg;
+        if (!reduce && FTAudio && typeof FTAudio.tick === 'function') {
+          try { FTAudio.tick(); } catch (err) { /* ignore */ }
+        }
       }
-      if (done) done();
-    }, dur + 60);
+      if (p < 1) {
+        wheelAnimRaf = requestAnimationFrame(frame);
+      } else {
+        wheelAnimRaf = 0;
+        wheelAngle = target;
+        spinWheelEl.style.transform = 'rotate(' + target + 'deg) translateZ(0)';
+        spinWheelEl.style.webkitTransform = 'rotate(' + target + 'deg) translateZ(0)';
+        wheelSpinning = false;
+        if (wheelWrapEl) {
+          wheelWrapEl.classList.remove('wheel-spinning');
+          wheelWrapEl.classList.add('wheel-win');
+        }
+        if (done) done();
+      }
+    }
+    wheelAnimRaf = requestAnimationFrame(frame);
   }
 
   function flashSpinResult(text) {
