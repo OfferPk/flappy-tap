@@ -1,5 +1,22 @@
 # Urr Jaa! STATUS
 
+## Current: **3.44.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.43)
+- **Preview Equip** — Equip button on garage long-press preview (locked = disabled)
+- **Star coin HUD ping** — `#coin-hud` star-ping pulse on rare night star coins
+- **Favorites** — stay local only (no export/cloud) — sync toast is enough
+- Polish / bugfixes — equip actions row; locked preview state
+- KEEP ALL ≤3.43 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v53-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.44.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.44.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.43.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.42)

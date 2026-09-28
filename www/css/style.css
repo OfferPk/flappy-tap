@@ -3513,3 +3513,30 @@ html.reduce-motion .toast.toast-claim.toast-pop { animation: toast-pop 0.25s eas
 }
 .garage-lp-hint { margin: 0 0 10px; font-size: 0.72rem; }
 html.reduce-motion .garage-lp-preview { backdrop-filter: none; }
+
+/* ——— v3.44: preview equip, star coin HUD ping ——— */
+.garage-lp-actions {
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+#garage-lp-equip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+#coin-hud.coin-hud-star-ping {
+  animation: coin-hud-star-ping 0.9s cubic-bezier(.2,1.1,.3,1);
+  color: #ffe566;
+  text-shadow: 0 0 12px rgba(255,217,61,.85), 0 0 2px rgba(0,0,0,.5);
+}
+@keyframes coin-hud-star-ping {
+  0% { transform: scale(1); filter: brightness(1); }
+  25% { transform: scale(1.22); filter: brightness(1.35); }
+  55% { transform: scale(1.08); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+html.reduce-motion #coin-hud.coin-hud-star-ping {
+  animation: none;
+  outline: 2px solid rgba(255,217,61,.7);
+}

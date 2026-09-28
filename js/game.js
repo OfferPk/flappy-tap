@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.43.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.44.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -1041,6 +1041,18 @@ function updateComboMeter(visible) {
     if (coinsStartEl) coinsStartEl.textContent = String(FTStorage.getCoins());
     if (garageCoinsEl) garageCoinsEl.textContent = String(FTStorage.getCoins());
     updateUnlockTeaser();
+  }
+
+  /** 3.44: star-coin HUD ping */
+  function pingCoinHudStar() {
+    if (!coinHudEl) return;
+    coinHudEl.classList.remove('coin-hud-star-ping');
+    void coinHudEl.offsetWidth;
+    coinHudEl.classList.add('coin-hud-star-ping');
+    clearTimeout(pingCoinHudStar._t);
+    pingCoinHudStar._t = setTimeout(function () {
+      if (coinHudEl) coinHudEl.classList.remove('coin-hud-star-ping');
+    }, reduceMotion ? 400 : 950);
   }
 
   function cosmeticsOpts() {
@@ -4354,6 +4366,7 @@ function updateComboMeter(visible) {
           starCoinLastAt = now;
           if (FTStorage.addCoins) FTStorage.addCoins(n);
           if (typeof updateCoinHud === 'function') updateCoinHud();
+          if (typeof pingCoinHudStar === 'function') pingCoinHudStar();
           showToast('⭐ Star luck! +' + n + ' 🪙' + (starCoinRunGain >= STAR_COIN_RUN_CAP ? ' · cap' : ''), 2000, 'lucky');
           if (FTAudio && FTAudio.coin) FTAudio.coin();
           else if (FTAudio && FTAudio.score) FTAudio.score();
@@ -6285,6 +6298,8 @@ function updateComboMeter(visible) {
   var garageLpOpened = false;
   var garageLpSuppressClick = false;
   var garageLpCard = null;
+  var garageLpKind = null;
+  var garageLpId = null;
 
   function stopGarageLpAnim() {
     if (garageLpRaf) { cancelAnimationFrame(garageLpRaf); garageLpRaf = 0; }
@@ -6295,6 +6310,32 @@ function updateComboMeter(visible) {
     stopGarageLpAnim();
     garageLpOpened = false;
     garageLpCard = null;
+    garageLpKind = null;
+    garageLpId = null;
+  }
+
+  function equipFromGarageLp() {
+    if (!garageLpKind || !garageLpId) return;
+    if (garageLpCard && garageLpCard.classList.contains('locked')) {
+      showToast('Locked — unlock first', 1200);
+      if (typeof haptic === 'function') haptic('power');
+      return;
+    }
+    onPickCosmetic(garageLpId, garageLpKind);
+    var label = (garageLpCard && (garageLpCard.dataset.label || garageLpId)) || garageLpId;
+    // refresh selected chrome without full rebuild when possible
+    document.querySelectorAll('#screen-garage .skin-card').forEach(function (el) {
+      var rowKind = el.closest('#garage-birds') ? 'bird' :
+        el.closest('#garage-vehicles') ? 'vehicle' :
+        el.closest('#garage-envs') ? 'env' :
+        el.closest('#garage-hats') ? 'hat' :
+        el.closest('#garage-trails') ? 'trail' : '';
+      if (rowKind !== garageLpKind) return;
+      el.classList.toggle('selected', el.dataset.id === garageLpId && !el.classList.contains('locked'));
+    });
+    showToast('Equipped · ' + label, 1200, 'medal');
+    if (typeof haptic === 'function') haptic('gift');
+    closeGarageLongPreview();
   }
   function drawGarageLpFrame(kind, id, canvas, t0) {
     if (!canvas || !FTSkins || !FTSkins.draw) return;
@@ -6342,6 +6383,10 @@ function updateComboMeter(visible) {
     var id = card.dataset.id;
     var label = card.dataset.label || id;
     var ov = document.getElementById('garage-lp-preview');
+    if (ov && !document.getElementById('garage-lp-equip')) {
+      ov.remove();
+      ov = null;
+    }
     if (!ov) {
       ov = document.createElement('div');
       ov.id = 'garage-lp-preview';
@@ -6351,21 +6396,40 @@ function updateComboMeter(visible) {
       ov.innerHTML = '<div class="garage-lp-card">' +
         '<canvas id="garage-lp-canvas" width="160" height="160" aria-hidden="true"></canvas>' +
         '<p class="garage-lp-label" id="garage-lp-label"></p>' +
-        '<p class="hint garage-lp-hint">Release or tap to close · long-press any skin</p>' +
+        '<p class="hint garage-lp-hint">Long-press preview · Equip or Close</p>' +
+        '<div class="garage-lp-actions btn-row">' +
+        '<button type="button" class="btn primary btn-sm" id="garage-lp-equip">Equip</button>' +
         '<button type="button" class="btn ghost btn-sm" id="garage-lp-close">Close</button>' +
-        '</div>';
+        '</div></div>';
       var host = document.getElementById('screen-garage') || document.body;
       host.appendChild(ov);
       ov.addEventListener('click', function (e) {
-        if (e.target === ov || (e.target && e.target.id === 'garage-lp-close')) closeGarageLongPreview();
+        var tid = e.target && e.target.id;
+        if (tid === 'garage-lp-equip') {
+          e.preventDefault();
+          e.stopPropagation();
+          equipFromGarageLp();
+          return;
+        }
+        if (e.target === ov || tid === 'garage-lp-close') closeGarageLongPreview();
       });
     }
     var lab = document.getElementById('garage-lp-label');
     if (lab) lab.textContent = (card.classList.contains('locked') ? '🔒 ' : '') + label;
     var canvas = document.getElementById('garage-lp-canvas');
     garageLpCard = card;
+    garageLpKind = kind;
+    garageLpId = id;
     garageLpOpened = true;
     ov.hidden = false;
+    var eq = document.getElementById('garage-lp-equip');
+    if (eq) {
+      var locked = card.classList.contains('locked');
+      eq.disabled = !!locked;
+      eq.textContent = locked ? 'Locked' : 'Equip';
+      eq.classList.toggle('ghost', !!locked);
+      eq.classList.toggle('primary', !locked);
+    }
     stopGarageLpAnim();
     var t0 = performance.now();
     function tick() {
