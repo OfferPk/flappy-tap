@@ -33,7 +33,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 
 - **Polish 3.6.0:** richer bird/vehicle art · juice/toasts · Mystery progress · voice variety · Guide/menu polish
 - **Collection depth:** +8 desi birds · +6 areas · 4 offline seasonal packs (Azadi / Eid / Winter / Basant)
-- **Improve 3.5.2:** Run Share · Home A2HS tip · Missions XSS harden (F1 closed)
+- **Improve 3.5.2/3.5.3:** Run Share · Home A2HS tip · Missions XSS harden · build preserves docs/.nojekyll
 
 | Feature | Notes |
 |---------|--------|

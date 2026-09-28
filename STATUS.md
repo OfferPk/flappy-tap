@@ -12,6 +12,7 @@
 - `dd627c8` windows zip refresh for Pages
 - `c91ba1f` docs/.nojekyll
 - `81e7c6d` release v3.5.2 (Share · A2HS · Missions XSS harden)
+- `d75b79b` 3.5.3 — preserve docs/.nojekyll in build:web
 
 ## ADD — v3.6.0 polish (keeps all ≤3.5.2 systems)
 - [x] Character graphics: clearer bird silhouettes/markings (Sparrow + unlocks) + richer Rickshaw/Cycle/Mehran/vehicles — hitboxes unchanged
