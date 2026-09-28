@@ -1,38 +1,37 @@
-# STATUS — Urr Jaa! v3.1.0-urrjaa
+# STATUS — Urr Jaa! v3.2.0-urrjaa
 
-**Path:** `/workspace/games/flappy-tap` (repo OfferPk/flappy-tap; UI title **Urr Jaa!**)  
-**Owner:** Mia Smith  
-**Updated:** 2026-09-28 ~15:45 Asia/Karachi (PKT)  
-**Version:** **3.1.0-urrjaa**  
-**SW cache:** `urrjaa-v6-20260928`  
+**Path:** `/workspace/games/flappy-tap` (repo OfferPk/flappy-tap; UI title **Urr Jaa!**)
+**Owner:** Mia Smith
+**Updated:** 2026-09-28 ~16:00 Asia/Karachi (PKT)
+**Version:** **3.2.0-urrjaa**
+**SW cache:** `urrjaa-v7-20260928`
 **Capacitor appId:** `com.offerpk.urrjaa`
 
 ## OWNER COMPLETE ✅
 
-### Core (kept)
+### Core (kept from ≤3.1)
 - [x] FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN
-- [x] Tap→flap, gravity, obstacles, score, death · NO countdown · 2s learn
-- [x] Pakistani birds/vehicles/cities · ads stubs · pause/settings
+- [x] Modes · leaderboards · near-miss RISKY · power-ups · streak · accessories/trails
+- [x] Desi voices · traffic · special areas · One Life · Collection · ads stubs · juice
 
-### ADD — v3.1.0
-- [x] Modes: Classic · Time Attack 60s · Hard · No Coin · Challenge stages · One Life (+ Daily/Practice)
-- [x] Local leaderboards: PB / Today / All-Time / Distance / Combo (+ mode bests)
-- [x] Near-miss CLOSE! · 3× consecutive → RISKY x3 score mult
-- [x] Rare power-ups: Shield · Turbo · Coin Magnet · Slow-mo 3s · Ghost
-- [x] Daily streak Day1–7 → coins → mystery → rare skin
-- [x] Accessories: sunglasses, cap, hat, helmet, scarf · trails fire/star/smoke/rainbow
-- [x] Desi voice cues: Oye hoye, Bach ke, Wah ji wah, Kya udaan, Haye oye, Shabaash
-- [x] Dynamic traffic escalate rickshaw/cycle→bike→taxi→bus→truck · dual cross
-- [x] Special areas: City, Bridge, Mountains, Village, Rain, Night, Desert
-- [x] Collection Book counters birds/vehicles/accessories/trails
-- [x] One Life: 1 attempt · Bronze100/Silver300/Gold500/Legend1000
+### ADD — v3.2.0
+- [x] Daily Missions: 3/day from pool (50 coins · dodge 20 · 3 near-misses · score 100) · coins/mystery/fragment rewards · persisted
+- [x] Coin combo ladder continuous x1→x5 · miss resets · links near-miss + RISKY
+- [x] Perfect Pass (gap center) · Normal +1 · Perfect +3 · Near-miss +5
+- [x] Bird passives (mild): Sparrow control · Parrot +5% coin · Owl night · Eagle near-miss — free
+- [x] Dynamic weather gameplay: Clear/Rain/Fog/Storm/Night/Sunset (slight visibility/speed)
+- [x] Boss/Chase every ~180m: DANGER truck/eagle/police/storm/giant · 30–60s
+- [x] Mystery box COMMON→LEGENDARY · rewards · duplicates→Fragments · 10/20 unlock
+- [x] Run Summary: Score/Best/Distance/Coins/Near Misses/Best Combo/Perfects · NEW RECORD · RETRY|COLLECTION|HOME
+- [x] Collection Album: Birds/Vehicles/Accessories/Trails/Areas/Challenges + 25/50/75/100% rewards
+- [x] Monetization stubs: Continue once · Mystery Box ad — never mid-flight
 
-### Juice (priority)
-- [x] Flap squash · coin pop particles · near-miss sparks · death flash+shake
-- [x] Score pop floats · combo/RISKY banners · forgiving hitbox · richer SFX
+### Polish
+- [x] Physics/passive feel · collision juice · SFX variety · score pops · shake · particles
+- [x] Optional per-area Web Audio music stubs
 
 ### Ship
-- [x] Offline PWA (`urrjaa-v6-20260928`)
+- [x] Offline PWA (`urrjaa-v7-20260928`)
 - [x] `www/` + `docs/` + `dist/urr-jaa-web-windows.zip`
 - [x] `npm run check` + `npm run smoke`
 - [x] No git push · no secrets

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.1.0 — birds, vehicles, accessories, trails, special areas, traffic.
+ * Urr Jaa! v3.2.0 — birds, vehicles, accessories, trails, weather, passives, traffic.
  * Canvas-drawn; forgiving hitboxes.
  */
 (function (global) {
@@ -44,12 +44,41 @@
   ];
 
   const WEATHERS = [
-    { id: 'sunny', label: 'Sunny' },
+    { id: 'clear', label: 'Clear' },
     { id: 'rain', label: 'Rain' },
     { id: 'fog', label: 'Fog' },
+    { id: 'storm', label: 'Storm' },
     { id: 'night', label: 'Night' },
-    { id: 'storm', label: 'Storm' }
+    { id: 'sunset', label: 'Sunset' }
   ];
+
+  /** Mild bird passives — never paywalled; sparrow free control feel. */
+  const BIRD_PASSIVES = {
+    sparrow: { id: 'control', label: 'Steady flaps', gravityMul: 0.96, flapMul: 1.04, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
+    parrot: { id: 'coin', label: '+5% coins', gravityMul: 1, flapMul: 1, coinMul: 1.05, nearMissBonus: 0, nightBonus: 0 },
+    owl: { id: 'night', label: 'Night bonus', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0.08 },
+    eagle: { id: 'nearmiss', label: 'Near-miss bonus', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 1, nightBonus: 0 },
+    chick: { id: 'none', label: 'Cute', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
+    funny: { id: 'none', label: 'Goofy', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0 }
+  };
+
+  function birdPassive(id) {
+    return BIRD_PASSIVES[id] || BIRD_PASSIVES.sparrow;
+  }
+
+  /** Light weather gameplay modifiers — slight, not unfair. */
+  function weatherMods(weatherId) {
+    const w = weatherId === 'sunny' ? 'clear' : weatherId;
+    const table = {
+      clear: { speedMul: 1, visibility: 1, label: 'Clear' },
+      rain: { speedMul: 0.97, visibility: 0.92, label: 'Rain' },
+      fog: { speedMul: 0.98, visibility: 0.72, label: 'Fog' },
+      storm: { speedMul: 1.06, visibility: 0.85, label: 'Storm' },
+      night: { speedMul: 1, visibility: 0.8, label: 'Night' },
+      sunset: { speedMul: 0.98, visibility: 0.95, label: 'Sunset' }
+    };
+    return table[w] || table.clear;
+  }
 
   const HATS = [
     { id: 'none', label: 'None', cost: 0, free: true },
@@ -538,7 +567,30 @@
       pal.sky1 = pal.storm ? '#34495e' : '#95a5a6';
       pal.sky2 = '#bdc3c7';
     }
+    if (weatherId === 'sunset') {
+      pal.sky0 = '#ff7e5f';
+      pal.sky1 = '#feb47b';
+      pal.sky2 = '#ffd194';
+      pal.sun = 'rgba(255,160,80,0.9)';
+      pal.cloud = 'rgba(255,200,160,0.55)';
+    }
+    if (weatherId === 'clear' || weatherId === 'sunny') {
+      /* keep base palette */
+    }
     return pal;
+  }
+
+  const BOSS_KINDS = [
+    { id: 'truck', label: 'GIANT TRUCK', emoji: '🚛' },
+    { id: 'eagle', label: 'FLYING EAGLE', emoji: '🦅' },
+    { id: 'police', label: 'POLICE CHASE', emoji: '🚓' },
+    { id: 'storm', label: 'STORM FRONT', emoji: '⛈' },
+    { id: 'giant', label: 'GIANT OBSTACLE', emoji: '🧱' }
+  ];
+
+  function pickBossKind(rng) {
+    const r = typeof rng === 'function' ? rng : Math.random;
+    return BOSS_KINDS[Math.floor(r() * BOSS_KINDS.length)];
   }
 
   function isUnlocked(id) {
@@ -576,7 +628,7 @@
           vehicle: kind === 'vehicle' ? item.id : 'none'
         });
       } else if (kind === 'env') {
-        const pal = envPalette(item.id, 'sunny');
+        const pal = envPalette(item.id, 'clear');
         const g = cctx.createLinearGradient(0, 0, 0, 64);
         g.addColorStop(0, pal.sky0);
         g.addColorStop(1, pal.sky2);
@@ -669,6 +721,7 @@
 
   global.FTSkins = {
     SKINS, BIRDS, VEHICLES, ENVS, WEATHERS, HATS, TRAILS,
+    BIRD_PASSIVES, birdPassive, weatherMods, BOSS_KINDS, pickBossKind,
     draw, drawLegacy, hitbox, renderPicker, isUnlocked,
     envPalette, pickObstacleKind, drawObstaclePair, OBSTACLE_KINDS,
     AREA_OBSTACLES, pickTrafficKind, drawTraffic, trafficHitbox, TRAFFIC_TIERS

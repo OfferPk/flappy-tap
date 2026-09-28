@@ -1,6 +1,7 @@
 /**
- * Urr Jaa! v3.1.0-urrjaa — one-tap fly, juice-first, modes, traffic, streak, one-life.
+ * Urr Jaa! v3.2.0-urrjaa — missions, perfect pass, passives, weather, boss, mystery rarity, run summary.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
+ * KEEP all v3.1 features — only ADD.
  */
 (function () {
   'use strict';
@@ -47,6 +48,10 @@
   const M_PER_PX = 0.08;
   const TIME_ATTACK_S = 60;
   const TRAFFIC_CHANCE = 0.018;
+  const PERFECT_CENTER_PX = 14;
+  const BOSS_EVERY_M = 180;
+  const BOSS_MIN_S = 30;
+  const BOSS_MAX_S = 60;
 
   const CHALLENGE_STAGES = [
     { id: 1, label: 'City Warm-up', area: 'city', target: 15, gapMul: 1.1, speedMul: 0.95 },
@@ -71,7 +76,7 @@
   let birdId = 'sparrow';
   let vehicleId = 'none';
   let envId = 'city';
-  let weatherId = 'sunny';
+  let weatherId = 'clear';
   let hatId = 'none';
   let trailId = 'spark';
   let continuedThisRun = false;
@@ -117,6 +122,18 @@
   let runBestCombo = 0;
   let bannerText = '';
   let bannerUntil = 0;
+  // v3.2
+  let runNearMisses = 0;
+  let runPerfects = 0;
+  let runBestCoinCombo = 0;
+  let bossActive = false;
+  let bossUntil = 0;
+  let bossKind = null;
+  let nextBossAt = BOSS_EVERY_M;
+  let weatherDynId = null; // dynamic weather override during run
+  let lastAreaMusic = null;
+  let mysteryAdUsed = false;
+  let nextWeatherAt = 90;
 
   const hud = document.getElementById('hud');
   const scoreEl = document.getElementById('score-display');
@@ -180,6 +197,18 @@
   const boardsList = document.getElementById('boards-list');
   const streakBody = document.getElementById('streak-body');
   const garageCoinsEl = document.getElementById('garage-coins');
+  const runDistanceEl = document.getElementById('run-distance');
+  const runNearMissEl = document.getElementById('run-nearmiss');
+  const runComboEl = document.getElementById('run-combo');
+  const runPerfectEl = document.getElementById('run-perfect');
+  const newRecordBanner = document.getElementById('new-record-banner');
+  const modeDeathValueEl = document.getElementById('mode-death-value');
+  const btnDeathCollection = document.getElementById('btn-death-collection');
+  const btnMysteryAd = document.getElementById('btn-mystery-ad');
+  const mysteryOverlay = document.getElementById('mystery-overlay');
+  const mysteryRarityEl = document.getElementById('mystery-rarity');
+  const mysteryRewardEl = document.getElementById('mystery-reward');
+  const btnMysteryOk = document.getElementById('btn-mystery-ok');
 
   function showToast(msg, ms) {
     if (!toastEl) return;
@@ -338,7 +367,9 @@
     var sm = modeSpeedMul();
     var gm = modeGapMul();
     var turboMul = performance.now() < turboUntil ? 1.35 : 1;
-    currentSpeed = Math.min(SPEED_CAP * (isHard() ? 1.2 : 1), (BASE_SPEED + sc * SPEED_PER_SCORE) * sm * turboMul);
+    var wMul = weatherMul().speedMul || 1;
+    if (bossActive) wMul *= 1.08;
+    currentSpeed = Math.min(SPEED_CAP * (isHard() ? 1.2 : 1), (BASE_SPEED + sc * SPEED_PER_SCORE) * sm * turboMul * wMul);
     currentGap = Math.max(GAP_FLOOR * gm, (BASE_GAP - sc * GAP_SHRINK_PER) * gm);
     currentSpawn = Math.max(SPAWN_FLOOR, BASE_SPAWN - sc * SPAWN_SHRINK_PER);
   }
@@ -353,10 +384,12 @@
   }
 
   function coinComboMult() {
-    if (coinCombo >= 10) return 10;
-    if (coinCombo >= 5) return 5;
-    if (coinCombo >= 2) return 2;
-    return 1;
+    // Continuous ladder x1→x5; miss coin resets (elsewhere)
+    var base = Math.min(5, Math.max(1, coinCombo));
+    // Connect with near-miss streak + RISKY if present
+    if (nearMissStreak >= 2) base = Math.min(5, base + 1);
+    if (riskyActive()) base = Math.min(5, base + 1);
+    return base;
   }
 
   function pipeComboMult() {
@@ -365,6 +398,23 @@
     if (performance.now() < riskyUntil) m *= 3;
     if (performance.now() < score2xUntil) m *= 2;
     return m;
+  }
+
+  function birdPass() {
+    return FTSkins.birdPassive ? FTSkins.birdPassive(birdId) : { gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0 };
+  }
+
+  function effectiveWeather() {
+    if (weatherDynId) return weatherDynId;
+    var area = activeArea();
+    if (area === 'rain') return 'rain';
+    if (area === 'night') return 'night';
+    return weatherId === 'sunny' ? 'clear' : weatherId;
+  }
+
+  function weatherMul() {
+    var mods = FTSkins.weatherMods ? FTSkins.weatherMods(effectiveWeather()) : { speedMul: 1, visibility: 1 };
+    return mods;
   }
 
   function riskyActive() { return performance.now() < riskyUntil; }
@@ -384,7 +434,7 @@
       if (riskyActive()) bits.push('RISKY x3');
       else if (nearMissStreak >= 2) bits.push('CLOSE x' + nearMissStreak);
       if (combo >= 2) bits.push('PIPE ' + combo);
-      if (ccm > 1) bits.push('COMBO x' + ccm);
+      if (ccm > 1) bits.push('COIN x' + ccm);
       else if (coinCombo >= 2) bits.push('COINS ' + coinCombo);
       comboEl.textContent = bits.join(' · ');
       comboEl.classList.toggle('combo-hot', ccm >= 5 || combo >= 5 || riskyActive());
@@ -589,8 +639,9 @@
 
   function popScore(amount, x, y) {
     if (reduceMotion) return;
+    var txt = (typeof amount === 'string') ? amount : ('+' + amount);
     scorePops.push({
-      text: '+' + amount,
+      text: txt,
       x: x == null ? bird.x : x,
       y: y == null ? bird.y - 20 : y,
       life: 0.7,
@@ -674,18 +725,31 @@
     hideAllScreens();
     screenDeath.hidden = false;
     hud.hidden = true;
+    if (FTAudio.stopAreaMusic) FTAudio.stopAreaMusic();
+    lastAreaMusic = null;
+    bossActive = false;
+    bossKind = null;
     if (finalScoreEl) finalScoreEl.textContent = String(score);
     if (runCoinsEl) runCoinsEl.textContent = String(runCoins);
-    if (modeDeathEl) {
+    if (runDistanceEl) runDistanceEl.textContent = String(Math.floor(metersFlown));
+    if (runNearMissEl) runNearMissEl.textContent = String(runNearMisses);
+    if (runComboEl) runComboEl.textContent = String(Math.max(runBestCombo, runBestCoinCombo));
+    if (runPerfectEl) runPerfectEl.textContent = String(runPerfects);
+    if (modeDeathEl) modeDeathEl.textContent = 'Mode';
+    if (modeDeathValueEl) {
       var labels = {
-        timeattack: 'Time Attack best', hard: 'Hard best', nocoin: 'No Coin best',
-        challenge: 'Challenge', onelife: 'One Life PB', daily: 'Daily best', practice: 'Practice'
+        classic: 'Classic', timeattack: 'Time Attack', hard: 'Hard', nocoin: 'No Coin',
+        challenge: 'Challenge', onelife: 'One Life', daily: 'Daily', practice: 'Practice'
       };
-      modeDeathEl.textContent = labels[playMode] || 'Best';
+      modeDeathValueEl.textContent = labels[playMode] || playMode;
     }
     var isRecord = persistScore();
+    FTStorage.setBestPerfect(runPerfects);
+    FTStorage.bumpNearMissTotal(runNearMisses);
+    FTStorage.bumpPerfectTotal(runPerfects);
     updateBestUI();
     showMedalUI(score);
+    if (newRecordBanner) newRecordBanner.hidden = !isRecord;
     if (isRecord) {
       FTAudio.record();
       voiceCue('shabaash');
@@ -699,13 +763,23 @@
       btnContinue.disabled = continuedThisRun || !allow || oneLifeLocked;
       btnContinue.textContent = continuedThisRun ? 'Continue used' : '▶ Continue (Ad)';
     }
-    if (btnRetry) {
-      btnRetry.textContent = isOneLife() ? 'Back to Menu' : 'Try Again';
+    if (btnMysteryAd) {
+      btnMysteryAd.hidden = isPractice();
+      btnMysteryAd.disabled = mysteryAdUsed;
+      btnMysteryAd.textContent = mysteryAdUsed ? 'Mystery used' : '🎁 Mystery Box (Ad)';
     }
+    if (btnRetry) {
+      btnRetry.textContent = isOneLife() ? 'HOME' : 'RETRY';
+    }
+    // Persist daily missions (today's 3 from pool)
     FTStorage.bumpMission('fly_m', Math.floor(metersFlown));
     FTStorage.bumpMission('coins', runCoins);
+    FTStorage.bumpMission('coins50', runCoins);
     FTStorage.bumpMission('pipes', score);
+    FTStorage.bumpMission('dodge20', score);
     FTStorage.bumpMission('boxes', runBoxes);
+    FTStorage.bumpMission('nearmiss3', runNearMisses);
+    FTStorage.setMissionMax('score100', score);
     if (!hitThisRun && cleanScorePeak >= 50) FTStorage.setMissionMax('clean50', cleanScorePeak);
     var unlocked = FTStorage.checkEnvMilestones(FTStorage.getBest());
     if (unlocked.length) showToast('Unlocked: ' + unlocked.join(', '), 2500);
@@ -779,6 +853,16 @@
       hitThisRun = false;
       cleanScorePeak = 0;
       runBestCombo = 0;
+      runBestCoinCombo = 0;
+      runNearMisses = 0;
+      runPerfects = 0;
+      bossActive = false;
+      bossUntil = 0;
+      bossKind = null;
+      nextBossAt = BOSS_EVERY_M;
+      weatherDynId = null;
+      mysteryAdUsed = false;
+      nextWeatherAt = 90;
       setScore(0);
       resetBird();
       resetPipes();
@@ -805,6 +889,9 @@
       coins = coins.filter(function (c) { return c.x > bird.x + 40; });
       boxes = boxes.filter(function (b) { return b.x > bird.x + 40; });
       traffic = [];
+      bossActive = false;
+      bossUntil = 0;
+      bossKind = null;
     }
     var hb = FTSkins.hitbox(birdId, cosmeticsOpts());
     bird.w = hb.w;
@@ -817,7 +904,8 @@
 
   function flap() {
     var sens = sensitivity;
-    var impulse = FLAP_IMPULSE * sens;
+    var pass = birdPass();
+    var impulse = FLAP_IMPULSE * sens * (pass.flapMul || 1);
     if (state === 'menu') {
       startRun(false, 'classic');
       bird.vy = FLAP_IMPULSE * sens;
@@ -930,8 +1018,16 @@
   function collectCoin(c) {
     c.taken = true;
     coinCombo += 1;
+    runBestCoinCombo = Math.max(runBestCoinCombo, coinCombo);
+    runBestCombo = Math.max(runBestCombo, coinCombo);
     var mult = coinComboMult();
-    var gained = mult;
+    var pass = birdPass();
+    var gained = Math.max(1, Math.round(mult * (pass.coinMul || 1)));
+    // Owl night bonus
+    var w = effectiveWeather();
+    if (pass.nightBonus && (w === 'night' || activeArea() === 'night')) {
+      gained = Math.max(1, Math.round(gained * (1 + pass.nightBonus)));
+    }
     runCoins += gained;
     FTStorage.addCoins(gained);
     if (FTAudio.coin) FTAudio.coin(); else FTAudio.score();
@@ -940,35 +1036,55 @@
     popScore(gained, c.x, c.y - 10);
     if (mult >= 5) {
       FTAudio.combo();
-      showBanner('COMBO x' + mult + '!', 900);
+      showBanner('COIN x' + mult + '!', 900);
       voiceCue('wah_ji');
       setScore(score + Math.floor(mult / 2));
+    } else if (mult >= 3) {
+      showBanner('COIN x' + mult, 700);
     }
     updateComboUI();
     updateCoinHud();
   }
 
-  function openMysteryBox(box) {
-    box.taken = true;
-    runBoxes += 1;
-    FTAudio.powerup();
+  function showMysteryResult(rarity, text) {
+    if (mysteryOverlay && mysteryRarityEl && mysteryRewardEl) {
+      mysteryRarityEl.textContent = rarity.label || rarity;
+      mysteryRarityEl.className = 'mystery-rarity rarity-' + (rarity.id || 'common');
+      mysteryRewardEl.textContent = text;
+      mysteryOverlay.hidden = false;
+      mysteryOverlay.classList.remove('mystery-pop');
+      void mysteryOverlay.offsetWidth;
+      mysteryOverlay.classList.add('mystery-pop');
+    } else {
+      showToast((rarity.label || '') + '! ' + text, 2200);
+    }
+  }
+
+  function grantMysteryReward(rngFn) {
+    var rarity = FTStorage.rollBoxRarity ? FTStorage.rollBoxRarity(rngFn || rng) : { id: 'common', label: 'COMMON', coinsMin: 10, coinsMax: 20, fragDup: 1 };
+    if (FTAudio.mystery) FTAudio.mystery();
+    if (rarity.id === 'legendary' && FTAudio.legendary) FTAudio.legendary();
     haptic('power');
     var pool = [
-      { kind: 'bird', ids: ['parrot', 'chick', 'owl'] },
-      { kind: 'vehicle', ids: ['cycle', 'scooty', 'bicycle', 'rickshaw', 'truck'] },
-      { kind: 'hat', ids: ['sunglasses', 'cap', 'hat', 'helmet', 'scarf'] },
-      { kind: 'trail', ids: ['smoke', 'stars', 'fire', 'rainbow'] },
-      { kind: 'env', ids: ['lahore', 'village', 'bridge', 'mountains'] },
+      { kind: 'bird', ids: ['parrot', 'chick', 'owl', 'eagle'] },
+      { kind: 'vehicle', ids: ['cycle', 'scooty', 'bicycle', 'rickshaw', 'truck', 'taxi'] },
+      { kind: 'hat', ids: ['sunglasses', 'cap', 'hat', 'helmet', 'scarf', 'crown'] },
+      { kind: 'trail', ids: ['smoke', 'stars', 'fire', 'rainbow', 'star'] },
+      { kind: 'env', ids: ['lahore', 'village', 'bridge', 'mountains', 'desert', 'night'] },
       { kind: 'coins', ids: null }
     ];
-    var pick = pool[Math.floor(rng() * pool.length)];
-    if (pick.kind === 'coins') {
-      var n = 15 + Math.floor(rng() * 20);
+    // Higher rarity → more likely cosmetic
+    var wantCoins = (rngFn || rng)() < (rarity.id === 'legendary' ? 0.15 : rarity.id === 'epic' ? 0.25 : 0.45);
+    var text = '';
+    if (wantCoins) {
+      var n = rarity.coinsMin + Math.floor((rngFn || rng)() * (rarity.coinsMax - rarity.coinsMin + 1));
       FTStorage.addCoins(n);
       runCoins += n;
-      showToast('Mystery: +' + n + ' coins!');
+      text = '+' + n + ' coins';
     } else {
-      var id = pick.ids[Math.floor(rng() * pick.ids.length)];
+      var pick = pool[Math.floor((rngFn || rng)() * (pool.length - 1))]; // skip pure coins slot bias
+      if (pick.kind === 'coins') pick = pool[0];
+      var id = pick.ids[Math.floor((rngFn || rng)() * pick.ids.length)];
       var unlocked = false;
       if (pick.kind === 'bird' && !FTStorage.isBirdUnlocked(id)) { FTStorage.unlockBird(id); unlocked = true; }
       else if (pick.kind === 'vehicle' && !FTStorage.isVehicleUnlocked(id)) { FTStorage.unlockVehicle(id); unlocked = true; }
@@ -976,14 +1092,26 @@
       else if (pick.kind === 'trail' && !FTStorage.isTrailUnlocked(id)) { FTStorage.unlockTrail(id); unlocked = true; }
       else if (pick.kind === 'env' && !FTStorage.isEnvUnlocked(id)) { FTStorage.unlockEnv(id); unlocked = true; }
       FTStorage.addToCollection(pick.kind === 'hat' ? 'accessory' : pick.kind, id);
-      if (unlocked) { showToast('Mystery: ' + id + '!'); voiceCue('wah_ji'); }
-      else {
-        FTStorage.addCoins(10);
-        runCoins += 10;
-        showToast('Mystery: +10 🪙');
+      if (unlocked) {
+        text = 'New ' + pick.kind + ': ' + id;
+        voiceCue('wah_ji');
+      } else {
+        // Duplicate → Fragments
+        var fr = rarity.fragDup || 1;
+        FTStorage.addFragments(fr);
+        text = 'Duplicate → +' + fr + ' Fragments';
       }
     }
+    showMysteryResult(rarity, text);
     updateCoinHud();
+    return { rarity: rarity, text: text };
+  }
+
+  function openMysteryBox(box) {
+    box.taken = true;
+    runBoxes += 1;
+    FTAudio.powerup();
+    grantMysteryReward(rng);
   }
 
   function beginDeath() {
@@ -1042,10 +1170,34 @@
     combo += 1;
     runBestCombo = Math.max(runBestCombo, combo, coinCombo, nearMissStreak);
     var mult = pipeComboMult();
-    var gained = 1 * mult;
+    // Perfect Pass: near gap center → +3 base (tune with existing mult)
+    var gap = p.gap != null ? p.gap : currentGap;
+    var center = p.gapY + gap / 2;
+    var distCenter = Math.abs(bird.y - center);
+    var basePts = 1;
+    var tag = '';
+    if (distCenter <= PERFECT_CENTER_PX) {
+      basePts = 3;
+      runPerfects += 1;
+      tag = 'PERFECT!';
+      if (FTAudio.perfect) FTAudio.perfect();
+      showBanner('PERFECT!', 800);
+      voiceCue('wah_ji');
+    }
+    // Near-miss bonus score already tracked separately; if just near-missed this pipe, bump
+    if (p._wasNearMiss) {
+      basePts = Math.max(basePts, 5);
+      tag = tag || 'CLOSE +5';
+      var pass = birdPass();
+      if (pass.nearMissBonus) basePts += pass.nearMissBonus;
+    }
+    var gained = basePts * mult;
     setScore(score + gained);
     FTAudio.score();
     popScore(gained, bird.x + 20, bird.y - 30);
+    if (tag && basePts >= 3) {
+      popScore(tag, bird.x, bird.y - 48);
+    }
     if (mult >= 3) {
       FTAudio.combo();
       showBanner((riskyActive() ? 'RISKY x' : 'COMBO x') + mult + '!', 900);
@@ -1088,6 +1240,8 @@
       FTAudio.nearmiss();
       haptic('nearmiss');
       nearMissStreak += 1;
+      runNearMisses += 1;
+      p._wasNearMiss = true;
       showToast('CLOSE!', 700);
       if (nearMissStreak >= 3) {
         riskyUntil = performance.now() + 5000;
@@ -1122,7 +1276,7 @@
     });
 
     var drawEnv = activeArea();
-    var weather = (drawEnv === 'rain') ? 'rain' : (drawEnv === 'night' ? 'night' : weatherId);
+    var weather = effectiveWeather();
     var pal = FTSkins.envPalette(drawEnv === 'rain' ? 'city' : drawEnv, weather);
     if ((pal.rain || drawEnv === 'rain') && !reduceMotion) {
       rainDrops.forEach(function (d) {
@@ -1180,7 +1334,7 @@
       }
     }
 
-    var g = GRAVITY * sensitivity;
+    var g = GRAVITY * sensitivity * (birdPass().gravityMul || 1);
     var term = TERMINAL_V * Math.max(0.85, sensitivity);
     bird.vy += g * sdt;
     if (bird.vy > term) bird.vy = term;
@@ -1190,6 +1344,57 @@
     bird.rot += (targetRot - bird.rot) * Math.min(1, sdt * 12);
 
     metersFlown += currentSpeed * sdt * M_PER_PX;
+
+    // Boss / Chase events every N distance (30–60s then normal)
+    if (!bossActive && metersFlown >= nextBossAt && !isPractice()) {
+      bossActive = true;
+      var dur = (BOSS_MIN_S + rng() * (BOSS_MAX_S - BOSS_MIN_S)) * 1000;
+      bossUntil = now + dur;
+      bossKind = FTSkins.pickBossKind ? FTSkins.pickBossKind(rng) : { id: 'truck', label: 'GIANT TRUCK', emoji: '🚛' };
+      nextBossAt = metersFlown + BOSS_EVERY_M + rng() * 40;
+      if (FTAudio.boss) FTAudio.boss();
+      showBanner('DANGER — ' + (bossKind.label || 'CHASE') + '!', 1600);
+      voiceCue('bach_ke');
+      // Spawn heavy traffic / giant obstacle feel
+      if (bossKind.id === 'storm') weatherDynId = 'storm';
+      else if (bossKind.id === 'eagle') {
+        traffic.push({ x: W + 60, y: bird.y, vx: -180, kind: 'truck', dir: -1, boss: true });
+      } else if (bossKind.id === 'police') {
+        traffic.push({ x: -50, y: H - GROUND_H - 36, vx: 200, kind: 'taxi', dir: 1, boss: true });
+        traffic.push({ x: -90, y: H - GROUND_H - 56, vx: 210, kind: 'bike', dir: 1, boss: true });
+      } else if (bossKind.id === 'truck' || bossKind.id === 'giant') {
+        traffic.push({ x: W + 80, y: H - GROUND_H - 40, vx: -160, kind: 'truck', dir: -1, boss: true });
+      }
+      difficultyFor(score);
+    }
+    if (bossActive && now >= bossUntil) {
+      bossActive = false;
+      bossKind = null;
+      if (weatherDynId === 'storm') weatherDynId = null;
+      showToast('All clear!', 1000);
+      difficultyFor(score);
+    }
+
+    // Mild dynamic weather drift (not unfair)
+    if (!bossActive && state === 'playing' && metersFlown >= nextWeatherAt) {
+      nextWeatherAt = metersFlown + 90 + rng() * 80;
+      if (!weatherDynId && rng() < 0.55) {
+        var opts = ['clear', 'rain', 'fog', 'sunset', 'night'];
+        weatherDynId = opts[Math.floor(rng() * opts.length)];
+        showToast('Weather: ' + weatherDynId, 1200);
+        difficultyFor(score);
+      } else if (weatherDynId && weatherDynId !== 'storm') {
+        weatherDynId = null;
+        difficultyFor(score);
+      }
+    }
+
+    // Optional per-area music stubs
+    var areaNow = activeArea();
+    if (FTAudio.playAreaMusic && areaNow !== lastAreaMusic) {
+      lastAreaMusic = areaNow;
+      FTAudio.playAreaMusic(areaNow);
+    }
 
     trailAcc += sdt;
     if (trailAcc >= TRAIL_INTERVAL) { trailAcc = 0; spawnTrailParticle(); }
@@ -1275,7 +1480,7 @@
 
   function drawSky() {
     var area = activeArea();
-    var weather = area === 'rain' ? 'rain' : (area === 'night' ? 'night' : weatherId);
+    var weather = effectiveWeather();
     var palEnv = (area === 'rain') ? 'city' : area;
     var pal = FTSkins.envPalette(palEnv, weather);
     var g = ctx.createLinearGradient(0, 0, 0, H);
@@ -1356,7 +1561,7 @@
 
   function drawWeatherFX() {
     var area = activeArea();
-    var weather = area === 'rain' ? 'rain' : weatherId;
+    var weather = effectiveWeather();
     var pal = FTSkins.envPalette(area === 'rain' ? 'city' : area, weather);
     if ((!pal.rain && area !== 'rain') || reduceMotion) return;
     ctx.strokeStyle = pal.storm ? 'rgba(200,220,255,0.55)' : 'rgba(180,200,230,0.45)';
@@ -1371,7 +1576,7 @@
 
   function drawPipe(p) {
     var area = activeArea();
-    var weather = area === 'rain' ? 'rain' : (area === 'night' ? 'night' : weatherId);
+    var weather = effectiveWeather();
     var pal = FTSkins.envPalette(area === 'rain' ? 'city' : area, weather);
     var ghost = (isPractice() || ghostActive()) && state === 'playing';
     FTSkins.drawObstaclePair(ctx, p, pal, H - GROUND_H, ghost);
@@ -1469,7 +1674,7 @@
 
   function drawGround() {
     var area = activeArea();
-    var weather = area === 'rain' ? 'rain' : weatherId;
+    var weather = effectiveWeather();
     var pal = FTSkins.envPalette(area === 'rain' ? 'city' : area, weather);
     var gy = H - GROUND_H;
     ctx.fillStyle = pal.ground;
@@ -1547,6 +1752,27 @@
     if (state === 'playing' && riskyActive()) {
       ctx.fillStyle = 'rgba(255,100,80,0.12)';
       ctx.fillRect(0, 0, W, H);
+    }
+    // Weather visibility veil (mild)
+    if (state === 'playing' || state === 'dying') {
+      var vis = weatherMul().visibility;
+      if (vis < 0.98) {
+        ctx.fillStyle = 'rgba(200,210,220,' + ((1 - vis) * 0.55).toFixed(3) + ')';
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+    // Boss DANGER banner strip
+    if (state === 'playing' && bossActive && bossKind) {
+      ctx.fillStyle = 'rgba(180,20,20,0.55)';
+      ctx.fillRect(0, 40, W, 28);
+      ctx.fillStyle = '#ffd93d';
+      ctx.font = 'bold 13px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText((bossKind.emoji || '⚠') + ' DANGER — ' + bossKind.label, W / 2, 59);
+      var left = Math.max(0, (bossUntil - performance.now()) / 1000);
+      ctx.fillStyle = '#fff';
+      ctx.font = '11px system-ui';
+      ctx.fillText(Math.ceil(left) + 's', W / 2, 72);
     }
     drawHitFlash();
   }
@@ -1691,7 +1917,11 @@
   }
 
   function onPickCosmetic(id, kind) {
-    if (kind === 'bird') { birdId = id; FTStorage.setBird(id); }
+    if (kind === 'bird') {
+      birdId = id; FTStorage.setBird(id);
+      var p = birdPass();
+      if (p && p.label) showToast(p.label, 1400);
+    }
     else if (kind === 'vehicle') { vehicleId = id; FTStorage.setVehicle(id); }
     else if (kind === 'env') { envId = id; FTStorage.setEnv(id); }
     else if (kind === 'hat') { hatId = id; FTStorage.setHat(id); }
@@ -1766,11 +1996,13 @@
       var card = document.createElement('div');
       card.className = 'mission-card' + (m.done ? ' done' : '') + (m.claimed ? ' claimed' : '');
       var pct = Math.min(100, Math.floor((m.progress / m.target) * 100));
+      var rewardLabel = m.rewardType === 'fragment' ? (m.reward + ' ✦ frag') :
+        m.rewardType === 'mystery' ? 'Mystery box' : ('🪙 ' + m.reward);
       card.innerHTML =
         '<div class="mission-title">' + m.label + '</div>' +
         '<div class="mission-bar"><span style="width:' + pct + '%"></span></div>' +
         '<div class="mission-meta">' + Math.min(m.progress, m.target) + ' / ' + m.target +
-        ' · 🪙 ' + m.reward + '</div>';
+        ' · ' + rewardLabel + '</div>';
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn primary btn-sm';
@@ -1778,7 +2010,14 @@
       btn.disabled = !m.done || m.claimed;
       btn.addEventListener('click', function () {
         var r = FTStorage.claimMission(m.id);
-        if (r) { showToast('+' + r + ' coins!'); refreshMissions(); updateCoinHud(); }
+        if (r) {
+          if (r.mystery) {
+            grantMysteryReward(Math.random);
+            showToast('Mission: Mystery box!');
+          } else if (r.fragments) showToast('+' + r.fragments + ' fragments!');
+          else showToast('+' + r.coins + ' coins!');
+          refreshMissions(); updateCoinHud();
+        }
       });
       card.appendChild(btn);
       missionsList.appendChild(card);
@@ -1800,15 +2039,40 @@
     var vehs = FTStorage.getUnlockedVehicles();
     var hats = FTStorage.getUnlockedHats();
     var trails = FTStorage.getUnlockedTrails();
+    var envs = FTStorage.getUnlockedEnvs();
+    var pct = FTStorage.albumCompletionPct ? FTStorage.albumCompletionPct() : 0;
+    var claimed = FTStorage.getAlbumClaimed ? FTStorage.getAlbumClaimed() : {};
+    var frags = FTStorage.getFragments ? FTStorage.getFragments() : 0;
     collectionList.innerHTML = '';
     var summary = document.createElement('p');
     summary.className = 'hint';
     summary.textContent =
       'Birds ' + counts.birds.have + '/' + counts.birds.total +
       ' · Vehicles ' + counts.vehicles.have + '/' + counts.vehicles.total +
-      ' · Accessories ' + counts.accessories.have + '/' + counts.accessories.total +
-      ' · Trails ' + counts.trails.have + '/' + counts.trails.total;
+      ' · Acc ' + counts.accessories.have + '/' + counts.accessories.total +
+      ' · Trails ' + counts.trails.have + '/' + counts.trails.total +
+      ' · Areas ' + counts.areas.have + '/' + counts.areas.total +
+      ' · Challenges ' + counts.challenges.have + '/' + counts.challenges.total;
     collectionList.appendChild(summary);
+    var prog = document.createElement('p');
+    prog.className = 'hint';
+    prog.textContent = 'Album ' + pct + '% · Fragments ✦ ' + frags + ' (10/20 unlock)';
+    collectionList.appendChild(prog);
+    var tiers = document.createElement('div');
+    tiers.className = 'btn-row';
+    [25, 50, 75, 100].forEach(function (t) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn ghost btn-sm';
+      b.textContent = claimed[String(t)] ? (t + '% ✓') : (t + '% reward');
+      b.disabled = !!claimed[String(t)] || pct < t;
+      b.addEventListener('click', function () {
+        var r = FTStorage.claimAlbumReward(t);
+        if (r) { showToast(t + '% → +' + r.coins + ' coins!'); refreshCollection(); updateCoinHud(); }
+      });
+      tiers.appendChild(b);
+    });
+    collectionList.appendChild(tiers);
     function section(title, map, labels) {
       var h = document.createElement('h3');
       h.textContent = title;
@@ -1828,10 +2092,20 @@
     var vehLabels = {}; FTSkins.VEHICLES.forEach(function (b) { vehLabels[b.id] = b.label; });
     var hatLabels = {}; FTSkins.HATS.forEach(function (b) { hatLabels[b.id] = b.label; });
     var trailLabels = {}; FTSkins.TRAILS.forEach(function (b) { trailLabels[b.id] = b.label; });
+    var envLabels = {}; FTSkins.ENVS.forEach(function (b) { envLabels[b.id] = b.label; });
     section('Birds', birds, birdLabels);
     section('Vehicles', vehs, vehLabels);
     section('Accessories', hats, hatLabels);
     section('Trails', trails, trailLabels);
+    section('Areas', envs, envLabels);
+    var chMap = {};
+    var chLabels = {};
+    for (var i = 0; i < CHALLENGE_STAGES.length; i++) {
+      var st = CHALLENGE_STAGES[i];
+      chLabels[String(st.id)] = st.label;
+      chMap[String(st.id)] = counts.challenges.have >= st.id;
+    }
+    section('Challenges', chMap, chLabels);
   }
   if (btnCollection) btnCollection.addEventListener('click', function () {
     hideAllScreens();
@@ -1915,11 +2189,31 @@
     b.addEventListener('click', function () { showMenu(); });
   });
 
+  if (btnDeathCollection) btnDeathCollection.addEventListener('click', function () {
+    hideAllScreens();
+    if (screenCollection) screenCollection.hidden = false;
+    refreshCollection();
+  });
+  if (btnMysteryOk) btnMysteryOk.addEventListener('click', function () {
+    if (mysteryOverlay) mysteryOverlay.hidden = true;
+  });
+  if (btnMysteryAd) btnMysteryAd.addEventListener('click', async function () {
+    if (mysteryAdUsed || state !== 'dead') return;
+    var res = await Ads.showRewarded('mystery-box');
+    if (res && res.rewarded) {
+      mysteryAdUsed = true;
+      btnMysteryAd.disabled = true;
+      btnMysteryAd.textContent = 'Mystery used';
+      grantMysteryReward(Math.random);
+    } else showToast('Mystery skipped');
+  });
+
   // Boot
   birdId = FTStorage.getBird();
   vehicleId = FTStorage.getVehicle();
   envId = FTStorage.getEnv();
   weatherId = FTStorage.getWeather();
+  if (weatherId === 'sunny') weatherId = 'clear';
   hatId = FTStorage.getHat();
   trailId = FTStorage.getTrail();
   sensitivity = FTStorage.getSensitivity();

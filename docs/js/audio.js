@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.1.0 — Web Audio SFX + short Desi voice cues (beep phrases + toast hooks).
+ * Urr Jaa! v3.2.0 — Web Audio SFX + Desi cues + perfect/boss/mystery + area music stubs.
  * No external assets; works offline.
  */
 (function (global) {
@@ -123,6 +123,64 @@
     setTimeout(() => tone(880, 0.08, 'square', 0.06), 80);
   }
 
+  function perfect() {
+    tone(988, 0.05, 'sine', 0.09);
+    setTimeout(() => tone(1319, 0.07, 'sine', 0.08), 40);
+    setTimeout(() => tone(1568, 0.1, 'triangle', 0.06), 90);
+  }
+
+  function boss() {
+    noiseBurst(0.1, 0.1);
+    tone(110, 0.2, 'sawtooth', 0.12, 80);
+    setTimeout(() => tone(180, 0.15, 'square', 0.08), 60);
+  }
+
+  function mystery() {
+    tone(400, 0.06, 'triangle', 0.08);
+    setTimeout(() => tone(600, 0.06, 'triangle', 0.07), 50);
+    setTimeout(() => tone(800, 0.06, 'triangle', 0.06), 100);
+    setTimeout(() => tone(1200, 0.12, 'sine', 0.08), 160);
+  }
+
+  function legendary() {
+    tone(523, 0.07, 'sine', 0.1);
+    setTimeout(() => tone(659, 0.07, 'sine', 0.09), 60);
+    setTimeout(() => tone(784, 0.07, 'sine', 0.08), 120);
+    setTimeout(() => tone(1047, 0.1, 'sine', 0.09), 180);
+    setTimeout(() => tone(1319, 0.14, 'triangle', 0.08), 260);
+  }
+
+  /** Optional per-area music stubs (short looping-ish arpeggios). */
+  let areaMusicTimer = null;
+  let areaMusicId = null;
+  function stopAreaMusic() {
+    if (areaMusicTimer) { clearInterval(areaMusicTimer); areaMusicTimer = null; }
+    areaMusicId = null;
+  }
+  function playAreaMusic(areaId) {
+    if (muted) { stopAreaMusic(); return; }
+    if (areaMusicId === areaId) return;
+    stopAreaMusic();
+    areaMusicId = areaId;
+    ensure();
+    const themes = {
+      city: [392, 494, 523, 587],
+      bridge: [349, 440, 523],
+      mountains: [262, 330, 392, 523],
+      village: [294, 370, 440],
+      rain: [220, 247, 294],
+      night: [196, 247, 294, 370],
+      desert: [311, 370, 415, 466]
+    };
+    const notes = themes[areaId] || themes.city;
+    let i = 0;
+    areaMusicTimer = setInterval(() => {
+      if (muted) return;
+      tone(notes[i % notes.length], 0.12, 'triangle', 0.025);
+      i++;
+    }, 420);
+  }
+
   /** Short Desi voice-like pitch phrases (not speech synthesis dialogue). */
   const VOICE = {
     oye_hoye: function () {
@@ -182,6 +240,7 @@
 
   global.FTAudio = {
     flap, score, coin, hit, powerup, nearmiss, combo, turbo, ghost, record, risky,
+    perfect, boss, mystery, legendary, playAreaMusic, stopAreaMusic,
     voice, VOICE_LABELS,
     setMuted, isMuted, setVoicePack, isVoicePack, unlock
   };

@@ -31,7 +31,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.1.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.2.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary" type="button">▶ Play</button>
@@ -77,7 +77,7 @@
       <div class="skin-row" id="garage-vehicles"></div>
       <h3 class="section-title">Environments</h3>
       <div class="skin-row" id="garage-envs"></div>
-      <h3 class="section-title">Weather (visual)</h3>
+      <h3 class="section-title">Weather (light gameplay)</h3>
       <div class="chip-row" id="weather-row"></div>
       <h3 class="section-title">Accessories</h3>
       <div class="skin-row" id="garage-hats"></div>
@@ -89,7 +89,7 @@
     <!-- Missions -->
     <div id="screen-missions" class="screen panel-screen scroll-screen" hidden>
       <h2>Daily Missions</h2>
-      <p class="hint">Local day · claim coin rewards</p>
+      <p class="hint">3 missions / day · coins · mystery · fragments</p>
       <div id="missions-list" class="missions-list"></div>
       <button class="btn primary" type="button" data-close="missions">Back</button>
     </div>
@@ -101,19 +101,41 @@
       <button class="btn primary" type="button" data-close="collection">Back</button>
     </div>
 
-    <!-- Death -->
-    <div id="screen-death" class="screen" hidden>
-      <h2>Game Over</h2>
+    <!-- Death / Run Summary -->
+    <div id="screen-death" class="screen panel-screen scroll-screen" hidden>
+      <h2>Run Summary</h2>
+      <div id="new-record-banner" class="new-record-banner" hidden>🏆 NEW RECORD!</div>
       <div id="medal-display" class="medal" hidden>
         <div class="medal-disc" aria-hidden="true"></div>
         <span id="medal-label">Medal</span>
       </div>
       <p class="score-big">Score: <span id="final-score">0</span></p>
-      <p class="best-line"><span id="mode-death-label">Best</span>: <span id="best-death">0</span> · Run 🪙 <span id="run-coins">0</span></p>
+      <div id="run-summary" class="run-summary">
+        <div class="sum-row"><span>Best</span><strong id="best-death">0</strong></div>
+        <div class="sum-row"><span>Distance</span><strong><span id="run-distance">0</span> m</strong></div>
+        <div class="sum-row"><span>Coins</span><strong id="run-coins">0</strong></div>
+        <div class="sum-row"><span>Near Misses</span><strong id="run-nearmiss">0</strong></div>
+        <div class="sum-row"><span>Best Combo</span><strong id="run-combo">0</strong></div>
+        <div class="sum-row"><span>Perfect Passes</span><strong id="run-perfect">0</strong></div>
+        <div class="sum-row muted-row"><span id="mode-death-label">Mode</span><strong id="mode-death-value">Classic</strong></div>
+      </div>
       <div class="btn-col">
         <button id="btn-continue" class="btn reward" type="button">▶ Continue (Ad)</button>
-        <button id="btn-retry" class="btn primary" type="button">Try Again</button>
-        <button id="btn-menu" class="btn ghost" type="button">Menu</button>
+        <button id="btn-mystery-ad" class="btn reward" type="button">🎁 Mystery Box (Ad)</button>
+        <button id="btn-retry" class="btn primary" type="button">RETRY</button>
+        <div class="btn-row">
+          <button id="btn-death-collection" class="btn secondary btn-sm" type="button">COLLECTION</button>
+          <button id="btn-menu" class="btn ghost btn-sm" type="button">HOME</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mystery rarity overlay -->
+    <div id="mystery-overlay" class="mystery-overlay" hidden>
+      <div class="mystery-card">
+        <div id="mystery-rarity" class="mystery-rarity">COMMON</div>
+        <div id="mystery-reward" class="mystery-reward">+10 coins</div>
+        <button id="btn-mystery-ok" class="btn primary" type="button">Nice!</button>
       </div>
     </div>
 

@@ -64,7 +64,7 @@
   }
 
   /**
-   * Rewarded continue after death.
+   * Rewarded stubs: Continue (once / death) or Mystery Box — NEVER mid-flight.
    */
   function showRewarded(reason) {
     return new Promise(async (resolve) => {
@@ -72,13 +72,16 @@
         resolve({ rewarded: false, stub: false, reason: 'no-plugin' });
         return;
       }
-      const ok = await promptStub(
-        'Rewarded Ad (stub)',
-        'Continue run after death?\n\nNo AdMob ID configured. Grant reward for this session?\n(' +
-          (reason || 'continue') +
-          ')'
-      );
-      resolve({ rewarded: ok, stub: true, reason: reason || 'continue' });
+      const r = reason || 'continue';
+      let body;
+      if (r === 'mystery' || r === 'mystery-box') {
+        body = 'Open a bonus Mystery Box?\n\nNo AdMob ID configured. Grant reward for this session?\n(mystery-box)\n\nNever shown mid-flight.';
+      } else {
+        body = 'Continue run after death? (once per run)\n\nNo AdMob ID configured. Grant reward for this session?\n(' +
+          r + ')\n\nNever interrupts mid-flight core loop.';
+      }
+      const ok = await promptStub('Rewarded Ad (stub)', body);
+      resolve({ rewarded: ok, stub: true, reason: r });
     });
   }
 

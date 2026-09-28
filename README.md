@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.1.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.2.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,24 +29,30 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.1.0-urrjaa)
+## Features (v3.2.0-urrjaa)
 
 | Feature | Notes |
 |---------|--------|
 | One-tap flap | Click / touch / Space — squash juice, rate-clamped |
-| **Modes** | Classic · Time Attack 60s · Hard · No Coin · Challenge stages · One Life · Daily · Practice |
-| Near-miss | **CLOSE!** toast · 3 consecutive → **RISKY x3** |
-| Power-ups (rare) | Shield · Turbo · Coin Magnet · Slow-mo 3s · Ghost |
-| Traffic | Escalating rickshaw/cycle → bike → taxi → bus/truck · dual cross |
-| Areas | City · Bridge · Mountains · Village · Rain · Night · Desert |
-| Accessories | Sunglasses · Cap · Hat · Helmet · Scarf |
-| Trails | Spark · Smoke · Stars · Fire · Rainbow |
+| **Modes** | Classic · Time Attack 60s · Hard · No Coin · Challenge · One Life · Daily · Practice |
+| Near-miss | **CLOSE!** · 3 consecutive → **RISKY x3** |
+| **Perfect Pass** | Gap center → **PERFECT!** (+3) · Near-miss pass (+5) · Normal (+1) |
+| Coin combo | Continuous ladder **x1→x5** · miss resets · near-miss/RISKY boost |
+| Power-ups | Shield · Turbo · Coin Magnet · Slow-mo 3s · Ghost |
+| Bird passives | Sparrow control · Parrot +5% coin · Owl night · Eagle near-miss (mild, free) |
+| Weather | Clear · Rain · Fog · Storm · Night · Sunset (light speed/visibility) |
+| Boss/Chase | Every ~180m · DANGER 30–60s · truck/eagle/police/storm/giant |
+| Mystery box | COMMON→LEGENDARY · coins/bird/accessory/trail/vehicle/env · dups→Fragments |
+| Daily Missions | 3/day from pool · coins / mystery / skin fragments |
+| Run Summary | Score · Best · Distance · Coins · Near Misses · Combo · Perfects · RETRY/COLLECTION/HOME |
+| Collection | Birds · Vehicles · Accessories · Trails · Areas · Challenges · 25–100% rewards |
+| Ads stubs | Continue once / Mystery Box — never mid-flight |
+| Traffic | Escalating rickshaw→truck · dual cross |
+| Areas | City · Bridge · Mountains · Village · Rain · Night · Desert (+ cities) |
 | Desi voices | Oye hoye · Bach ke · Wah ji wah · Kya udaan · Haye oye · Shabaash |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| One Life | 1 attempt · Bronze100 / Silver300 / Gold500 / Legend1000 |
-| Collection | Progress counters birds / vehicles / accessories / trails |
-| PWA | `sw.js` cache **urrjaa-v6-20260928** |
+| PWA | `sw.js` cache **urrjaa-v7-20260928** |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)
@@ -70,7 +76,7 @@ flappy-tap/          # repo path kept
   www/               # Capacitor webDir
   docs/              # GitHub Pages + urr-jaa-web-windows.zip
   dist/              # urr-jaa-web-windows.zip
-  package.json       # name urr-jaa, version 3.1.0-urrjaa
+  package.json       # name urr-jaa, version 3.2.0-urrjaa
   capacitor.config.json
   README.md STATUS.md
 ```
@@ -87,4 +93,4 @@ flappy-tap/          # repo path kept
 
 ## Monetization
 
-Stubs only in `js/ads.js`. No secrets / AdMob IDs. Core play free offline.
+Stubs only in `js/ads.js`. No secrets / AdMob IDs. Core play free offline. Continue + Mystery Box rewarded stubs never interrupt mid-flight.

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.1.0-urrjaa — localStorage: scores, coins, unlocks, streak, leaderboards.
+ * Urr Jaa! v3.2.0-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -51,7 +51,14 @@
     noCoinBest: PREFIX + 'nocoin-best',
     hardBest: PREFIX + 'hard-best',
     challengeStage: PREFIX + 'challenge-stage',
-    voicePack: PREFIX + 'voice-pack'
+    voicePack: PREFIX + 'voice-pack',
+    // v3.2
+    missionsActive: PREFIX + 'missions-active',
+    fragments: PREFIX + 'fragments',
+    albumClaimed: PREFIX + 'album-claimed',
+    bestPerfect: PREFIX + 'best-perfect',
+    nearMissTotal: PREFIX + 'nearmiss-total',
+    perfectTotal: PREFIX + 'perfect-total'
   };
 
   const BIRDS = {
@@ -314,13 +321,14 @@
   }
 
   function getWeather() {
-    const w = get(KEYS.weather, 'sunny');
-    const ok = { sunny: 1, rain: 1, fog: 1, night: 1, storm: 1 };
-    return ok[w] ? w : 'sunny';
+    let w = get(KEYS.weather, 'clear');
+    if (w === 'sunny') w = 'clear';
+    const ok = { clear: 1, sunny: 1, rain: 1, fog: 1, night: 1, storm: 1, sunset: 1 };
+    return ok[w] ? (w === 'sunny' ? 'clear' : w) : 'clear';
   }
   function setWeather(id) {
-    const ok = { sunny: 1, rain: 1, fog: 1, night: 1, storm: 1 };
-    if (ok[id]) set(KEYS.weather, id);
+    const ok = { clear: 1, sunny: 1, rain: 1, fog: 1, night: 1, storm: 1, sunset: 1 };
+    if (ok[id]) set(KEYS.weather, id === 'sunny' ? 'clear' : id);
   }
 
   function getHat() {
@@ -361,14 +369,98 @@
     const vehs = getUnlockedVehicles();
     const hats = getUnlockedHats();
     const trails = getUnlockedTrails();
+    const envs = getUnlockedEnvs();
     const count = (obj) => Object.keys(obj).filter((k) => obj[k] && k !== 'none').length;
     const total = (map) => Object.keys(map).filter((k) => k !== 'none').length;
+    const challengeStage = getChallengeStage();
+    const challengeTotal = 5;
+    const challengesHave = Math.max(0, Math.min(challengeTotal, challengeStage - 1));
     return {
       birds: { have: count(birds), total: total(BIRDS) },
       vehicles: { have: count(vehs), total: total(VEHICLES) },
       accessories: { have: count(hats), total: total(HATS) },
-      trails: { have: count(trails), total: total(TRAILS) }
+      trails: { have: count(trails), total: total(TRAILS) },
+      areas: { have: count(envs), total: total(ENVS) },
+      challenges: { have: challengesHave, total: challengeTotal }
     };
+  }
+
+  function albumCompletionPct() {
+    const c = collectionCounts();
+    let have = 0, tot = 0;
+    Object.keys(c).forEach((k) => { have += c[k].have; tot += c[k].total; });
+    if (!tot) return 0;
+    return Math.floor((have / tot) * 100);
+  }
+
+  function getAlbumClaimed() {
+    const out = {};
+    String(get(KEYS.albumClaimed, '')).split(',').forEach((id) => { if (id) out[id] = true; });
+    return out;
+  }
+
+  function claimAlbumReward(tier) {
+    const tiers = { 25: 30, 50: 60, 75: 100, 100: 200 };
+    if (!tiers[tier]) return null;
+    const claimed = getAlbumClaimed();
+    if (claimed[String(tier)]) return null;
+    if (albumCompletionPct() < tier) return null;
+    claimed[String(tier)] = true;
+    set(KEYS.albumClaimed, Object.keys(claimed).join(','));
+    addCoins(tiers[tier]);
+    if (tier === 100) {
+      addFragments(5);
+    }
+    return { tier: tier, coins: tiers[tier] };
+  }
+
+  function getFragments() {
+    return parseInt(get(KEYS.fragments, '0'), 10) || 0;
+  }
+  function setFragments(n) {
+    const v = Math.max(0, n | 0);
+    set(KEYS.fragments, v);
+    return v;
+  }
+  function addFragments(n) {
+    return setFragments(getFragments() + (n | 0));
+  }
+  function spendFragments(n) {
+    n = n | 0;
+    if (getFragments() < n) return false;
+    setFragments(getFragments() - n);
+    return true;
+  }
+  /** Spend 10/20 fragments to unlock a locked cosmetic. */
+  function unlockWithFragments(kind, id, cost) {
+    cost = cost || 10;
+    if (!spendFragments(cost)) return false;
+    if (kind === 'bird') unlockBird(id);
+    else if (kind === 'vehicle') unlockVehicle(id);
+    else if (kind === 'hat' || kind === 'accessory') unlockHat(id);
+    else if (kind === 'trail') unlockTrail(id);
+    else if (kind === 'env' || kind === 'area') unlockEnv(id);
+    else { addFragments(cost); return false; }
+    return true;
+  }
+
+  function getBestPerfect() {
+    return parseInt(get(KEYS.bestPerfect, '0'), 10) || 0;
+  }
+  function setBestPerfect(n) {
+    const best = Math.max(getBestPerfect(), n | 0);
+    set(KEYS.bestPerfect, best);
+    return best;
+  }
+  function bumpNearMissTotal(n) {
+    const v = (parseInt(get(KEYS.nearMissTotal, '0'), 10) || 0) + (n | 0);
+    set(KEYS.nearMissTotal, v);
+    return v;
+  }
+  function bumpPerfectTotal(n) {
+    const v = (parseInt(get(KEYS.perfectTotal, '0'), 10) || 0) + (n | 0);
+    set(KEYS.perfectTotal, v);
+    return v;
   }
 
   function getMetersBest() {
@@ -502,22 +594,75 @@
     };
   }
 
-  // Daily missions
-  const MISSION_DEFS = [
-    { id: 'fly_m', label: 'Fly 500m', target: 500, reward: 25, unit: 'm' },
-    { id: 'coins', label: 'Collect 20 coins', target: 20, reward: 20, unit: 'coins' },
-    { id: 'pipes', label: 'Pass 30 obstacles', target: 30, reward: 25, unit: 'pipes' },
-    { id: 'boxes', label: 'Open 2 mystery boxes', target: 2, reward: 30, unit: 'boxes' },
-    { id: 'clean50', label: 'Score 50 clean (no hit)', target: 50, reward: 40, unit: 'score' }
+  // Daily missions — each calendar day pick 3 from pool
+  const MISSION_POOL = [
+    { id: 'coins50', label: 'Collect 50 coins', target: 50, unit: 'coins', rewardType: 'coins', reward: 40 },
+    { id: 'dodge20', label: 'Dodge 20 obstacles', target: 20, unit: 'pipes', rewardType: 'mystery', reward: 1 },
+    { id: 'nearmiss3', label: 'Land 3 near-misses', target: 3, unit: 'nearmiss', rewardType: 'fragment', reward: 3 },
+    { id: 'score100', label: 'Score 100', target: 100, unit: 'score', rewardType: 'coins', reward: 50 },
+    // legacy-compatible extras still trackable if selected historically
+    { id: 'fly_m', label: 'Fly 500m', target: 500, unit: 'm', rewardType: 'coins', reward: 25 },
+    { id: 'coins', label: 'Collect 20 coins', target: 20, unit: 'coins', rewardType: 'coins', reward: 20 },
+    { id: 'pipes', label: 'Pass 30 obstacles', target: 30, unit: 'pipes', rewardType: 'coins', reward: 25 },
+    { id: 'boxes', label: 'Open 2 mystery boxes', target: 2, unit: 'boxes', rewardType: 'coins', reward: 30 },
+    { id: 'clean50', label: 'Score 50 clean (no hit)', target: 50, unit: 'score', rewardType: 'coins', reward: 40 }
   ];
+  const MISSION_DEFS = MISSION_POOL; // alias
+  const DAILY_MISSION_IDS = ['coins50', 'dodge20', 'nearmiss3', 'score100'];
+
+  function hashDay(str) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function pickDailyMissionIds(dateStr) {
+    const pool = DAILY_MISSION_IDS.slice();
+    let seed = hashDay('urrjaa-missions-' + dateStr);
+    function rnd() {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return (seed >>> 0) / 4294967296;
+    }
+    // Fisher-Yates pick 3
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+    }
+    return pool.slice(0, 3);
+  }
 
   function ensureMissionsDay() {
     const today = todayKey();
     if (get(KEYS.missionsDate, '') !== today) {
       set(KEYS.missionsDate, today);
-      set(KEYS.missionsProgress, JSON.stringify({ fly_m: 0, coins: 0, pipes: 0, boxes: 0, clean50: 0 }));
+      const active = pickDailyMissionIds(today);
+      set(KEYS.missionsActive, active.join(','));
+      const progress = {};
+      active.forEach((id) => { progress[id] = 0; });
+      // also zero legacy keys for bump compatibility
+      ['fly_m', 'coins', 'pipes', 'boxes', 'clean50', 'coins50', 'dodge20', 'nearmiss3', 'score100'].forEach((id) => {
+        if (progress[id] == null) progress[id] = 0;
+      });
+      set(KEYS.missionsProgress, JSON.stringify(progress));
       set(KEYS.missionsClaimed, '');
+    } else if (!get(KEYS.missionsActive, '')) {
+      const active = pickDailyMissionIds(today);
+      set(KEYS.missionsActive, active.join(','));
     }
+  }
+
+  function getActiveMissionIds() {
+    ensureMissionsDay();
+    const raw = String(get(KEYS.missionsActive, '')).split(',').filter(Boolean);
+    if (raw.length >= 3) return raw.slice(0, 3);
+    return pickDailyMissionIds(todayKey());
+  }
+
+  function missionDef(id) {
+    return MISSION_POOL.find((m) => m.id === id) || null;
   }
 
   function getMissions() {
@@ -528,19 +673,36 @@
     String(get(KEYS.missionsClaimed, '')).split(',').forEach((id) => {
       if (id) claimed[id] = true;
     });
-    return MISSION_DEFS.map((m) => ({
-      ...m,
-      progress: progress[m.id] || 0,
-      claimed: !!claimed[m.id],
-      done: (progress[m.id] || 0) >= m.target
-    }));
+    return getActiveMissionIds().map((id) => {
+      const m = missionDef(id) || { id: id, label: id, target: 1, reward: 10, rewardType: 'coins' };
+      return {
+        ...m,
+        progress: progress[m.id] || 0,
+        claimed: !!claimed[m.id],
+        done: (progress[m.id] || 0) >= m.target
+      };
+    });
   }
 
   function bumpMission(id, amount) {
     ensureMissionsDay();
     let progress = {};
     try { progress = JSON.parse(get(KEYS.missionsProgress, '{}')) || {}; } catch (_) { progress = {}; }
-    progress[id] = (progress[id] || 0) + (amount || 1);
+    // Map legacy bump ids onto today's mission ids when relevant
+    const map = {
+      coins: 'coins50',
+      pipes: 'dodge20',
+      nearmiss: 'nearmiss3',
+      score: 'score100'
+    };
+    const targets = [id];
+    if (map[id]) targets.push(map[id]);
+    // Also: coins bump should advance coins50; pipes→dodge20; etc.
+    if (id === 'coins') targets.push('coins50');
+    if (id === 'pipes') targets.push('dodge20');
+    targets.forEach((tid) => {
+      progress[tid] = (progress[tid] || 0) + (amount || 1);
+    });
     set(KEYS.missionsProgress, JSON.stringify(progress));
   }
 
@@ -549,20 +711,54 @@
     let progress = {};
     try { progress = JSON.parse(get(KEYS.missionsProgress, '{}')) || {}; } catch (_) { progress = {}; }
     progress[id] = Math.max(progress[id] || 0, value | 0);
+    // map score peaks
+    if (id === 'clean50' || id === 'score' || id === 'score100') {
+      progress.score100 = Math.max(progress.score100 || 0, value | 0);
+    }
     set(KEYS.missionsProgress, JSON.stringify(progress));
   }
 
   function claimMission(id) {
     const list = getMissions();
     const m = list.find((x) => x.id === id);
-    if (!m || !m.done || m.claimed) return false;
+    if (!m || !m.done || m.claimed) return null;
     const claimed = String(get(KEYS.missionsClaimed, ''))
       .split(',')
       .filter(Boolean);
     claimed.push(id);
     set(KEYS.missionsClaimed, claimed.join(','));
-    addCoins(m.reward);
-    return m.reward;
+    const result = { id: id, type: m.rewardType || 'coins', coins: 0, fragments: 0, mystery: false };
+    if (m.rewardType === 'fragment') {
+      addFragments(m.reward || 2);
+      result.fragments = m.reward || 2;
+    } else if (m.rewardType === 'mystery') {
+      result.mystery = true;
+      result.type = 'mystery';
+    } else {
+      addCoins(m.reward || 20);
+      result.coins = m.reward || 20;
+    }
+    return result;
+  }
+
+  // Mystery box rarity roll COMMON→LEGENDARY
+  const BOX_RARITIES = [
+    { id: 'common', label: 'COMMON', weight: 50, coinsMin: 8, coinsMax: 18, fragDup: 1 },
+    { id: 'uncommon', label: 'UNCOMMON', weight: 28, coinsMin: 15, coinsMax: 28, fragDup: 2 },
+    { id: 'rare', label: 'RARE', weight: 14, coinsMin: 25, coinsMax: 45, fragDup: 3 },
+    { id: 'epic', label: 'EPIC', weight: 6, coinsMin: 40, coinsMax: 70, fragDup: 5 },
+    { id: 'legendary', label: 'LEGENDARY', weight: 2, coinsMin: 80, coinsMax: 120, fragDup: 8 }
+  ];
+
+  function rollBoxRarity(rngFn) {
+    const rnd = typeof rngFn === 'function' ? rngFn : Math.random;
+    const total = BOX_RARITIES.reduce((s, r) => s + r.weight, 0);
+    let roll = rnd() * total;
+    for (let i = 0; i < BOX_RARITIES.length; i++) {
+      roll -= BOX_RARITIES[i].weight;
+      if (roll <= 0) return BOX_RARITIES[i];
+    }
+    return BOX_RARITIES[0];
   }
 
   function isMuted() { return get(KEYS.mute, '0') === '1'; }
@@ -630,13 +826,17 @@
     getUnlockedHats, isHatUnlocked, unlockHat,
     getUnlockedTrails, isTrailUnlocked, unlockTrail,
     getCollection, addToCollection, collectionCounts,
-    getMissions, bumpMission, setMissionMax, claimMission, MISSION_DEFS,
-    getMetersBest, setMetersBest, checkEnvMilestones,
+    getMissions, bumpMission, setMissionMax, claimMission, MISSION_DEFS, MISSION_POOL,
+    getActiveMissionIds, getMetersBest, setMetersBest, checkEnvMilestones,
     getStreak, claimStreak, STREAK_REWARDS,
     getOneLifeBest, setOneLifeBest, oneLifeMedalFor, getOneLifeMedal,
     getTimeAttackBest, setTimeAttackBest,
     getNoCoinBest, setNoCoinBest, getHardBest, setHardBest,
     getChallengeStage, setChallengeStage,
+    getFragments, setFragments, addFragments, spendFragments, unlockWithFragments,
+    albumCompletionPct, getAlbumClaimed, claimAlbumReward,
+    getBestPerfect, setBestPerfect, bumpNearMissTotal, bumpPerfectTotal,
+    rollBoxRarity, BOX_RARITIES,
     BIRDS, VEHICLES, ENVS, HATS, TRAILS
   };
 })(window);
