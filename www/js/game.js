@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.33.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.34.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -439,6 +439,7 @@
       else if (kind === 'nearmiss') pat = 10;
       else if (kind === 'coin') pat = 8;
       else if (kind === 'boss') pat = [30, 40, 30, 40, 50];
+      else if (kind === 'perfect') pat = [6, 18, 10]; // 3.34 soft double-tap
       else pat = 12;
       navigator.vibrate(scaleVibePattern(pat, mul));
     } catch (_) {}
@@ -1523,8 +1524,10 @@
     copyShareText(text);
   }
 
-  var A2HS_SESSION_KEY = 'urrjaa:a2hs';
+  var A2HS_DISMISS_KEY = 'urrjaa:a2hs'; // permanent dismiss / installed
+  var A2HS_LATER_KEY = 'urrjaa:a2hs-later'; // session snooze
   var deferredA2hsPrompt = null;
+  var a2hsFlowStep = 0; // 0 tip, 1 prompting
 
   function isA2hsInstalled() {
     try {
@@ -1535,43 +1538,86 @@
     return false;
   }
 
+  function isIosSafari() {
+    try {
+      var ua = navigator.userAgent || '';
+      var iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var webkit = /WebKit/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+      return iOS && webkit;
+    } catch (_) { return false; }
+  }
+
+  function a2hsHowToText() {
+    if (isIosSafari()) {
+      return 'Tap <strong>Share</strong> ↑ then <strong>Add to Home Screen</strong>';
+    }
+    if (deferredA2hsPrompt) {
+      return 'Tap <strong>Install</strong> → confirm in the browser sheet';
+    }
+    return 'Browser menu → <strong>Add to Home Screen</strong> / Install app';
+  }
+
   function updateA2hsTip() {
     var a2hs = document.getElementById('a2hs');
     if (!a2hs) return;
     if (isA2hsInstalled()) {
       a2hs.hidden = true;
-      a2hs.classList.remove('a2hs-visible', 'a2hs-can-install');
+      a2hs.classList.remove('a2hs-visible', 'a2hs-can-install', 'a2hs-ios', 'a2hs-flow');
       return;
     }
     try {
-      if (sessionStorage.getItem(A2HS_SESSION_KEY) === '1' || localStorage.getItem(A2HS_SESSION_KEY) === '1') {
+      if (localStorage.getItem(A2HS_DISMISS_KEY) === '1') {
+        a2hs.hidden = true;
+        return;
+      }
+      if (sessionStorage.getItem(A2HS_LATER_KEY) === '1') {
         a2hs.hidden = true;
         return;
       }
     } catch (_) { /* private mode */ }
-    // 3.33: show from first completed run; highlight when install prompt available
     var runs = FTStorage.getRunCount ? FTStorage.getRunCount() : 0;
     var show = screenStart && !screenStart.hidden && runs >= 1;
     a2hs.hidden = !show;
-    a2hs.classList.toggle('a2hs-can-install', !!(show && deferredA2hsPrompt));
+    var canNative = !!(show && deferredA2hsPrompt);
+    a2hs.classList.toggle('a2hs-can-install', canNative);
+    a2hs.classList.toggle('a2hs-ios', !!(show && isIosSafari() && !deferredA2hsPrompt));
+    a2hs.classList.toggle('a2hs-flow', !!(show && a2hsFlowStep > 0));
     if (show) a2hs.classList.add('a2hs-visible');
+    var how = document.getElementById('a2hs-how');
+    if (how) how.innerHTML = a2hsHowToText();
+    var steps = document.getElementById('a2hs-steps');
+    if (steps) {
+      steps.hidden = !show;
+      steps.innerHTML = canNative
+        ? '<span class="a2hs-step' + (a2hsFlowStep >= 1 ? ' done' : ' active') + '">1 Install</span>' +
+          '<span class="a2hs-step' + (a2hsFlowStep >= 2 ? ' done' : (a2hsFlowStep >= 1 ? ' active' : '')) + '">2 Confirm</span>'
+        : (isIosSafari()
+          ? '<span class="a2hs-step active">1 Share ↑</span><span class="a2hs-step">2 Add to Home</span>'
+          : '<span class="a2hs-step active">Menu</span><span class="a2hs-step">Install</span>');
+    }
     var installBtn = document.getElementById('a2hs-install');
-    if (installBtn) installBtn.hidden = !deferredA2hsPrompt;
+    if (installBtn) {
+      // Always show Install: native prompt when available, else how-to toast / expand
+      installBtn.hidden = !show;
+      installBtn.textContent = deferredA2hsPrompt ? 'Install' : (isIosSafari() ? 'How to' : 'How to');
+      installBtn.classList.toggle('a2hs-howto', !deferredA2hsPrompt);
+    }
     var okBtn = document.getElementById('a2hs-ok');
-    if (okBtn && deferredA2hsPrompt) okBtn.textContent = 'Later';
-    else if (okBtn) okBtn.textContent = 'Got it';
+    if (okBtn) okBtn.textContent = deferredA2hsPrompt ? 'Later' : 'Got it';
   }
 
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredA2hsPrompt = e;
+    a2hsFlowStep = 0;
     updateA2hsTip();
   });
   window.addEventListener('appinstalled', function () {
     deferredA2hsPrompt = null;
-    try { localStorage.setItem(A2HS_SESSION_KEY, '1'); } catch (_) {}
+    a2hsFlowStep = 2;
+    try { localStorage.setItem(A2HS_DISMISS_KEY, '1'); } catch (_) {}
     updateA2hsTip();
-    showToast('✓ Installed · offline-ready', 1600);
+    showToast('✓ Installed · offline-ready', 1800, 'medal');
   });
 
   function hideAllScreens() {
@@ -3380,6 +3426,7 @@
       if (FTAudio.perfect) FTAudio.perfect();
       showBanner('PERFECT!', 800);
       showToast('PERFECT!', 900, 'perfect');
+      haptic('perfect');
       spawnPerfectStars(bird.x, bird.y);
       perfectRailFlash = 1;
       // rail sparkles along gap center
@@ -5060,30 +5107,55 @@
   if (a2hsOk) {
     a2hsOk.addEventListener('click', function () {
       try {
-        sessionStorage.setItem(A2HS_SESSION_KEY, '1');
-        localStorage.setItem(A2HS_SESSION_KEY, '1');
+        if (deferredA2hsPrompt) {
+          // Later = snooze this session only (reappears next visit)
+          sessionStorage.setItem(A2HS_LATER_KEY, '1');
+        } else {
+          localStorage.setItem(A2HS_DISMISS_KEY, '1');
+        }
       } catch (_) {}
       var tip = document.getElementById('a2hs');
       if (tip) tip.hidden = true;
+      a2hsFlowStep = 0;
     });
   }
   var a2hsInstall = document.getElementById('a2hs-install');
   if (a2hsInstall) {
     a2hsInstall.addEventListener('click', function () {
       if (!deferredA2hsPrompt) {
-        showToast('Use browser menu → Add to Home Screen', 1800);
+        a2hsFlowStep = 1;
+        updateA2hsTip();
+        if (isIosSafari()) {
+          showToast('iPhone: Share ↑ → Add to Home Screen', 2400);
+        } else {
+          showToast('Browser menu → Install / Add to Home Screen', 2200);
+        }
         return;
       }
+      a2hsFlowStep = 1;
+      updateA2hsTip();
       var ev = deferredA2hsPrompt;
-      deferredA2hsPrompt = null;
+      // keep deferred until choice — re-bind if dismissed
       ev.prompt().then(function () {
         return ev.userChoice;
       }).then(function (choice) {
         if (choice && choice.outcome === 'accepted') {
-          try { localStorage.setItem(A2HS_SESSION_KEY, '1'); } catch (_) {}
+          deferredA2hsPrompt = null;
+          a2hsFlowStep = 2;
+          try { localStorage.setItem(A2HS_DISMISS_KEY, '1'); } catch (_) {}
+          showToast('✓ Installing…', 1200, 'medal');
+        } else {
+          a2hsFlowStep = 0;
+          // prompt consumed; wait for next beforeinstallprompt
+          deferredA2hsPrompt = null;
+          showToast('Install anytime from this tip', 1400);
         }
         updateA2hsTip();
-      }).catch(function () { updateA2hsTip(); });
+      }).catch(function () {
+        a2hsFlowStep = 0;
+        deferredA2hsPrompt = null;
+        updateA2hsTip();
+      });
     });
   }
   btnContinue.addEventListener('click', async function () {
@@ -6119,8 +6191,9 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   if (btnSpinOnce) btnSpinOnce.addEventListener('click', function () { doSpinOnce(); });
   if (btnSpinAll) btnSpinAll.addEventListener('click', function () { doSpinAll(); });
 
-  function setGuideLang(lang) {
+  function setGuideLang(lang, persist) {
     lang = lang || 'en';
+    if (lang !== 'en' && lang !== 'ru' && lang !== 'ur') lang = 'en';
     document.querySelectorAll('.guide-tab').forEach(function (t) {
       var on = t.getAttribute('data-guide-lang') === lang;
       t.classList.toggle('active', on);
@@ -6129,15 +6202,17 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
     document.querySelectorAll('[data-guide-panel]').forEach(function (p) {
       p.hidden = p.getAttribute('data-guide-panel') !== lang;
     });
+    if (persist !== false && FTStorage.setGuideLang) FTStorage.setGuideLang(lang);
   }
   if (btnGuide) btnGuide.addEventListener('click', function () {
     hideAllScreens();
     if (screenGuide) screenGuide.hidden = false;
-    setGuideLang('en');
+    var saved = (FTStorage.getGuideLang && FTStorage.getGuideLang()) || 'en';
+    setGuideLang(saved, false);
   });
   document.querySelectorAll('.guide-tab').forEach(function (t) {
     t.addEventListener('click', function () {
-      setGuideLang(t.getAttribute('data-guide-lang') || 'en');
+      setGuideLang(t.getAttribute('data-guide-lang') || 'en', true);
     });
   });
   document.querySelectorAll('[data-close="guide"]').forEach(function (b) {

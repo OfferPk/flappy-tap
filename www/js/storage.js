@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.33.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.34.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -20,6 +20,7 @@
     quietNight: PREFIX + 'quiet-night',
     areaMusic: PREFIX + 'area-music',
     swipeDismiss: PREFIX + 'swipe-dismiss',
+    guideLang: PREFIX + 'guide-lang',
     topRuns: PREFIX + 'top-runs',
     streakLog: PREFIX + 'streak-log',
     confettiIntensity: PREFIX + 'confetti-intensity',
@@ -933,6 +934,15 @@
   function setAreaMusic(on) { set(KEYS.areaMusic, on ? '1' : '0'); }
   function isSwipeDismiss() { return get(KEYS.swipeDismiss, '1') === '1'; }
   function setSwipeDismiss(on) { set(KEYS.swipeDismiss, on ? '1' : '0'); }
+  function getGuideLang() {
+    var v = get(KEYS.guideLang, 'en');
+    return (v === 'ru' || v === 'ur' || v === 'en') ? v : 'en';
+  }
+  function setGuideLang(lang) {
+    lang = (lang === 'ru' || lang === 'ur') ? lang : 'en';
+    set(KEYS.guideLang, lang);
+    return lang;
+  }
   function getRunCount() { return parseInt(get(KEYS.runs, '0'), 10) || 0; }
   function bumpRunCount() {
     const n = getRunCount() + 1;
@@ -1259,7 +1269,7 @@
     getBestCombo, setBestCombo, getLeaderboards,
     getSkin, setSkin, getBird, setBird, getVehicle, setVehicle,
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
-    isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, isSwipeDismiss, setSwipeDismiss, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
+    isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, isSwipeDismiss, setSwipeDismiss, getGuideLang, setGuideLang, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
     msUntilDailyReset, formatDailyCountdown, resetPreferences,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,

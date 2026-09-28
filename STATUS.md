@@ -1,19 +1,19 @@
 # Urr Jaa! STATUS
 
-## Current: **3.33.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.34.0-urrjaa** (2026-09-28 PKT)
 
-### This pack (NEW vs 3.11–3.32)
-- **Swipe-to-dismiss panels** — optional Settings toggle; swipe down from panel top to close
-- **Better A2HS** — Install button via beforeinstallprompt · standalone detect · clearer tip
-- **Run streak flame icon** — animated flame on Streak button + status when hot/claimable
-- **Mystery wheel pointer bounce** — pointer bounces on land
-- Bugfixes: resetPreferences restores area music / haptic intensity / swipe dismiss
-- KEEP ALL ≤3.32 incl. **15s Mystery Spin once**, Close (X), …
+### This pack (NEW vs 3.11–3.33)
+- **Better Install A2HS flow** — step chips · iOS Share how-to · Later snoozes session only · Install keeps prompt until choice
+- **Soft vibration on PERFECT** — gentle double-tap haptic on perfect pass
+- **Guide language remember** — EN / Roman Urdu / اردو tab persisted
+- **Micro UI polish** — guide tabs, A2HS steps, perfect toast, focus rings
+- Bugfixes: Guide no longer resets to English every open; A2HS Later ≠ permanent dismiss
+- KEEP ALL ≤3.33 incl. **15s Mystery Spin once**, Close (X), …
 
-SW cache: `urrjaa-v42-20260928`
+SW cache: `urrjaa-v43-20260928`
 
-**Ship commit:** `743f74a` · tag `v3.33.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.33.0-urrjaa  
+**Ship commit:** (pending) · tag `v3.34.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.34.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/
 
 
