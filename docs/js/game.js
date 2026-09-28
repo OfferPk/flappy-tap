@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.25.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.26.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -92,6 +92,11 @@
   var turboTrail = []; // 3.25 afterimages {x,y,rot}
   var ghostSilTrail = []; // 3.25 ghost silhouettes
   var garageSortMode = 'owned';
+  var replayBuf = []; // 3.26 last ~5s stub {x,y,rot,t}
+  var replaySampleAcc = 0;
+  var deathFreezeCanvas = null;
+  var deathCamZoom = 0;
+  var REPLAY_WINDOW_MS = 5000;
 
 
 
@@ -231,6 +236,8 @@
   const btnCoachNext = document.getElementById('btn-coach-next');
   const btnCoachSkip = document.getElementById('btn-coach-skip');
   const garageSortSel = document.getElementById('garage-sort');
+  const deathFreezeThumb = document.getElementById('death-freeze-thumb');
+  const btnReplayStub = document.getElementById('btn-replay-stub');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -1826,6 +1833,10 @@
       ghostUntil = 0;
       turboTrail.length = 0;
       ghostSilTrail.length = 0;
+      replayBuf.length = 0;
+      replaySampleAcc = 0;
+      deathFreezeCanvas = null;
+      deathCamZoom = 0;
       score2xUntil = 0;
       metersFlown = 0;
       runCoins = 0;
@@ -2257,7 +2268,7 @@
 
   function spawnGiftPop(x, y) {
     var n = reduceMotion ? 5 : 18;
-    var cols = ['#c084fc', '#ffd93d', '#ff6b6b', '#fff'];
+    var cols = ['#c084fc', '#ffd93d', '#ff6b6b', '#fff', '#f0abfc'];
     for (var i = 0; i < n; i++) {
       var a = (Math.PI * 2 * i) / n + rng() * 0.2;
       var sp = 70 + rng() * 90;
@@ -2268,6 +2279,31 @@
     }
     if (!reduceMotion) {
       particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.32, max: 0.32, color: 'rgba(192,132,252,.5)', r: 8, kind: 'ring', grow: 34 });
+      // 3.26 gift spawn sparkle stars
+      for (var s = 0; s < 8; s++) {
+        var sa = (Math.PI * 2 * s) / 8;
+        particles.push({
+          x: x, y: y,
+          vx: Math.cos(sa) * (40 + rng() * 50),
+          vy: Math.sin(sa) * (40 + rng() * 50) - 40,
+          life: 0.45 + rng() * 0.2, max: 0.65,
+          color: s % 2 ? '#fef08a' : '#e9d5ff',
+          r: 3.2 + rng() * 2,
+          kind: 'star',
+          spin: 4 + rng() * 6
+        });
+      }
+      // twinkle sparks
+      for (var k = 0; k < 6; k++) {
+        particles.push({
+          x: x + (rng() - 0.5) * 20, y: y + (rng() - 0.5) * 20,
+          vx: (rng() - 0.5) * 30, vy: -30 - rng() * 40,
+          life: 0.35, max: 0.5,
+          color: '#fff',
+          r: 1.2 + rng(),
+          kind: 'spark'
+        });
+      }
     }
     trimParticles();
   }
@@ -2815,6 +2851,104 @@
     nextSpin();
   }
 
+
+  /** 3.26: capture canvas freeze frame at death impact. */
+  function captureDeathFreezeFrame() {
+    try {
+      if (!canvas) return;
+      if (!deathFreezeCanvas) {
+        deathFreezeCanvas = document.createElement('canvas');
+      }
+      deathFreezeCanvas.width = canvas.width;
+      deathFreezeCanvas.height = canvas.height;
+      var dctx = deathFreezeCanvas.getContext('2d');
+      dctx.clearRect(0, 0, deathFreezeCanvas.width, deathFreezeCanvas.height);
+      dctx.drawImage(canvas, 0, 0);
+    } catch (err) { deathFreezeCanvas = null; }
+  }
+
+  function pushReplaySample(now) {
+    if (!bird) return;
+    replayBuf.push({ x: bird.x, y: bird.y, rot: bird.rot || 0, t: now });
+    var cutoff = now - REPLAY_WINDOW_MS;
+    while (replayBuf.length && replayBuf[0].t < cutoff) replayBuf.shift();
+    if (replayBuf.length > 64) replayBuf.shift();
+  }
+
+  function drawReplayPathStub() {
+    if (!replayBuf.length || reduceMotion) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,217,61,0.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    for (var i = 0; i < replayBuf.length; i++) {
+      var p = replayBuf[i];
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // silhouette dots
+    for (var j = 0; j < replayBuf.length; j += 3) {
+      var q = replayBuf[j];
+      var a = 0.15 + 0.35 * (j / replayBuf.length);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawDeathFreezeOverlay() {
+    if (state !== 'dying' || !bird) return;
+    var rem = Math.max(0, (deathFreezeUntil - performance.now()) / Math.max(1, DEATH_FREEZE_MS));
+    // freeze vignette around impact (path drawn inside camera transform)
+    ctx.save();
+    var gV = ctx.createRadialGradient(bird.x, bird.y, 24, bird.x, bird.y, Math.max(W, H) * 0.72);
+    gV.addColorStop(0, 'rgba(0,0,0,0)');
+    gV.addColorStop(1, 'rgba(15,5,10,' + (0.32 + 0.28 * (1 - rem)).toFixed(3) + ')');
+    ctx.fillStyle = gV;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255,230,230,0.92)';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('❄ FREEZE', bird.x, Math.max(28, bird.y - 42));
+    ctx.restore();
+  }
+
+  function drawPipeParallaxMicro() {
+    if (reduceMotion || !pipes.length) return;
+    var shift = ((groundX % 40) * 0.22) - 4;
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    ctx.translate(shift, 1.5);
+    for (var i = 0; i < pipes.length; i++) {
+      var p = pipes[i];
+      var gap = p.gap != null ? p.gap : currentGap;
+      var topH = p.gapY;
+      var botY = p.gapY + gap;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(p.x - 3, 0, (p.w || PIPE_W) + 2, topH);
+      ctx.fillRect(p.x - 3, botY, (p.w || PIPE_W) + 2, (H - GROUND_H) - botY);
+    }
+    ctx.restore();
+  }
+
+  function updateDeathFreezeThumb() {
+    if (!deathFreezeThumb) return;
+    if (deathFreezeCanvas) {
+      try {
+        deathFreezeThumb.src = deathFreezeCanvas.toDataURL('image/jpeg', 0.72);
+        deathFreezeThumb.hidden = false;
+      } catch (e) { deathFreezeThumb.hidden = true; }
+    } else {
+      deathFreezeThumb.hidden = true;
+    }
+  }
+
   function beginDeath() {
     if (state !== 'playing') return;
     if (isPractice()) {
@@ -3162,6 +3296,14 @@
         ghostSilTrail.push({ x: bird.x, y: bird.y, rot: bird.rot });
         if (ghostSilTrail.length > 12) ghostSilTrail.shift();
       } else if (ghostSilTrail.length) ghostSilTrail.length = 0;
+    }
+    // 3.26: ring-buffer last 5s for replay stub
+    if (bird && state === 'playing') {
+      replaySampleAcc += sdt;
+      if (replaySampleAcc >= 0.1) {
+        replaySampleAcc = 0;
+        pushReplaySample(now);
+      }
     }
 
     if (ghostUntil && now >= ghostUntil) { ghostUntil = 0; updatePowerHud(); }
@@ -4074,12 +4216,17 @@
   }
 
   function drawFrame(idle) {
-    var kick = !reduceMotion && (camKickX || camKickY || camKickZoom);
+    // 3.26: death camera freeze zoom toward bird
+    var dZoom = (state === 'dying' && !reduceMotion) ? deathCamZoom : 0;
+    if (state === 'dying' && !reduceMotion) deathCamZoom = Math.min(0.14, deathCamZoom + 0.012);
+    var kick = !reduceMotion && (camKickX || camKickY || camKickZoom || dZoom);
     if (kick) {
       ctx.save();
-      ctx.translate(W / 2 + camKickX, H / 2 + camKickY);
-      ctx.scale(1 + camKickZoom, 1 + camKickZoom);
-      ctx.translate(-W / 2, -H / 2);
+      var cx = (state === 'dying' && bird) ? bird.x : W / 2;
+      var cy = (state === 'dying' && bird) ? bird.y : H / 2;
+      ctx.translate(cx + camKickX, cy + camKickY);
+      ctx.scale(1 + camKickZoom + dZoom, 1 + camKickZoom + dZoom);
+      ctx.translate(-cx, -cy);
     }
     drawSky();
     pipes.forEach(drawPipe);
@@ -4341,6 +4488,15 @@
     if (FTStorage.getRunCount() % 2 === 0) await Ads.showInterstitial('between-runs');
     startRun(false, playMode === 'challenge' && challengeWon ? 'classic' : playMode);
   }
+  if (btnReplayStub) btnReplayStub.addEventListener('click', function () {
+    var n = replayBuf.length;
+    showToast(n ? ('Replay stub · ' + n + ' samples / last 5s') : 'Replay stub · no path yet', 1400);
+    // flash path on canvas briefly if possible
+    if (n && canvas) {
+      drawFrame(false);
+      drawReplayPathStub();
+    }
+  });
   btnRetry.addEventListener('click', function () { retryFlow(); });
   btnMenu.addEventListener('click', function () { showMenu(); });
   if (btnShare) btnShare.addEventListener('click', function () { openSharePreview(); });
@@ -4395,10 +4551,19 @@
   if (btnResume) btnResume.addEventListener('click', function () { resumeGame(); });
   if (btnQuitPause) btnQuitPause.addEventListener('click', function () { quitToMenu(); });
 
+  // 3.26: clearer mute SVG icons
+  var MUTE_SVG_ON = '<svg class="mute-ico" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1-3.29-2.5-4.03v8.05c1.5-.74 2.5-2.26 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+  var MUTE_SVG_OFF = '<svg class="mute-ico" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M16.5 12c0-1.77-1-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>';
   function syncMuteBtn() {
     var m = FTStorage.isMuted();
     FTAudio.setMuted(m);
-    btnMute.textContent = m ? '🔇' : '🔊';
+    if (btnMute) {
+      btnMute.innerHTML = m ? MUTE_SVG_OFF : MUTE_SVG_ON;
+      btnMute.classList.toggle('is-muted', !!m);
+      btnMute.setAttribute('aria-pressed', m ? 'true' : 'false');
+      btnMute.setAttribute('aria-label', m ? 'Unmute sound' : 'Mute sound');
+      btnMute.title = m ? 'Unmute' : 'Mute';
+    }
     if (soundToggleChk) soundToggleChk.checked = !m;
   }
   btnMute.addEventListener('click', function () {

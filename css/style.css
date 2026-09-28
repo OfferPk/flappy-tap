@@ -2492,3 +2492,32 @@ html.large-buttons .chip {
   min-width: 140px;
   flex: 0 0 auto;
 }
+
+
+/* ——— v3.26: mute icons, death freeze ——— */
+.mute-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e2e8f0;
+}
+.mute-btn.is-muted { color: #f87171; }
+.mute-btn .mute-ico { display: block; pointer-events: none; }
+.death-freeze-wrap {
+  margin: 8px auto 10px;
+  text-align: center;
+  max-width: 220px;
+}
+.death-freeze-thumb {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  margin: 0 auto 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,107,107,0.45);
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  object-fit: cover;
+  background: #0f172a;
+}
+.death-freeze-thumb[hidden] { display: none !important; }

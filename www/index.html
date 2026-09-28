@@ -45,7 +45,7 @@
       <div id="lives-hud" class="lives-hud" hidden aria-label="Lives"></div>
       <div id="power-hud" hidden></div>
       <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause" title="Pause">⏸</button>
-      <button id="btn-mute" class="icon-btn" type="button" aria-label="Toggle sound" title="Sound">🔊</button>
+      <button id="btn-mute" class="icon-btn mute-btn" type="button" aria-label="Mute sound" title="Mute" aria-pressed="false"></button>
     </div>
 
     <!-- 3.24 first-run coach marks -->
@@ -63,7 +63,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.25.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.26.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -228,6 +228,10 @@
         <div class="medal-disc" aria-hidden="true"></div>
         <span id="medal-label">Medal</span>
       </div>
+      <figure class="death-freeze-wrap" aria-label="Death freeze frame">
+        <img id="death-freeze-thumb" class="death-freeze-thumb" alt="Last moment freeze" hidden width="200" height="120" />
+        <figcaption class="hint">Last-moment freeze · tap Replay stub for 5s path</figcaption>
+      </figure>
       <p class="score-big">Score: <span id="final-score">0</span></p>
       <div class="grade-wrap" aria-label="Run grade">
         <span class="grade-label">Grade</span>
@@ -248,6 +252,7 @@
         <button id="btn-continue" class="btn reward continue-ready" type="button">▶ Revive · Continue (Ad stub)</button>
         <p id="continue-hint" class="hint continue-hint">Watch a short stub ad to revive at your score (once per run).</p>
         <button id="btn-mystery-ad" class="btn reward" type="button">🎁 +1 Gift (Ad)</button>
+        <button id="btn-replay-stub" class="btn ghost btn-sm" type="button">🎞 Replay stub (last 5s)</button>
         <button id="btn-retry" class="btn primary" type="button">RETRY</button>
         <button id="btn-share" class="btn secondary" type="button">📤 Share</button>
         <div class="btn-row">
@@ -345,7 +350,7 @@
         <p class="setting-hint">How visible the Practice mode ghost guide is</p>
       </div>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.25.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.26.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -413,6 +418,7 @@
           <li><strong>3.23:</strong> reduced-motion respect · score-card screenshot share · bird shadow · landing dust · credits in Settings.</li>
           <li><strong>3.24:</strong> first-run coach marks · magnet pull VFX · shield shimmer · practice ghost opacity · micro-perf.</li>
           <li><strong>3.25:</strong> turbo afterimage trails · ghost silhouette trail · slow-mo vignette · garage sort · bugfixes.</li>
+          <li><strong>3.26:</strong> death freeze + 5s replay stub · better mute icons · pipe parallax · gift sparkle.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>

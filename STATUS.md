@@ -1,5 +1,24 @@
 # Urr Jaa! STATUS
 
+## Current: **3.26.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.25)
+- **Death camera freeze** — zoom + vignette + FREEZE label; JPEG thumb on Run Summary
+- **Replay stub (last 5s)** — ring-buffer path; Replay stub button previews samples
+- **Better mute icons** — SVG speaker / muted, aria-pressed, red when muted
+- **Pipe parallax micro** — faint depth layer behind pipes
+- **Gift spawn sparkle** — stars + twinkles on gift pop
+- KEEP ALL ≤3.25 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v35-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.26.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.26.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.25.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.24)
