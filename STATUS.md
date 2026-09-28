@@ -8,7 +8,7 @@
 
 ## Sync
 - Fetched/merged `origin/main` (up to date @ 3.12.0).
-- Shipped: commit TBD · tag `v3.13.0-urrjaa` · Pages · release zip
+- Shipped: commit `6c20d78` · tag `v3.13.0-urrjaa` · Pages · release zip
 
 ## ADD — v3.13.0 (new vs 3.11–3.12)
 - [x] Boss/chase juice (pulse veil, timer bar, multi-wave, clear confetti)
