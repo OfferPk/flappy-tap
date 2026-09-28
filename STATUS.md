@@ -30,8 +30,8 @@
 | Sea Boat | Best ≥ 60 | 50 🪙 |
 
 ### Ship
-- [ ] `npm run check` + `npm run smoke` + build:web + pack:windows
-- [ ] push main · Pages · release zip
+- [x] `npm run check` + `npm run smoke` + build:web + pack:windows
+- [ ] push main · Pages · release zip — **BLOCKED:** `GH_TOKEN`/`GITHUB_TOKEN` both 401 Unauthorized (need valid PAT with `repo` scope)
 
 ## How to open
 ```bash
