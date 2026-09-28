@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.11.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.12.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,14 +29,15 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.11.0-urrjaa)
+## Features (v3.12.0-urrjaa)
 
-- **Feel 3.11:** smoother Classic survival (wider early gaps, softer gravity/inset, stronger LUCKY recover) · Hard stays strict
-- **Pseudo-3D 3.11:** wing lag + tip flutter · eye blink · tail wag · vehicle lean/exhaust · mouth idle micro-chirp
-- **Mystery 3.11:** history rarity badges · land pulse · Back locked mid-spin · wheel win glow
-- **Juice 3.11:** PERFECT stars · confetti · toast kinds · run grade S–E + flight time · menu Play pulse / logo shimmer
-- **Theme skins:** Jungle wali · Mountains wali · Sea wali (+ matching vehicles)
-- **Mystery spin:** ~7s wheel decelerate, grant coins on land · History persists
+- **Missions 3.12:** larger daily pool (PERFECT, combo, gifts, fly…) · 3 rotate/day
+- **Streak 3.12:** progress bar · richer day rewards · claim juice
+- **Weather 3.12:** fog wisps · rain splash · storm lightning flash
+- **Power-ups 3.12:** glow + labels · pickup FX · HUD countdown chips
+- **Garage 3.12:** All / Themes / Seasonals filter · theme badges
+- **Combo / Pause / Perf:** x5 pulse · pause tip+stats · adaptive particle caps · touch debounce
+- **Theme skins + Mystery spin** kept from ≤3.11
 
 - **Polish 3.6.0:** richer bird/vehicle art · juice/toasts · Mystery progress · voice variety · Guide/menu polish
 - **Collection depth:** +8 desi birds · +6 areas · 4 offline seasonal packs (Azadi / Eid / Winter / Basant)

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.11.0-urrjaa — richer 3D wing lag / blink / tail / vehicle lean; keeps ≤3.10.
+ * Urr Jaa! v3.12.0-urrjaa — garage theme badges/filters + prior 3D motion; keeps ≤3.11.
  * Canvas-drawn; wings/hats/mouth are visual-only (hitbox ignores them).
  */
 (function (global) {
@@ -1202,10 +1202,16 @@
       else if (kind === 'hat') unlocked = !FTStorage || FTStorage.isHatUnlocked(item.id);
       else if (kind === 'trail') unlocked = !FTStorage || FTStorage.isTrailUnlocked(item.id);
 
+      const themeIds = { jungle: 1, alpine: 1, seagull: 1, jungle_rickshaw: 1, snow_bike: 1, sea_boat: 1 };
+      const isTheme = !!(item.theme || themeIds[item.id]);
+      const isSeasonal = !!item.seasonal;
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'skin-card' + (item.id === selectedId && unlocked ? ' selected' : '') + (!unlocked ? ' locked' : '');
+      btn.className = 'skin-card' + (item.id === selectedId && unlocked ? ' selected' : '') + (!unlocked ? ' locked' : '') +
+        (isTheme ? ' theme-skin' : '') + (isSeasonal ? ' seasonal-skin' : '');
       btn.dataset.id = item.id;
+      btn.dataset.theme = isTheme ? '1' : '0';
+      btn.dataset.seasonal = isSeasonal ? '1' : '0';
       const c = document.createElement('canvas');
       c.width = 64;
       c.height = 64;
@@ -1249,6 +1255,15 @@
       label.textContent = unlocked ? item.label : item.label;
       btn.appendChild(c);
       btn.appendChild(label);
+      if (isTheme) {
+        const badge = document.createElement('span');
+        badge.className = 'skin-theme-badge';
+        badge.textContent = item.id.indexOf('jungle') >= 0 ? '🌿' :
+          (item.id.indexOf('alpine') >= 0 || item.id.indexOf('snow') >= 0) ? '⛰' :
+          (item.id.indexOf('sea') >= 0 || item.id === 'seagull') ? '🌊' : '✦';
+        badge.title = 'Theme skin';
+        btn.appendChild(badge);
+      }
       if (!unlocked && item.seasonal) {
         const hint = document.createElement('span');
         hint.className = 'skin-unlock-hint';
@@ -1333,6 +1348,7 @@
     SKINS, BIRDS, VEHICLES, ENVS, WEATHERS, HATS, TRAILS, SEASONAL_PACKS,
     BIRD_PASSIVES, birdPassive, weatherMods, BOSS_KINDS, pickBossKind,
     seasonalInWindow, seasonalEligible,
+    THEME_IDS: { jungle: 1, alpine: 1, seagull: 1, jungle_rickshaw: 1, snow_bike: 1, sea_boat: 1 },
     draw, drawLegacy, hitbox, renderPicker, isUnlocked,
     envPalette, pickObstacleKind, drawObstaclePair, OBSTACLE_KINDS,
     AREA_OBSTACLES, pickTrafficKind, drawTraffic, trafficHitbox, TRAFFIC_TIERS

@@ -31,7 +31,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.11.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.12.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary btn-play-pulse" type="button">▶ Play</button>
@@ -79,6 +79,12 @@
     <div id="screen-garage" class="screen panel-screen scroll-screen" hidden>
       <h2>Garage</h2>
       <p class="coins-line">🪙 <span id="garage-coins">0</span></p>
+      <div class="garage-filters" id="garage-filters" role="tablist" aria-label="Garage filter">
+        <button type="button" class="garage-filter active" data-garage-filter="all" role="tab" aria-selected="true">All</button>
+        <button type="button" class="garage-filter" data-garage-filter="theme" role="tab" aria-selected="false">🌿 Themes</button>
+        <button type="button" class="garage-filter" data-garage-filter="seasonal" role="tab" aria-selected="false">📅 Seasonals</button>
+      </div>
+      <p id="garage-filter-hint" class="hint garage-filter-hint">Theme skins: Jungle · Mountains · Sea (score or coins)</p>
       <h3 class="section-title">Birds</h3>
       <div class="skin-row" id="garage-birds"></div>
       <h3 class="section-title">Vehicles (pair)</h3>
@@ -97,7 +103,7 @@
     <!-- Missions -->
     <div id="screen-missions" class="screen panel-screen scroll-screen" hidden>
       <h2>Daily Missions</h2>
-      <p class="hint">3 missions / day · coins · gifts · fragments</p>
+      <p class="hint">3 rotating missions / day · coins · gifts · fragments · PERFECT &amp; combo</p>
       <div id="missions-list" class="missions-list"></div>
       <button class="btn primary" type="button" data-close="missions">Back</button>
     </div>
@@ -204,7 +210,11 @@
     <!-- Pause -->
     <div id="screen-pause" class="screen pause-screen" hidden>
       <h2>Paused</h2>
-      <p class="hint">Take a breath. Resume or quit to menu.</p>
+      <div class="pause-stats" aria-live="polite">
+        <div class="pause-stat"><span>Score</span><strong id="pause-score">0</strong></div>
+        <div class="pause-stat"><span>Mode</span><strong id="pause-mode">Classic</strong></div>
+      </div>
+      <p id="pause-tip" class="hint pause-tip">Tip loads…</p>
       <div class="btn-col">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit-pause" class="btn ghost" type="button">Quit to Menu</button>
@@ -215,16 +225,25 @@
     <div id="screen-settings" class="screen settings-screen" hidden>
       <h2>Settings</h2>
       <div class="settings-card">
+        <h3 class="settings-group">Audio</h3>
         <label class="setting-row check-row" for="sound-toggle">
           <span>Sound</span>
           <input id="sound-toggle" type="checkbox" checked />
         </label>
         <p class="setting-hint">Game SFX (flap/coin/hit) · HUD mute · does not turn off Desi voice</p>
+        <label class="setting-row check-row" for="voice-toggle">
+          <span>Desi voice ON/OFF</span>
+          <input id="voice-toggle" type="checkbox" checked />
+        </label>
+        <p class="setting-hint">Independent of Sound mute · speech (hi-IN/ur) + toast · melodic chirp fallback</p>
+        <button id="btn-voice-preview" class="btn ghost voice-preview-btn" type="button">Preview voice · Oye hoye!</button>
+        <h3 class="settings-group">Feel</h3>
         <label class="setting-row check-row" for="haptics-toggle">
           <span>Haptics</span>
           <input id="haptics-toggle" type="checkbox" checked />
         </label>
-        <p class="setting-hint">Vibration stub when supported</p>
+        <p class="setting-hint">Vibration when supported · tap Preview below</p>
+        <button id="btn-haptic-preview" class="btn ghost btn-sm" type="button">Preview haptic</button>
         <label class="setting-row" for="sens-slider">
           <span>Sensitivity</span>
           <span id="sens-value">1.00</span>
@@ -235,13 +254,7 @@
           <span>Reduce motion</span>
           <input id="reduce-motion" type="checkbox" />
         </label>
-        <p class="setting-hint">Less shake, no trail, fewer particles</p>
-        <label class="setting-row check-row" for="voice-toggle">
-          <span>Desi voice ON/OFF</span>
-          <input id="voice-toggle" type="checkbox" checked />
-        </label>
-        <p class="setting-hint">Independent of Sound mute · speech (hi-IN/ur) + toast · melodic chirp fallback</p>
-        <button id="btn-voice-preview" class="btn ghost voice-preview-btn" type="button">Preview voice · Oye hoye!</button>
+        <p class="setting-hint">Less shake, no trail, fewer particles · better on low-end phones</p>
       </div>
       <button id="btn-settings-close" class="btn primary" type="button">Done</button>
     </div>
@@ -282,6 +295,7 @@
           <li><strong>Skill:</strong> edge pass = CLOSE; center pass = PERFECT.</li>
           <li><strong>Feel:</strong> Classic is smoother &amp; forgiving; Hard and One Life stay strict.</li>
           <li><strong>Run grade:</strong> S–E on the summary — PERFECT &amp; CLOSE boost it.</li>
+          <li><strong>Daily missions:</strong> 3 rotate each day (PERFECT, combo, gifts, fly…).</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant packs unlock by local date windows or score milestones — no server seasons.</li>

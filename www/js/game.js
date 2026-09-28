@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.11.0-urrjaa — Classic feel polish + richer 3D motion + Mystery/juice UI; keeps ≤3.10.
+ * Urr Jaa! v3.12.0-urrjaa — missions/streak, weather FX, power-ups, garage themes, combo, pause/perf.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all prior features — feel / characters / mystery / juice / guide polish.
+ * KEEP all prior features — different pack from 3.11 feel/3D/mystery.
  */
 (function () {
   'use strict';
@@ -73,6 +73,9 @@
   let particles = [];
   let traffic = [];
   let rainDrops = [];
+  let fogWisps = [];
+  let weatherFlash = 0; // storm lightning alpha
+
   let scorePops = [];
   let score = 0;
   let best = 0;
@@ -514,12 +517,26 @@
 
   function initRain() {
     rainDrops = [];
-    for (var i = 0; i < 40; i++) {
+    var nRain = reduceMotion ? 18 : 48;
+    for (var i = 0; i < nRain; i++) {
       rainDrops.push({
         x: Math.random() * W,
         y: Math.random() * H,
-        len: 8 + Math.random() * 12,
-        spd: 280 + Math.random() * 200
+        len: 8 + Math.random() * 14,
+        spd: 260 + Math.random() * 220,
+        splash: 0
+      });
+    }
+    fogWisps = [];
+    var nFog = reduceMotion ? 6 : 14;
+    for (var fi = 0; fi < nFog; fi++) {
+      fogWisps.push({
+        x: Math.random() * W,
+        y: H * 0.35 + Math.random() * H * 0.4,
+        w: 40 + Math.random() * 70,
+        h: 12 + Math.random() * 18,
+        spd: 12 + Math.random() * 22,
+        a: 0.08 + Math.random() * 0.12
       });
     }
   }
@@ -604,6 +621,8 @@
     var ccm = coinComboMult();
     if ((combo >= 2 || coinCombo >= 2 || riskyActive() || nearMissStreak >= 2) && state === 'playing') {
       comboEl.hidden = false;
+      comboEl.classList.toggle('combo-x3', ccm >= 3);
+      comboEl.classList.toggle('combo-x5', ccm >= 5 || combo >= 5 || riskyActive());
       var bits = [];
       if (riskyActive()) bits.push('RISKY x3');
       else if (nearMissStreak >= 2) bits.push('CLOSE x' + nearMissStreak);
@@ -617,22 +636,31 @@
     }
   }
 
+  function powerRemainSec(until) {
+    return Math.max(0, Math.ceil((until - performance.now()) / 1000));
+  }
   function updatePowerHud() {
     if (!powerHudEl) return;
     var now = performance.now();
     var bits = [];
-    if (shieldActive) bits.push('🛡');
-    if (now < slowMoUntil) bits.push('⏱');
-    if (now < magnetUntil) bits.push('🧲');
-    if (now < turboUntil) bits.push('⚡');
-    if (now < ghostUntil) bits.push('👻');
+    if (shieldActive) bits.push('🛡 Shield');
+    if (now < slowMoUntil) bits.push('⏱ ' + powerRemainSec(slowMoUntil) + 's');
+    if (now < magnetUntil) bits.push('🧲 ' + powerRemainSec(magnetUntil) + 's');
+    if (now < turboUntil) bits.push('⚡ ' + powerRemainSec(turboUntil) + 's');
+    if (now < ghostUntil) bits.push('👻 ' + powerRemainSec(ghostUntil) + 's');
     if (riskyActive()) bits.push('🎯x3');
     if (isHard()) bits.push('🔥');
     if (isNoCoin()) bits.push('🚫🪙');
     if (isOneLife()) bits.push('1️⃣');
     if (bits.length) {
       powerHudEl.hidden = false;
-      powerHudEl.textContent = bits.join('  ');
+      powerHudEl.innerHTML = '';
+      bits.forEach(function (b) {
+        var chip = document.createElement('span');
+        chip.className = 'power-chip';
+        chip.textContent = b;
+        powerHudEl.appendChild(chip);
+      });
     } else powerHudEl.hidden = true;
   }
 
@@ -1167,9 +1195,15 @@
     FTStorage.bumpMission('pipes', score);
     FTStorage.bumpMission('dodge20', score);
     FTStorage.bumpMission('boxes', runBoxes);
+    FTStorage.bumpMission('gifts3', runBoxes);
     FTStorage.bumpMission('nearmiss3', runNearMisses);
+    FTStorage.bumpMission('nearmiss8', runNearMisses);
+    FTStorage.bumpMission('perfect5', runPerfects);
     FTStorage.setMissionMax('score100', score);
     FTStorage.setMissionMax('score70', score);
+    FTStorage.setMissionMax('score40', score);
+    FTStorage.setMissionMax('combo8', Math.max(runBestCombo, combo));
+    FTStorage.setMissionMax('perfect5', runPerfects);
     if (!hitThisRun && cleanScorePeak >= 50) FTStorage.setMissionMax('clean50', cleanScorePeak);
     var unlocked = FTStorage.checkEnvMilestones(FTStorage.getBest());
     var themeNew = FTStorage.checkThemeSkinMilestones ? FTStorage.checkThemeSkinMilestones(FTStorage.getBest()) : [];
@@ -1182,6 +1216,28 @@
     if (state !== 'playing') return;
     state = 'paused';
     if (screenPause) screenPause.hidden = false;
+    var pauseScore = document.getElementById('pause-score');
+    var pauseMode = document.getElementById('pause-mode');
+    var pauseTip = document.getElementById('pause-tip');
+    if (pauseScore) pauseScore.textContent = String(score);
+    if (pauseMode) {
+      var labels = {
+        classic: 'Classic', timeattack: 'Time Attack', hard: 'Hard', nocoin: 'No Coin',
+        challenge: 'Challenge', onelife: 'One Life', daily: 'Daily', practice: 'Practice'
+      };
+      pauseMode.textContent = labels[playMode] || playMode;
+    }
+    if (pauseTip) {
+      var tips = [
+        'Center the gap for PERFECT (+3).',
+        'Edge graze = CLOSE — stacks coin mult.',
+        'Gifts 📦 → Mystery spins (10 = 1 spin).',
+        'Shield saves one hard hit.',
+        'Classic is forgiving; Hard is not.',
+        'Combo x5+ drops confetti — keep chaining!'
+      ];
+      pauseTip.textContent = tips[Math.floor(Math.random() * tips.length)];
+    }
   }
   function resumeGame() {
     if (state !== 'paused') return;
@@ -1469,9 +1525,18 @@
   }
 
   var MAX_PARTICLES = 96;
+  function particleBudget() {
+    if (reduceMotion) return 28;
+    // Mobile / low DPR: tighter budget (3.12 perf)
+    var dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    var narrow = (typeof window !== 'undefined' && window.innerWidth < 480);
+    if (narrow || dpr > 2.5) return 56;
+    return MAX_PARTICLES;
+  }
 
   function trimParticles() {
-    if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
+    var cap = particleBudget();
+    if (particles.length > cap) particles.splice(0, particles.length - cap);
   }
 
   function spawnNearMissSparks(x, y) {
@@ -1589,16 +1654,46 @@
     });
   }
 
+  function spawnPowerPickupFX(x, y, type) {
+    if (reduceMotion) return;
+    var cols = {
+      shield: ['#7dd3fc', '#38bdf8', '#fff'],
+      slowmo: ['#c4b5fd', '#a78bfa', '#fff'],
+      turbo: ['#fbbf24', '#f59e0b', '#fff'],
+      magnet: ['#f9a8d4', '#ec4899', '#fff'],
+      ghost: ['#e2e8f0', '#94a3b8', '#fff']
+    };
+    var c = cols[type] || ['#ffd93d', '#fff'];
+    for (var i = 0; i < 12; i++) {
+      var a = (Math.PI * 2 * i) / 12;
+      particles.push({
+        x: x, y: y, vx: Math.cos(a) * (50 + rng() * 60), vy: Math.sin(a) * (50 + rng() * 60) - 20,
+        life: 0.4, max: 0.55, color: c[i % c.length], r: 2.2 + rng() * 1.8, kind: 'spark'
+      });
+    }
+    particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.28, max: 0.28, color: c[0], r: 8, kind: 'ring', grow: 36 });
+    trimParticles();
+  }
+
   function collectPowerup(pu) {
     pu.taken = true;
     FTAudio.powerup();
     haptic('power');
     var now = performance.now();
-    if (pu.type === 'shield') { shieldActive = true; showToast('Shield!'); voiceCue('wah_ji'); }
-    else if (pu.type === 'slowmo') { slowMoUntil = now + SLOWMO_MS; showToast('Slow-mo 3s'); }
-    else if (pu.type === 'magnet') { magnetUntil = now + 4000; showToast('Coin Magnet!'); }
-    else if (pu.type === 'turbo') { turboUntil = now + TURBO_MS; FTAudio.turbo(); showToast('Turbo!'); showBanner('TURBO!', 800); }
-    else if (pu.type === 'ghost') { ghostUntil = now + GHOST_MS; FTAudio.ghost(); showToast('Ghost!'); }
+    var labels = {
+      shield: '🛡 Shield ON',
+      slowmo: '⏱ Slow-mo 3s',
+      magnet: '🧲 Coin Magnet',
+      turbo: '⚡ Turbo!',
+      ghost: '👻 Ghost phase'
+    };
+    spawnPowerPickupFX(pu.x, pu.y, pu.type);
+    if (pu.type === 'shield') { shieldActive = true; showToast(labels.shield, 1200, 'lucky'); voiceCue('wah_ji'); }
+    else if (pu.type === 'slowmo') { slowMoUntil = now + SLOWMO_MS; showToast(labels.slowmo, 1200); }
+    else if (pu.type === 'magnet') { magnetUntil = now + 4000; showToast(labels.magnet, 1200); }
+    else if (pu.type === 'turbo') { turboUntil = now + TURBO_MS; FTAudio.turbo(); showToast(labels.turbo, 1200, 'medal'); showBanner('TURBO!', 800); }
+    else if (pu.type === 'ghost') { ghostUntil = now + GHOST_MS; FTAudio.ghost(); showToast(labels.ghost, 1200); }
+    showBanner(labels[pu.type] || 'Power!', 700);
     updatePowerHud();
     updateComboUI();
   }
@@ -2099,7 +2194,13 @@
     if (mult >= 3) {
       FTAudio.combo();
       showBanner((riskyActive() ? 'RISKY x' : 'COMBO x') + mult + '!', 900);
+      if (mult >= 5 && !reduceMotion) {
+        spawnConfettiBurst(bird.x, bird.y - 20, 10);
+        showToast('COMBO x' + mult + '!', 900, 'medal');
+      }
     }
+    // Track combo mission peak live
+    if (FTStorage.setMissionMax) FTStorage.setMissionMax('combo8', Math.max(combo, runBestCombo));
     toastOyeAcc += 1;
     if (toastOyeAcc >= 7 + Math.floor(rng() * 5)) {
       toastOyeAcc = 0;
@@ -2179,12 +2280,37 @@
     var drawEnv = activeArea();
     var weather = effectiveWeather();
     var pal = FTSkins.envPalette(drawEnv === 'rain' || drawEnv === 'monsoon' ? 'city' : drawEnv, weather);
-    if ((pal.rain || drawEnv === 'rain' || drawEnv === 'monsoon') && !reduceMotion) {
+    var weatherNow = effectiveWeather();
+    if ((pal.rain || drawEnv === 'rain' || drawEnv === 'monsoon' || weatherNow === 'storm') && !reduceMotion) {
       rainDrops.forEach(function (d) {
         d.y += d.spd * dt;
-        d.x -= 40 * dt;
-        if (d.y > H) { d.y = -10; d.x = Math.random() * W; }
+        d.x -= (weatherNow === 'storm' ? 55 : 40) * dt;
+        if (d.splash > 0) d.splash = Math.max(0, d.splash - dt * 3);
+        if (d.y > H - GROUND_H) {
+          d.splash = 1;
+          d.y = -10;
+          d.x = Math.random() * W;
+        }
       });
+    }
+    if ((pal.fog || weatherNow === 'fog') && fogWisps.length) {
+      fogWisps.forEach(function (w) {
+        w.x += w.spd * dt;
+        w.y += Math.sin(performance.now() / 900 + w.x * 0.01) * 6 * dt;
+        if (w.x - w.w > W) { w.x = -w.w; w.y = H * 0.35 + Math.random() * H * 0.4; }
+      });
+    }
+    if (weatherNow === 'storm' && !reduceMotion) {
+      if (weatherFlash > 0) weatherFlash = Math.max(0, weatherFlash - dt * 2.2);
+      else if (rng() < 0.008) weatherFlash = 0.85 + rng() * 0.4;
+    } else {
+      weatherFlash = 0;
+    }
+    // Refresh power HUD countdown chips ~4 Hz
+    if (state === 'playing' && powerHudEl && !powerHudEl.hidden) {
+      if (!updatePowerHud._acc) updatePowerHud._acc = 0;
+      updatePowerHud._acc += dt;
+      if (updatePowerHud._acc > 0.25) { updatePowerHud._acc = 0; updatePowerHud(); }
     }
 
     for (var i = particles.length - 1; i >= 0; i--) {
@@ -2210,7 +2336,7 @@
       }
       if (pt.life <= 0) particles.splice(i, 1);
     }
-    if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
+    if (particles.length > particleBudget()) particles.splice(0, particles.length - particleBudget());
 
     for (var si = scorePops.length - 1; si >= 0; si--) {
       var sp = scorePops[si];
@@ -2512,8 +2638,10 @@
     });
 
     if (pal.fog) {
-      ctx.fillStyle = 'rgba(220,220,230,0.25)';
-      ctx.fillRect(0, H * 0.35, W, H * 0.4);
+      ctx.fillStyle = 'rgba(220,220,230,0.18)';
+      ctx.fillRect(0, H * 0.28, W, H * 0.22);
+      ctx.fillStyle = 'rgba(200,205,220,0.22)';
+      ctx.fillRect(0, H * 0.45, W, H * 0.35);
     }
   }
 
@@ -2521,14 +2649,38 @@
     var area = activeArea();
     var weather = effectiveWeather();
     var pal = FTSkins.envPalette(area === 'rain' || area === 'monsoon' ? 'city' : area, weather);
-    if ((!pal.rain && area !== 'rain' && area !== 'monsoon') || reduceMotion) return;
-    ctx.strokeStyle = pal.storm ? 'rgba(200,220,255,0.55)' : 'rgba(180,200,230,0.45)';
-    ctx.lineWidth = 1.5;
+    var isRain = !!(pal.rain || area === 'rain' || area === 'monsoon' || weather === 'storm');
+    var isFog = !!(pal.fog || weather === 'fog');
+    // Fog wisps (3.12)
+    if (isFog && fogWisps.length) {
+      fogWisps.forEach(function (w) {
+        ctx.fillStyle = 'rgba(220,225,235,' + w.a.toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.ellipse(w.x, w.y, w.w, w.h, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    // Storm lightning flash
+    if (weatherFlash > 0) {
+      ctx.fillStyle = 'rgba(220,235,255,' + (weatherFlash * 0.45).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (!isRain || reduceMotion) return;
+    ctx.strokeStyle = pal.storm ? 'rgba(200,220,255,0.6)' : 'rgba(180,200,230,0.5)';
+    ctx.lineWidth = pal.storm ? 1.8 : 1.4;
     rainDrops.forEach(function (d) {
       ctx.beginPath();
       ctx.moveTo(d.x, d.y);
-      ctx.lineTo(d.x - 3, d.y + d.len);
+      ctx.lineTo(d.x - (pal.storm ? 4 : 3), d.y + d.len);
       ctx.stroke();
+      if (d.splash > 0) {
+        ctx.globalAlpha = Math.min(1, d.splash);
+        ctx.strokeStyle = 'rgba(200,220,255,0.45)';
+        ctx.beginPath();
+        ctx.arc(d.x, H - GROUND_H - 2, 3 + (1 - d.splash) * 4, Math.PI, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
     });
   }
 
@@ -2543,26 +2695,44 @@
   function drawPowerup(pu) {
     if (pu.taken) return;
     var t = performance.now() / 1000;
-    var bob = reduceMotion ? 0 : Math.sin(t * 4 + pu.x * 0.05) * 3;
+    var bob = reduceMotion ? 0 : Math.sin(t * 4 + pu.x * 0.05) * 3.5;
+    var pulse = 1 + (reduceMotion ? 0 : Math.sin(t * 6 + pu.x) * 0.1);
     ctx.save();
     ctx.translate(pu.x, pu.y + bob);
+    ctx.scale(pulse, pulse);
     var colors = {
-      shield: 'rgba(100,200,255,0.9)', slowmo: 'rgba(180,140,255,0.92)',
-      turbo: 'rgba(255,180,50,0.95)', magnet: 'rgba(255,100,150,0.92)', ghost: 'rgba(200,220,255,0.85)'
+      shield: 'rgba(100,200,255,0.95)', slowmo: 'rgba(180,140,255,0.95)',
+      turbo: 'rgba(255,180,50,0.97)', magnet: 'rgba(255,100,150,0.95)', ghost: 'rgba(200,220,255,0.9)'
     };
-    ctx.fillStyle = colors[pu.type] || '#ffd93d';
+    var glow = colors[pu.type] || '#ffd93d';
+    // outer glow ring (3.12 clarity)
+    if (!reduceMotion) {
+      ctx.strokeStyle = glow;
+      ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 5);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, POWERUP_R + 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(0, 0, POWERUP_R, 0, Math.PI * 2);
+    ctx.arc(0, 0, POWERUP_R + 1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    ctx.lineWidth = 2.2;
     ctx.stroke();
     ctx.fillStyle = '#0a2540';
-    ctx.font = 'bold 12px system-ui';
+    ctx.font = 'bold 13px system-ui';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     var icons = { shield: '🛡', slowmo: '⏱', turbo: '⚡', magnet: '🧲', ghost: '👻' };
     ctx.fillText(icons[pu.type] || '✦', 0, 1);
+    // tiny label under icon
+    var names = { shield: 'SHIELD', slowmo: 'SLOW', turbo: 'TURBO', magnet: 'MAG', ghost: 'GHOST' };
+    ctx.font = 'bold 7px system-ui';
+    ctx.fillStyle = 'rgba(10,37,64,0.9)';
+    ctx.fillText(names[pu.type] || 'PWR', 0, POWERUP_R + 9);
     ctx.restore();
   }
 
@@ -2786,11 +2956,16 @@
     animId = requestAnimationFrame(loop);
   }
 
+  var lastFlapTouchTs = 0;
   function onPointer(e) {
     if (e.target && e.target.closest && e.target.closest(
-      'button, .skin-card, #ad-stub-modal, .screen, label, input, .tab-btn, .mission-card, .chip'
+      'button, .skin-card, #ad-stub-modal, .screen, label, input, .tab-btn, .mission-card, .chip, .garage-filter, .power-chip'
     )) return;
-    e.preventDefault();
+    // 3.12: debounce duplicate pointer/touch within 30ms (mobile double-fire)
+    var now = performance.now();
+    if (now - lastFlapTouchTs < 30) return;
+    lastFlapTouchTs = now;
+    if (e.cancelable) e.preventDefault();
     flap();
   }
   // Unlock AudioContext + speechSynthesis on first user tap (mobile gate)
@@ -2805,15 +2980,20 @@
       document.removeEventListener('keydown', once, true);
     }
     document.addEventListener('pointerdown', once, true);
-    document.addEventListener('touchstart', once, true);
+    document.addEventListener('touchstart', once, { capture: true, passive: true });
     document.addEventListener('keydown', once, true);
   })();
 
-  canvas.addEventListener('pointerdown', onPointer);
+  canvas.style.touchAction = 'none';
+  canvas.addEventListener('pointerdown', onPointer, { passive: false });
+  // Prefer pointer events only on #app during play (avoids touch+mouse double flap)
   document.getElementById('app').addEventListener('pointerdown', function (e) {
     if (state === 'playing') {
-      if (e.target.closest && e.target.closest('button, .screen, label, input')) return;
-      e.preventDefault();
+      if (e.target.closest && e.target.closest('button, .screen, label, input, .icon-btn')) return;
+      var now = performance.now();
+      if (now - lastFlapTouchTs < 30) return;
+      lastFlapTouchTs = now;
+      if (e.cancelable) e.preventDefault();
       flap();
     }
   }, { passive: false });
@@ -2895,6 +3075,13 @@
     if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
   });
   if (btnSettingsClose) btnSettingsClose.addEventListener('click', function () { screenSettings.hidden = true; });
+  var btnHapticPreview = document.getElementById('btn-haptic-preview');
+  if (btnHapticPreview) {
+    btnHapticPreview.addEventListener('click', function () {
+      haptic('power');
+      showToast('Haptic pulse', 900);
+    });
+  }
   if (sensSlider) sensSlider.addEventListener('input', function () {
     sensitivity = FTStorage.setSensitivity(sensSlider.value);
     if (sensValueEl) sensValueEl.textContent = sensitivity.toFixed(2);
@@ -3024,6 +3211,31 @@
     drawFrame(true);
   }
 
+  var garageFilter = 'all'; // all | theme | seasonal
+
+  function applyGarageFilter() {
+    var hint = document.getElementById('garage-filter-hint');
+    if (hint) {
+      hint.textContent = garageFilter === 'theme'
+        ? 'Showing theme skins — Jungle · Mountains · Sea (+ matching vehicles)'
+        : garageFilter === 'seasonal'
+          ? 'Showing seasonal packs — unlock by date window or score'
+          : 'Theme skins: Jungle · Mountains · Sea (score or coins)';
+    }
+    document.querySelectorAll('#screen-garage .skin-card').forEach(function (card) {
+      var show = true;
+      if (garageFilter === 'theme') show = card.dataset.theme === '1';
+      else if (garageFilter === 'seasonal') show = card.dataset.seasonal === '1';
+      card.hidden = !show;
+    });
+    // Hide empty section titles lightly via row emptiness
+    document.querySelectorAll('#screen-garage .skin-row').forEach(function (row) {
+      var any = false;
+      row.querySelectorAll('.skin-card').forEach(function (c) { if (!c.hidden) any = true; });
+      row.classList.toggle('filter-empty', !any);
+    });
+  }
+
   function refreshGarage() {
     updateCoinHud();
     if (garageBirds) FTSkins.renderPicker(garageBirds, birdId, onPickCosmetic, tryUnlock, 'bird');
@@ -3048,12 +3260,29 @@
         weatherRow.appendChild(btn);
       });
     }
+    document.querySelectorAll('.garage-filter').forEach(function (b) {
+      var on = b.getAttribute('data-garage-filter') === garageFilter;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    applyGarageFilter();
   }
 
   if (btnGarage) btnGarage.addEventListener('click', function () {
     hideAllScreens();
     if (screenGarage) screenGarage.hidden = false;
     refreshGarage();
+  });
+  document.querySelectorAll('.garage-filter').forEach(function (b) {
+    b.addEventListener('click', function () {
+      garageFilter = b.getAttribute('data-garage-filter') || 'all';
+      document.querySelectorAll('.garage-filter').forEach(function (el) {
+        var on = el === b;
+        el.classList.toggle('active', on);
+        el.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      applyGarageFilter();
+    });
   });
   document.querySelectorAll('[data-close="garage"]').forEach(function (b) {
     b.addEventListener('click', function () { showMenu(); });
@@ -3089,6 +3318,7 @@
       var pct = Math.min(100, Math.max(0, Math.floor((Number(m.progress) / Math.max(1, Number(m.target))) * 100)));
       var rewardLabel = m.rewardType === 'fragment' ? (m.reward + ' ✦ frag') :
         m.rewardType === 'mystery' ? '🎁 Gift box' : ('🪙 ' + m.reward);
+      var unitIco = { coins: '🪙', pipes: '🧱', nearmiss: '⚡', score: '🏆', m: '🛫', boxes: '🎁', perfect: '✨', combo: '🔥' };
 
       var title = document.createElement('div');
       title.className = 'mission-title';
@@ -3102,7 +3332,7 @@
 
       var meta = document.createElement('div');
       meta.className = 'mission-meta';
-      meta.textContent = Math.min(m.progress, m.target) + ' / ' + m.target + ' · ' + rewardLabel;
+      meta.textContent = (unitIco[m.unit] || '•') + ' ' + Math.min(m.progress, m.target) + ' / ' + m.target + ' · ' + rewardLabel;
 
       card.appendChild(title);
       card.appendChild(bar);
@@ -3264,14 +3494,20 @@
 
   function refreshStreak() {
     if (!streakBody) return;
-    var s = FTStorage.getStreak();
-    var html = '<p class="hint">Day ' + s.day + ' of 7' + (s.claimed ? ' · claimed today' : '') + '</p>';
+    var st = FTStorage.getStreak();
+    var fire = st.day >= 5 ? '🔥🔥' : (st.day >= 3 ? '🔥' : '✨');
+    var html = '<p class="hint streak-status">' + fire + ' Day <strong>' + st.day + '</strong> of 7' +
+      (st.claimed ? ' · claimed today' : ' · claim ready!') + '</p>';
+    html += '<div class="streak-progress" aria-hidden="true"><span style="width:' +
+      Math.round((Math.max(0, st.day - (st.claimed ? 0 : 1)) / 7) * 100) + '%"></span></div>';
     html += '<div class="streak-days">';
     for (var i = 1; i <= 7; i++) {
-      var r = s.rewards[i - 1];
-      var done = i < s.day || (i === s.day && s.claimed);
-      var current = i === s.day && !s.claimed;
-      var label = r.type === 'coins' ? r.coins + '🪙' : r.type === 'rare_skin' ? '🐦' : '?';
+      var r = st.rewards[i - 1];
+      var done = i < st.day || (i === st.day && st.claimed);
+      var current = i === st.day && !st.claimed;
+      var label = r.type === 'coins' ? r.coins + '🪙' :
+        r.type === 'rare_skin' ? '🐦+' + (r.coins || 0) :
+        r.type === 'mystery' ? '🎁+' + (r.coins || 0) : '?';
       html += '<div class="streak-day' + (done ? ' done' : '') + (current ? ' current' : '') + '">' +
         '<span>D' + i + '</span><strong>' + label + '</strong></div>';
     }
@@ -3279,8 +3515,9 @@
     streakBody.innerHTML = html;
     var btn = document.getElementById('btn-claim-streak');
     if (btn) {
-      btn.disabled = !s.canClaim;
-      btn.textContent = s.claimed ? 'Claimed today' : 'Claim Day ' + s.day;
+      btn.disabled = !st.canClaim;
+      btn.classList.toggle('btn-streak-ready', !!st.canClaim);
+      btn.textContent = st.claimed ? 'Claimed today' : ('Claim Day ' + st.day + ' 🔥');
     }
   }
   if (btnStreak) btnStreak.addEventListener('click', function () {
@@ -3293,14 +3530,15 @@
     var r = FTStorage.claimStreak();
     if (!r) return;
     if (r.type === 'rare_skin') {
-      showToast('Day ' + r.day + ': rare skin ' + r.unlocked + '!');
+      showToast('Day ' + r.day + ': rare skin ' + r.unlocked + '!', 2200, 'medal');
       voiceCue('shabaash');
+      if (typeof spawnConfettiBurst === 'function') spawnConfettiBurst(W / 2, H * 0.35, 20);
     } else if (r.type === 'mystery') {
-      showToast('Day ' + r.day + ': +' + r.coins + ' 🪙 + gift 🎁');
+      showToast('Day ' + r.day + ': +' + r.coins + ' 🪙 + gift 🎁', 2000, 'gift');
       voiceGiftCue();
       detectSpinUnlockFromDelta(r.gifts || 1);
     } else {
-      showToast('Day ' + r.day + ': +' + r.coins + ' coins');
+      showToast('Streak Day ' + r.day + ': +' + r.coins + ' 🪙', 1800, 'medal');
     }
     updateCoinHud();
     refreshStreak();

@@ -13,7 +13,7 @@ const game = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');
 const need = [
   'timeattack', 'nocoin', 'onelife', 'RISKY', 'CLOSE!', 'Ghost',
   'Turbo', 'magnet', 'claimStreak', 'getLeaderboards', 'pickTrafficKind',
-  '3.11.0', 'squashTarget', 'voiceCue',
+  '3.12.0', 'squashTarget', 'voiceCue',
   'PERFECT!', 'DANGER', 'coinComboMult', 'grantMysteryReward', 'birdPass',
   'runPerfects', 'bossActive', 'effectiveWeather',
   'LUCKY!', 'isForgivingMode', 'firstRunProtect', 'calibMods', 'applyLuckySave', 'resolveCollision',
@@ -30,13 +30,15 @@ const need = [
   'refreshSpinHistoryUI', 'wheelEaseOut', 'cancelWheelAnim', 'spin-history-list',
   'requestAnimationFrame(frame)', 'ROOT-CAUSE FIX',
   'spawnPerfectStars', 'spawnConfettiBurst', 'runGradeFor', 'spinRarityClass', 'spinRarityLabel',
-  'wingLag', 'tipFlutter', 'tailWag', 'eyeBlink', 'vehLean', 'isForgivingMode()) g *= 0.93'
+  'wingLag', 'tipFlutter', 'tailWag', 'eyeBlink', 'vehLean', 'isForgivingMode()) g *= 0.93',
+  'spawnPowerPickupFX', 'particleBudget', 'fogWisps', 'weatherFlash', 'applyGarageFilter',
+  'garageFilter', 'powerRemainSec', 'pause-score', 'lastFlapTouchTs', 'combo-x5'
 ];
 for (const n of need) {
   if (!game.includes(n)) { console.error('MISSING in game.js:', n); ok = false; }
 }
 const storage = fs.readFileSync(path.join(root, 'js/storage.js'), 'utf8');
-for (const n of ['coins50', 'dodge20', 'nearmiss3', 'score100', 'score70', 'addFragments', 'rollBoxRarity', 'albumCompletionPct', 'pushRunDuration', 'getAvgRunDuration', 'getGiftBoxes', 'spinWheelAll', 'beginWheelSpin', 'grantSpinCoins', 'WHEEL_REWARDS', 'GIFTS_PER_SPIN', 'checkSeasonalUnlocks', 'SEASONALS', 'unlockSeasonal', 'kabootar', 'oldcity', 'jungle', 'alpine', 'seagull', 'checkThemeSkinMilestones', 'getSpinHistory', 'recordSpinHistory', 'getSpinHistoryTotal', 'SPIN_HISTORY_MAX']) {
+for (const n of ['coins50', 'dodge20', 'nearmiss3', 'score100', 'score70', 'addFragments', 'rollBoxRarity', 'albumCompletionPct', 'pushRunDuration', 'getAvgRunDuration', 'getGiftBoxes', 'spinWheelAll', 'beginWheelSpin', 'grantSpinCoins', 'WHEEL_REWARDS', 'GIFTS_PER_SPIN', 'checkSeasonalUnlocks', 'SEASONALS', 'unlockSeasonal', 'kabootar', 'oldcity', 'jungle', 'alpine', 'seagull', 'checkThemeSkinMilestones', 'getSpinHistory', 'recordSpinHistory', 'getSpinHistoryTotal', 'SPIN_HISTORY_MAX', 'perfect5', 'combo8', 'gifts3', 'fly800', 'nearmiss8', 'score40']) {
   if (!storage.includes(n)) { console.error('MISSING in storage.js:', n); ok = false; }
 }
 const audio = fs.readFileSync(path.join(root, 'js/audio.js'), 'utf8');
@@ -48,15 +50,15 @@ if (!audio.includes('independent') && !audio.includes('Independent') && !audio.i
   ok = false;
 }
 const skins = fs.readFileSync(path.join(root, 'js/skins.js'), 'utf8');
-for (const n of ['BIRD_PASSIVES', 'weatherMods', 'sunset', 'pickBossKind', 'SEASONAL_PACKS', 'seasonalEligible', 'mynah', 'hunza', 'ind_topi', 'basant_trail', 'drawBirdBody', 'drawVehicleUnder', 'rickshaw', 'mehran', 'drawWing', 'shadeColor', 'wingFlap', 'headTilt', 'wheelRot', 'jungle', 'alpine', 'seagull', 'jungle_rickshaw', 'snow_bike', 'sea_boat', 'vehicleTheme', 'Best ', 'mouthOpen', 'headBob', 'wingLag', 'tipFlutter', 'tailWag', 'eyeBlink', 'vehLean']) {
+for (const n of ['BIRD_PASSIVES', 'weatherMods', 'sunset', 'pickBossKind', 'SEASONAL_PACKS', 'seasonalEligible', 'mynah', 'hunza', 'ind_topi', 'basant_trail', 'drawBirdBody', 'drawVehicleUnder', 'rickshaw', 'mehran', 'drawWing', 'shadeColor', 'wingFlap', 'headTilt', 'wheelRot', 'jungle', 'alpine', 'seagull', 'jungle_rickshaw', 'snow_bike', 'sea_boat', 'vehicleTheme', 'Best ', 'mouthOpen', 'headBob', 'wingLag', 'tipFlutter', 'tailWag', 'eyeBlink', 'vehLean', 'theme-skin', 'skin-theme-badge', 'THEME_IDS']) {
   if (!skins.includes(n)) { console.error('MISSING in skins.js:', n); ok = false; }
 }
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-if (!sw.includes('urrjaa-v20-20260928')) { console.error('SW cache not bumped'); ok = false; }
+if (!sw.includes('urrjaa-v21-20260928')) { console.error('SW cache not bumped'); ok = false; }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (pkg.version !== '3.11.0-urrjaa') { console.error('package version', pkg.version); ok = false; }
+if (pkg.version !== '3.12.0-urrjaa') { console.error('package version', pkg.version); ok = false; }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-if (!html.includes('v3.11.0-urrjaa')) { console.error('index version tag missing'); ok = false; }
+if (!html.includes('v3.12.0-urrjaa')) { console.error('index version tag missing'); ok = false; }
 if (!html.includes('data-mode="timeattack"')) { console.error('modes missing'); ok = false; }
 if (!html.includes('run-summary')) { console.error('run summary missing'); ok = false; }
 if (!html.includes('btn-voice-preview')) { console.error('voice preview btn missing'); ok = false; }
@@ -69,6 +71,10 @@ if (!html.includes('run-grade') || !html.includes('run-time')) { console.error('
 if (!html.includes('spin-history-count')) { console.error('spin history count missing'); ok = false; }
 if (!html.includes('btn-play-pulse') || !html.includes('logo-shimmer')) { console.error('menu polish classes missing'); ok = false; }
 if (!html.includes('Run grade')) { console.error('guide run grade missing'); ok = false; }
+if (!html.includes('garage-filter') || !html.includes('data-garage-filter="theme"')) { console.error('garage theme filter missing'); ok = false; }
+if (!html.includes('pause-score') || !html.includes('pause-tip')) { console.error('pause polish missing'); ok = false; }
+if (!html.includes('settings-group') || !html.includes('btn-haptic-preview')) { console.error('settings polish missing'); ok = false; }
+if (!html.includes('Daily missions')) { console.error('guide daily missions missing'); ok = false; }
 if (!html.includes('run-gifts')) { console.error('run gifts summary missing'); ok = false; }
 if (!html.includes('screen-guide') || !html.includes('btn-guide')) { console.error('guide screen missing'); ok = false; }
 if (!html.includes('data-guide-lang="ur"')) { console.error('urdu guide tab missing'); ok = false; }
@@ -85,11 +91,12 @@ if (game.includes("'<div class=\"mission-title\">' + m.label")) { console.error(
 const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
 if (!css.includes('rim-pulse') || !css.includes('wheel-hub')) { console.error('wheel polish CSS missing'); ok = false; }
 if (!css.includes('run-grade') || !css.includes('spin-hist-badge') || !css.includes('btn-play-pulse')) { console.error('3.11 polish CSS missing'); ok = false; }
+if (!css.includes('power-chip') || !css.includes('garage-filter') || !css.includes('pause-stats') || !css.includes('streak-progress')) { console.error('3.12 polish CSS missing'); ok = false; }
 if (!css.includes('spin-history') || !css.includes('wheel-land')) { console.error('3.10 history/spin CSS missing'); ok = false; }
 if (!css.includes('.a2hs')) { console.error('a2hs CSS missing'); ok = false; }
 if (!css.includes('menu-tools') || !css.includes('gift-progress') || !css.includes('toast-close')) { console.error('3.6 polish CSS missing'); ok = false; }
 if (!html.includes('gift-progress') || !html.includes('menu-tools')) { console.error('3.6 polish HTML missing'); ok = false; }
 // Ensure post-death rarity auto-open path is gone (no Duplicate → Fragments in openMysteryBox flow)
 if (game.includes("text = 'Duplicate → +'")) { console.error('legacy duplicate fragment popup text still present'); ok = false; }
-if (ok) console.log('SMOKE OK · Urr Jaa! 3.11.0-urrjaa');
+if (ok) console.log('SMOKE OK · Urr Jaa! 3.12.0-urrjaa');
 else { console.error('SMOKE FAIL'); process.exit(1); }

@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.11.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.12.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -494,13 +494,13 @@
 
   // Daily streak Day1–7
   const STREAK_REWARDS = [
-    { day: 1, coins: 10, type: 'coins' },
-    { day: 2, coins: 15, type: 'coins' },
-    { day: 3, coins: 25, type: 'coins' },
-    { day: 4, coins: 0, type: 'mystery' },
-    { day: 5, coins: 40, type: 'coins' },
-    { day: 6, coins: 0, type: 'mystery' },
-    { day: 7, coins: 0, type: 'rare_skin', skin: 'funny' }
+    { day: 1, coins: 12, type: 'coins' },
+    { day: 2, coins: 18, type: 'coins' },
+    { day: 3, coins: 30, type: 'coins' },
+    { day: 4, coins: 5, type: 'mystery' }, // coins+gift (claim handles gift)
+    { day: 5, coins: 45, type: 'coins' },
+    { day: 6, coins: 10, type: 'mystery' },
+    { day: 7, coins: 25, type: 'rare_skin', skin: 'funny' }
   ];
 
   function getStreak() {
@@ -537,8 +537,10 @@
     } else if (reward.type === 'rare_skin') {
       unlockBird(reward.skin || 'funny');
       result.unlocked = reward.skin || 'funny';
+      if (reward.coins) { addCoins(reward.coins); result.coins = reward.coins; }
     } else if (reward.type === 'mystery') {
-      const n = 20 + Math.floor(Math.random() * 30);
+      const bonus = reward.coins | 0;
+      const n = (bonus > 0 ? bonus : 0) + 20 + Math.floor(Math.random() * 30);
       addCoins(n);
       addGiftBoxes(1);
       result.coins = n;
@@ -628,10 +630,18 @@
     { id: 'pipes', label: 'Pass 30 obstacles', target: 30, unit: 'pipes', rewardType: 'coins', reward: 25 },
     { id: 'boxes', label: 'Open 2 mystery boxes', target: 2, unit: 'boxes', rewardType: 'coins', reward: 30 },
     { id: 'clean50', label: 'Score 50 clean (no hit)', target: 50, unit: 'score', rewardType: 'coins', reward: 40 },
-    { id: 'score70', label: 'Score 70 (theme skins)', target: 70, unit: 'score', rewardType: 'coins', reward: 45 }
+    { id: 'score70', label: 'Score 70 (theme skins)', target: 70, unit: 'score', rewardType: 'coins', reward: 45 },
+    // 3.12 variety
+    { id: 'perfect5', label: 'Land 5 PERFECT passes', target: 5, unit: 'perfect', rewardType: 'coins', reward: 35 },
+    { id: 'combo8', label: 'Reach pipe combo x8', target: 8, unit: 'combo', rewardType: 'fragment', reward: 2 },
+    { id: 'gifts3', label: 'Grab 3 gifts in runs', target: 3, unit: 'boxes', rewardType: 'mystery', reward: 1 },
+    { id: 'fly800', label: 'Fly 800m total today', target: 800, unit: 'm', rewardType: 'coins', reward: 30 },
+    { id: 'nearmiss8', label: 'Land 8 near-misses', target: 8, unit: 'nearmiss', rewardType: 'coins', reward: 28 },
+    { id: 'score40', label: 'Score 40 in one run', target: 40, unit: 'score', rewardType: 'coins', reward: 22 }
   ];
   const MISSION_DEFS = MISSION_POOL; // alias
-  const DAILY_MISSION_IDS = ['coins50', 'dodge20', 'nearmiss3', 'score100'];
+  // 3.12: full pool rotates daily (was fixed 4); still picks 3/day
+  const DAILY_MISSION_IDS = MISSION_POOL.map((m) => m.id);
 
   function hashDay(str) {
     let h = 2166136261 >>> 0;
@@ -666,7 +676,7 @@
       const progress = {};
       active.forEach((id) => { progress[id] = 0; });
       // also zero legacy keys for bump compatibility
-      ['fly_m', 'coins', 'pipes', 'boxes', 'clean50', 'score70', 'coins50', 'dodge20', 'nearmiss3', 'score100'].forEach((id) => {
+      ['fly_m', 'coins', 'pipes', 'boxes', 'clean50', 'score70', 'coins50', 'dodge20', 'nearmiss3', 'score100', 'perfect5', 'combo8', 'gifts3', 'fly800', 'nearmiss8', 'score40'].forEach((id) => {
         if (progress[id] == null) progress[id] = 0;
       });
       set(KEYS.missionsProgress, JSON.stringify(progress));
@@ -720,19 +730,29 @@
     ensureMissionsDay();
     let progress = {};
     try { progress = JSON.parse(get(KEYS.missionsProgress, '{}')) || {}; } catch (_) { progress = {}; }
-    // Map legacy bump ids onto today's mission ids when relevant
+    // Map alias bump ids onto concrete mission ids (3.12 expanded)
     const map = {
       coins: 'coins50',
       pipes: 'dodge20',
       nearmiss: 'nearmiss3',
-      score: 'score100'
+      score: 'score100',
+      perfect: 'perfect5',
+      boxes: 'gifts3',
+      m: 'fly_m'
     };
     const targets = [id];
     if (map[id]) targets.push(map[id]);
-    // Also: coins bump should advance coins50; pipes→dodge20; etc.
     if (id === 'coins') targets.push('coins50');
     if (id === 'pipes') targets.push('dodge20');
+    if (id === 'nearmiss') { targets.push('nearmiss3'); targets.push('nearmiss8'); }
+    if (id === 'boxes') targets.push('gifts3');
+    if (id === 'fly_m' || id === 'm') { targets.push('fly_m'); targets.push('fly800'); }
+    if (id === 'perfect') targets.push('perfect5');
+    // unique
+    const seen = {};
     targets.forEach((tid) => {
+      if (!tid || seen[tid]) return;
+      seen[tid] = 1;
       progress[tid] = (progress[tid] || 0) + (amount || 1);
     });
     set(KEYS.missionsProgress, JSON.stringify(progress));
@@ -744,9 +764,16 @@
     try { progress = JSON.parse(get(KEYS.missionsProgress, '{}')) || {}; } catch (_) { progress = {}; }
     progress[id] = Math.max(progress[id] || 0, value | 0);
     // map score peaks
-    if (id === 'clean50' || id === 'score' || id === 'score100' || id === 'score70') {
+    if (id === 'clean50' || id === 'score' || id === 'score100' || id === 'score70' || id === 'score40') {
       progress.score100 = Math.max(progress.score100 || 0, value | 0);
       progress.score70 = Math.max(progress.score70 || 0, value | 0);
+      progress.score40 = Math.max(progress.score40 || 0, value | 0);
+    }
+    if (id === 'combo' || id === 'combo8') {
+      progress.combo8 = Math.max(progress.combo8 || 0, value | 0);
+    }
+    if (id === 'perfect' || id === 'perfect5') {
+      progress.perfect5 = Math.max(progress.perfect5 || 0, value | 0);
     }
     set(KEYS.missionsProgress, JSON.stringify(progress));
   }
