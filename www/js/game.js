@@ -1,8 +1,8 @@
 /**
- * Urr Jaa! v3.16.0-urrjaa — Mystery wheel 15s Spin once (smooth decelerate), Spin-all 15/8/5s tiering.
- * KEEP all prior features — Power VFX, Challenge select, One Life HUD, Close (X), economy, ≤3.15 systems.
+ * Urr Jaa! v3.17.0-urrjaa — Tutorial tips polish, high-score fireworks, death tip, pipe variety,
+ * SFX mix, safe-area polish, bugfixes. KEEP ALL ≤3.16 incl. 15s Mystery Spin once + Close (X).
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all prior features — different pack from 3.11–3.15.
+ * KEEP all prior features — different pack from 3.11–3.16.
  */
 (function () {
   'use strict';
@@ -152,6 +152,7 @@
   let weatherDynId = null; // dynamic weather override during run
   let lastAreaMusic = null;
   let mysteryAdUsed = false;
+  var lastHitCause = 'pipe'; // pipe | ground | ceiling | traffic (3.17 death tip)
   let nextWeatherAt = 90;
   let runStartTs = 0;
   let luckyCooldownUntil = 0;
@@ -964,7 +965,8 @@
     var kind;
     if (phase.simple || firstRunProtect()) {
       // Simple patterns: mostly pipes / soft props
-      var simple = ['pipe', 'pipe', 'tiled', 'terracotta', 'signboard', 'tree', 'kite'];
+      // 3.17: more patterned skins even in easy phase
+      var simple = ['pipe', 'pipe', 'tiled', 'terracotta', 'lattice', 'stripe', 'mosaic', 'signboard', 'tree', 'kite'];
       kind = simple[Math.floor(rng() * simple.length)];
     } else {
       kind = FTSkins.pickObstacleKind(rng, activeArea());
@@ -1224,6 +1226,7 @@
     updateA2hsTip();
     updateUnlockTeaser();
     updateLivesHud();
+    refreshMenuTip();
     drawFrame(true);
   }
 
@@ -1251,6 +1254,51 @@
     if (pts >= 30) return { letter: 'C', tier: 'c', tip: 'Getting there — watch the edges' };
     if (pts >= 12) return { letter: 'D', tier: 'd', tip: 'Warm-up done — try again' };
     return { letter: 'E', tier: 'e', tip: 'Oye — flap again!' };
+  }
+
+
+  var TUTORIAL_TIPS = [
+    'Tap early — pipes come at you fast.',
+    'Center the gap for PERFECT (+3).',
+    'Edge graze = CLOSE — stacks coin mult.',
+    'Gifts 📦 → Mystery spins (10 = 1 spin · 15s wheel).',
+    'Shield saves one hard hit.',
+    'Classic is forgiving; Hard is not.',
+    'Combo x5+ drops confetti — keep chaining!',
+    'Magnet pulls coins · Slow-mo buys time.',
+    'Practice mode: follow the ghost bird.',
+    'Time Attack: pace yourself — timer on HUD.',
+    'Near-miss CLOSE for juice & coins.',
+    'Landscape notch? Safe-area keeps HUD clear.'
+  ];
+
+  function pickTutorialTip(seed) {
+    var i = Math.abs((seed | 0) + (FTStorage.getRunCount ? FTStorage.getRunCount() : 0)) % TUTORIAL_TIPS.length;
+    return TUTORIAL_TIPS[i];
+  }
+
+  function refreshMenuTip() {
+    var el = document.getElementById('menu-tip');
+    if (!el) return;
+    el.textContent = '💡 ' + pickTutorialTip(Date.now() / 8000);
+    el.hidden = false;
+  }
+
+  function refreshDeathTip(isRecord) {
+    var el = document.getElementById('death-tip');
+    if (!el) return;
+    var tip;
+    if (isRecord) tip = '🏆 New best! Fireworks for you — can you beat it again?';
+    else if (lastHitCause === 'ground') tip = '💡 Tip: flap sooner near the ground — stay mid-gap.';
+    else if (lastHitCause === 'ceiling') tip = '💡 Tip: ease off the taps — ceiling hits count.';
+    else if (lastHitCause === 'traffic') tip = '💡 Tip: traffic dodge — wait a beat or grab Ghost.';
+    else if (score < 3) tip = '💡 Tip: tap once, wait, tap again — 2s to learn.';
+    else if (runPerfects === 0 && score >= 5) tip = '💡 Tip: aim for the gap center — PERFECT pays +3.';
+    else if (runNearMisses === 0 && score >= 8) tip = '💡 Tip: graze the edge for CLOSE juice (safe-ish!).';
+    else if (runBoxes === 0 && score >= 10) tip = '💡 Tip: snag 📦 gifts for Mystery spins (15s wheel).';
+    else tip = '💡 ' + pickTutorialTip(score + runPerfects * 3);
+    el.textContent = tip;
+    el.hidden = false;
   }
 
   function showDeath() {
@@ -1291,9 +1339,19 @@
       FTAudio.record();
       voiceCue('shabaash');
       showToast('Shabaash! New record!', 2200, 'medal');
+      // 3.17 high-score fireworks
+      spawnFireworks(W * 0.5, H * 0.32, 5);
+      setTimeout(function () { spawnFireworks(W * 0.35, H * 0.28, 3); }, 280);
+      setTimeout(function () { spawnFireworks(W * 0.65, H * 0.3, 3); }, 520);
+      if (newRecordBanner) {
+        newRecordBanner.classList.remove('fw-boom');
+        void newRecordBanner.offsetWidth;
+        newRecordBanner.classList.add('fw-boom');
+      }
     } else {
       voiceCue('haye_oye');
     }
+    refreshDeathTip(isRecord);
     if (btnContinue) {
       var allow = !isPractice() && !isChallenge() && !isOneLife() && !isTimeAttack();
       btnContinue.hidden = !allow;
@@ -1376,15 +1434,7 @@
       pauseMode.textContent = labels[playMode] || playMode;
     }
     if (pauseTip) {
-      var tips = [
-        'Center the gap for PERFECT (+3).',
-        'Edge graze = CLOSE — stacks coin mult.',
-        'Gifts 📦 → Mystery spins (10 = 1 spin).',
-        'Shield saves one hard hit.',
-        'Classic is forgiving; Hard is not.',
-        'Combo x5+ drops confetti — keep chaining!'
-      ];
-      pauseTip.textContent = tips[Math.floor(Math.random() * tips.length)];
+      pauseTip.textContent = '💡 ' + pickTutorialTip(Math.floor(Math.random() * 99) + score);
     }
   }
   function resumeGame() {
@@ -1579,11 +1629,13 @@
     if (bird.y + halfH >= groundY) {
       var overG = bird.y + halfH - groundY;
       if (isForgivingMode() && overG < cornerTol * 0.85) return 'soft';
+      lastHitCause = 'ground';
       return 'hard';
     }
     if (bird.y - halfH <= 0) {
       var overC = halfH - bird.y;
       if (isForgivingMode() && overC < cornerTol * 0.85) return 'soft';
+      lastHitCause = 'ceiling';
       return 'hard';
     }
     var insetMul = isForgivingMode() ? 0.82 : 0.48; // 3.11: Classic softer body inset
@@ -1599,14 +1651,14 @@
         var penTop = (by0 + bh) - p.gapY; // how far into the pipe edge
         var cornerX = Math.min(Math.abs((bx + bw) - p.x), Math.abs(bx - (p.x + pw)));
         if (isForgivingMode() && penTop > 0 && penTop <= cornerTol && cornerX <= cornerTol + 10) softHit = true;
-        else return 'hard';
+        else { lastHitCause = 'pipe'; return 'hard'; }
       }
       var botY = p.gapY + gap;
       if (rectsOverlap(bx, by0, bw, bh, p.x, botY, pw, groundY - botY)) {
         var penBot = botY - by0;
         var cornerXb = Math.min(Math.abs((bx + bw) - p.x), Math.abs(bx - (p.x + pw)));
         if (isForgivingMode() && penBot > 0 && penBot <= cornerTol && cornerXb <= cornerTol + 10) softHit = true;
-        else return 'hard';
+        else { lastHitCause = 'pipe'; return 'hard'; }
       }
     }
     for (var j = 0; j < traffic.length; j++) {
@@ -1621,7 +1673,7 @@
           var overlapY = Math.min(by0 + bh, ty + th) - Math.max(by0, ty);
           if (overlapX <= cornerTol + 8 || overlapY <= cornerTol + 6) softHit = true;
           else return 'hard';
-        } else return 'hard';
+        } else { lastHitCause = 'traffic'; return 'hard'; }
       }
     }
     return softHit ? 'soft' : false;
@@ -1740,6 +1792,56 @@
       });
     }
     trimParticles();
+  }
+
+  /** 3.17: high-score fireworks — rockets that bloom into star bursts. */
+  function spawnFireworks(cx, cy, waves) {
+    if (reduceMotion) return;
+    waves = waves || 3;
+    var cols = ['#ff6b6b', '#ffd93d', '#4ecdc4', '#c084fc', '#60a5fa', '#f472b6', '#fff'];
+    for (var w = 0; w < waves; w++) {
+      var ox = cx + (rng() - 0.5) * (W * 0.45);
+      var oy = cy + rng() * 40;
+      particles.push({
+        x: ox, y: H - GROUND_H - 8,
+        vx: (ox - cx) * 0.15,
+        vy: -220 - rng() * 160,
+        life: 0.55 + rng() * 0.25, max: 0.9,
+        color: cols[w % cols.length],
+        r: 3.2,
+        kind: 'fw_rocket',
+        bloomY: oy,
+        bloomColor: cols[(w + 2) % cols.length]
+      });
+    }
+    trimParticles();
+  }
+
+  function bloomFirework(pt) {
+    var cols = ['#ff6b6b', '#ffd93d', '#4ecdc4', '#c084fc', '#60a5fa', '#f472b6', '#fff'];
+    var n = 14 + Math.floor(rng() * 8);
+    for (var i = 0; i < n; i++) {
+      var a = (Math.PI * 2 * i) / n + rng() * 0.2;
+      var sp = 70 + rng() * 140;
+      particles.push({
+        x: pt.x, y: pt.y,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        life: 0.55 + rng() * 0.35, max: 1,
+        color: cols[i % cols.length],
+        r: 2 + rng() * 2.4,
+        kind: 'fw_spark',
+        rot: rng() * Math.PI
+      });
+    }
+    particles.push({
+      x: pt.x, y: pt.y, vx: 0, vy: 0,
+      life: 0.35, max: 0.35,
+      color: pt.bloomColor || 'rgba(255,217,61,.55)',
+      r: 6, kind: 'ring', grow: 55
+    });
+    if (FTAudio && typeof FTAudio.firework === 'function') {
+      try { FTAudio.firework(); } catch (e) { /* ignore */ }
+    }
   }
 
   function spawnCoinPop(x, y) {
@@ -2533,6 +2635,16 @@
           pt.vy += 90 * dt;
           pt.rot = (pt.rot || 0) + (pt.spin || 6) * dt;
           pt.vx *= 0.99;
+        } else if (pt.kind === 'fw_rocket') {
+          pt.vy += 40 * dt;
+          if (pt.y <= (pt.bloomY || H * 0.35) || pt.life < 0.12) {
+            bloomFirework(pt);
+            pt.life = 0;
+          }
+        } else if (pt.kind === 'fw_spark') {
+          pt.vy += 110 * dt;
+          pt.vx *= 0.985;
+          pt.rot = (pt.rot || 0) + 5 * dt;
         } else if (pt.kind === 'star') {
           pt.vy += 60 * dt;
           pt.rot = (pt.rot || 0) + 3 * dt;
@@ -3093,6 +3205,35 @@
         ctx.translate(pt.x, pt.y);
         ctx.rotate(pt.rot || 0);
         ctx.fillRect(-pt.r, -pt.r * 0.4, pt.r * 2, pt.r * 0.8);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (pt.kind === 'fw_rocket') {
+        ctx.globalAlpha = a;
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = a * 0.5;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(pt.x - 1, pt.y, 2, 10);
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (pt.kind === 'fw_spark') {
+        ctx.globalAlpha = a;
+        ctx.fillStyle = pt.color;
+        ctx.save();
+        ctx.translate(pt.x, pt.y);
+        ctx.rotate(pt.rot || 0);
+        ctx.beginPath();
+        ctx.moveTo(0, -pt.r);
+        ctx.lineTo(pt.r * 0.45, 0);
+        ctx.lineTo(0, pt.r);
+        ctx.lineTo(-pt.r * 0.45, 0);
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
         ctx.globalAlpha = 1;
         continue;

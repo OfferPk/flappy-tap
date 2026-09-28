@@ -1,5 +1,25 @@
 # Urr Jaa! STATUS
 
+## Current: **3.17.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.16)
+- **Tutorial tips polish** — shared tip pool on menu, pause, and death
+- **High-score fireworks** — rocket blooms + banner pulse + firework SFX on new best
+- **Death tip** — contextual coaching (ground / ceiling / traffic / early run / PERFECT)
+- **Pipe variety** — lattice & stripe pipe skins in pools + easy-phase mix
+- **SFX mix** — pitch/gain jitter on flap / score / coin / hit
+- **Safe-area** — toast + HUD + panels respect left/right insets in portrait too
+- KEEP ALL ≤3.16 incl. **15s Mystery Spin once**, Close (X), Power VFX, …
+
+SW cache: `urrjaa-v26-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.17.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.17.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.16.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.15)

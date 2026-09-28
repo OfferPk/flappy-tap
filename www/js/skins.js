@@ -945,18 +945,18 @@
   const OBSTACLE_KINDS = [
     'pipe', 'kite', 'rickshaw', 'cycle', 'bus', 'signboard',
     'tree', 'construction', 'brick', 'wires', 'clothesline', 'truck',
-    'mosaic', 'terracotta', 'neon_pipe', 'tiled'
+    'mosaic', 'terracotta', 'neon_pipe', 'tiled', 'lattice', 'stripe'
   ];
 
   const AREA_OBSTACLES = {
-    city: ['pipe', 'mosaic', 'neon_pipe', 'signboard', 'bus', 'rickshaw', 'construction'],
-    bridge: ['pipe', 'tiled', 'wires', 'signboard', 'bus', 'truck'],
+    city: ['pipe', 'mosaic', 'neon_pipe', 'lattice', 'stripe', 'signboard', 'bus', 'rickshaw', 'construction'],
+    bridge: ['pipe', 'tiled', 'lattice', 'wires', 'signboard', 'bus', 'truck'],
     mountains: ['pipe', 'terracotta', 'tree', 'brick', 'kite'],
     village: ['pipe', 'terracotta', 'tree', 'clothesline', 'cycle', 'kite'],
     rain: ['pipe', 'tiled', 'wires', 'signboard', 'bus'],
     night: ['pipe', 'neon_pipe', 'signboard', 'bus', 'wires', 'rickshaw'],
     desert: ['pipe', 'terracotta', 'brick', 'construction', 'truck'],
-    lahore: ['pipe', 'mosaic', 'kite', 'rickshaw', 'signboard', 'bus'],
+    lahore: ['pipe', 'mosaic', 'stripe', 'kite', 'rickshaw', 'signboard', 'bus'],
     islamabad: ['pipe', 'tiled', 'tree', 'signboard', 'kite'],
     karachi: ['pipe', 'neon_pipe', 'bus', 'signboard', 'rickshaw', 'truck'],
     murree: ['pipe', 'tree', 'kite', 'wires'],
@@ -965,7 +965,7 @@
     gwadar: ['pipe', 'bus', 'signboard', 'truck', 'wires'],
     quetta: ['pipe', 'signboard', 'rickshaw', 'brick', 'wires'],
     monsoon: ['pipe', 'tree', 'clothesline', 'kite', 'wires'],
-    oldcity: ['pipe', 'mosaic', 'terracotta', 'clothesline', 'brick', 'wires', 'signboard']
+    oldcity: ['pipe', 'mosaic', 'terracotta', 'stripe', 'lattice', 'clothesline', 'brick', 'wires', 'signboard']
   };
 
   function pickObstacleKind(rng, areaId) {
@@ -974,7 +974,7 @@
     // 3.14: fewer plain pipes — more patterned skins
     if (r < 0.16) return 'pipe';
     if (r < 0.28) {
-      const fancy = ['mosaic', 'terracotta', 'neon_pipe', 'tiled'];
+      const fancy = ['mosaic', 'terracotta', 'neon_pipe', 'tiled', 'lattice', 'stripe'];
       return fancy[Math.floor(rng() * fancy.length)];
     }
     return pool[Math.floor(rng() * pool.length)];
@@ -985,11 +985,15 @@
     const body = skin === 'terracotta' ? '#c0392b' :
       skin === 'mosaic' ? (pal.neon || '#1abc9c') :
       skin === 'neon_pipe' ? '#0f3460' :
-      skin === 'tiled' ? '#5d6d7e' : pal.pipe;
+      skin === 'tiled' ? '#5d6d7e' :
+      skin === 'lattice' ? '#2c3e50' :
+      skin === 'stripe' ? '#1a5276' : pal.pipe;
     const cap = skin === 'terracotta' ? '#e67e22' :
       skin === 'mosaic' ? '#f1c40f' :
       skin === 'neon_pipe' ? (pal.neon || '#4ecdc4') :
-      skin === 'tiled' ? '#95a5a6' : pal.pipeCap;
+      skin === 'tiled' ? '#95a5a6' :
+      skin === 'lattice' ? '#f39c12' :
+      skin === 'stripe' ? '#e74c3c' : pal.pipeCap;
     function column(y0, y1) {
       const h = y1 - y0;
       if (h <= 0) return;
@@ -1020,6 +1024,27 @@
         ctx.globalAlpha = 1;
         ctx.fillStyle = 'rgba(78,205,196,0.15)';
         ctx.fillRect(p.x, y0, 4, h);
+      } else if (skin === 'lattice') {
+        // 3.17 diamond lattice overlay
+        ctx.strokeStyle = 'rgba(243,156,18,0.55)';
+        ctx.lineWidth = 1.4;
+        for (let y = y0 + 6; y < y1 - 4; y += 12) {
+          ctx.beginPath();
+          ctx.moveTo(p.x + 4, y);
+          ctx.lineTo(p.x + p.w / 2, y + 6);
+          ctx.lineTo(p.x + p.w - 4, y);
+          ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(p.x + 2, y0, 3, h);
+      } else if (skin === 'stripe') {
+        // 3.17 bold diagonal / band stripes
+        for (let y = y0; y < y1; y += 16) {
+          ctx.fillStyle = ((Math.floor((y - y0) / 16) % 2) === 0) ? 'rgba(231,76,60,0.55)' : 'rgba(255,255,255,0.12)';
+          ctx.fillRect(p.x, y, p.w, 10);
+        }
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(p.x + p.w - 6, y0, 6, h);
       }
     }
     column(0, p.gapY);
@@ -1040,7 +1065,7 @@
     const gap = p.gap;
     const kind = p.kind || 'pipe';
     ctx.globalAlpha = ghost ? 0.55 : 1;
-    if (kind === 'pipe' || !kind || kind === 'mosaic' || kind === 'terracotta' || kind === 'neon_pipe' || kind === 'tiled') {
+    if (kind === 'pipe' || !kind || kind === 'mosaic' || kind === 'terracotta' || kind === 'neon_pipe' || kind === 'tiled' || kind === 'lattice' || kind === 'stripe') {
       drawPipeSkin(ctx, p, pal, groundY, gap, kind === 'pipe' || !kind ? 'pipe' : kind);
     } else if (kind === 'kite') {
       drawKiteColumn(ctx, p.x, 0, p.gapY, p.w, '#e74c3c');

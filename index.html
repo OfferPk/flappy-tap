@@ -43,7 +43,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.16.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.17.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
@@ -65,6 +65,7 @@
         </div>
       </div>
       <p class="hint">Tap / Space · Coins in gaps · Esc pause · 2s to learn</p>
+      <p id="menu-tip" class="menu-tip hint" role="status">💡 Tip loads…</p>
       <p class="runs-line">Runs: <span id="total-runs">0</span></p>
       <div id="a2hs" class="a2hs" hidden role="status">
         <span><strong>Install for offline play</strong> — browser menu → <strong>Add to Home Screen</strong><br /><em class="a2hs-ur">Home screen par add karein — offline chalega. 📱</em></span>
@@ -192,6 +193,7 @@
       <button type="button" class="panel-close" data-panel-close="death" aria-label="Close">X</button>
       <h2>Run Summary</h2>
       <div id="new-record-banner" class="new-record-banner" hidden>🏆 NEW RECORD!</div>
+      <p id="death-tip" class="death-tip hint" role="status" hidden></p>
       <div id="medal-display" class="medal" hidden>
         <div class="medal-disc" aria-hidden="true"></div>
         <span id="medal-label">Medal</span>
@@ -336,6 +338,7 @@
           <li><strong>Power VFX:</strong> Slow-mo purple edge, Ghost afterimage, Turbo speed lines.</li>
           <li><strong>One Life:</strong> heart HUD — no continue.</li>
           <li><strong>Mystery wheel:</strong> Spin once is a full <strong>15s</strong> decelerate into the segment; Spin all uses 15s / 8s / 5s tiering.</li>
+          <li><strong>Tips &amp; fireworks:</strong> menu/pause/death tips · high-score fireworks · lattice &amp; stripe pipes.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>

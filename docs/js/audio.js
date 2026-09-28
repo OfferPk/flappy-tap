@@ -75,28 +75,47 @@
     src.stop(t0 + dur + 0.02);
   }
 
+  /** 3.17 SFX mix: small random pitch/gain so flaps/scores don't sound identical. */
+  function mixJitter(base, spread) {
+    return base + (Math.random() - 0.5) * (spread == null ? 40 : spread);
+  }
+
   function flap() {
-    tone(480, 0.055, 'square', 0.07);
-    setTimeout(function () { tone(680, 0.05, 'square', 0.055); }, 28);
-    setTimeout(function () { tone(820, 0.04, 'triangle', 0.04); }, 55);
+    var j = mixJitter(0, 36);
+    var v = 0.06 + Math.random() * 0.025;
+    tone(480 + j, 0.055, 'square', v);
+    setTimeout(function () { tone(680 + j * 0.8, 0.05, 'square', v * 0.8); }, 28);
+    setTimeout(function () { tone(820 + j * 0.5, 0.04, Math.random() > 0.45 ? 'triangle' : 'sine', v * 0.6); }, 55);
   }
 
   function score() {
-    tone(880, 0.07, 'sine', 0.1);
-    setTimeout(function () { tone(1175, 0.09, 'sine', 0.08); }, 55);
-    setTimeout(function () { tone(1480, 0.06, 'triangle', 0.05); }, 100);
+    var j = mixJitter(0, 50);
+    tone(880 + j, 0.07, 'sine', 0.1);
+    setTimeout(function () { tone(1175 + j * 0.7, 0.09, 'sine', 0.08); }, 55);
+    setTimeout(function () { tone(1480 + j * 0.4, 0.06, Math.random() > 0.5 ? 'triangle' : 'sine', 0.05); }, 100);
   }
 
   function coin() {
-    tone(1200, 0.05, 'sine', 0.09);
-    setTimeout(function () { tone(1600, 0.07, 'sine', 0.07); }, 40);
-    setTimeout(function () { tone(2000, 0.05, 'triangle', 0.04); }, 80);
+    var j = mixJitter(0, 60);
+    tone(1200 + j, 0.05, 'sine', 0.085 + Math.random() * 0.02);
+    setTimeout(function () { tone(1600 + j * 0.6, 0.07, 'sine', 0.07); }, 40);
+    setTimeout(function () { tone(2000 + j * 0.3, 0.05, 'triangle', 0.04); }, 80);
   }
 
   function hit() {
-    noiseBurst(0.12, 0.12);
-    tone(140, 0.22, 'sawtooth', 0.14, 60);
-    setTimeout(function () { tone(70, 0.28, 'triangle', 0.1); }, 40);
+    var j = mixJitter(0, 25);
+    noiseBurst(0.12, 0.11 + Math.random() * 0.03);
+    tone(140 + j, 0.22, 'sawtooth', 0.14, 60);
+    setTimeout(function () { tone(70 + j * 0.4, 0.28, 'triangle', 0.1); }, 40);
+  }
+
+  /** Soft firework pop for high-score celebration (3.17). */
+  function firework() {
+    noiseBurst(0.06, 0.05);
+    var j = mixJitter(0, 80);
+    tone(520 + j, 0.05, 'sine', 0.07);
+    setTimeout(function () { tone(780 + j * 0.5, 0.07, 'triangle', 0.06); }, 35);
+    setTimeout(function () { tone(1100 + j * 0.3, 0.08, 'sine', 0.045); }, 80);
   }
 
   function powerup() {
@@ -740,7 +759,7 @@
   hookVoices();
 
   global.FTAudio = {
-    flap: flap, score: score, coin: coin, hit: hit, powerup: powerup, nearmiss: nearmiss, chirp: chirp,
+    flap: flap, score: score, coin: coin, hit: hit, firework: firework, powerup: powerup, nearmiss: nearmiss, chirp: chirp,
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,

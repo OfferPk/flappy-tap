@@ -458,15 +458,19 @@ html.reduce-motion #app.shake { animation: none; }
 .toast {
   position: absolute;
   bottom: calc(28px + var(--safe-bottom));
-  left: 50%;
-  transform: translateX(-50%);
+  left: max(12px, calc(50% - 200px + var(--safe-left)));
+  right: max(12px, calc(50% - 200px + var(--safe-right)));
+  margin-left: auto;
+  margin-right: auto;
+  width: fit-content;
+  max-width: min(90%, calc(100% - 24px - var(--safe-left) - var(--safe-right)));
+  transform: none;
   z-index: 30;
   background: var(--panel);
   color: var(--text);
   padding: 12px 20px;
   border-radius: 12px;
   font-size: 0.9rem;
-  max-width: 90%;
   text-align: center;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 24px rgba(0,0,0,.35);
@@ -2014,3 +2018,56 @@ html.reduce-motion .splash-bar > span { width: 70%; }
   }
 }
 html.reduce-motion .unlock-teaser.teaser-ready { animation: none; }
+
+
+/* ——— v3.17: tutorial tips, fireworks, death tip, safe-area ——— */
+.menu-tip {
+  margin: 4px 12px 2px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: #cfe8ff;
+  background: rgba(30, 58, 95, 0.55);
+  border: 1px solid rgba(125, 211, 252, 0.25);
+  border-radius: 10px;
+  max-width: min(340px, calc(100% - 24px - var(--safe-left) - var(--safe-right)));
+  text-align: center;
+}
+.death-tip {
+  margin: 8px auto 10px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  color: #ffe8a3;
+  background: rgba(92, 61, 12, 0.55);
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 12px;
+  max-width: min(380px, calc(100% - 24px - var(--safe-left) - var(--safe-right)));
+  text-align: center;
+  line-height: 1.35;
+}
+.death-tip[hidden] { display: none !important; }
+.new-record-banner.fw-boom {
+  animation: fw-banner-pop 0.85s cubic-bezier(.2,.85,.25,1);
+  box-shadow: 0 0 28px rgba(255, 217, 61, 0.65), 0 0 60px rgba(244, 114, 182, 0.35);
+}
+@keyframes fw-banner-pop {
+  0% { transform: scale(0.7); opacity: 0.4; filter: brightness(1.4); }
+  40% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+html.reduce-motion .new-record-banner.fw-boom { animation: none; }
+
+/* Always apply horizontal safe-area (portrait notch / home indicator) */
+#app {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+#mode-badge { left: calc(12px + var(--safe-left)); }
+#lives-hud { left: calc(12px + var(--safe-left)); }
+#coin-hud, #timer-hud { right: calc(12px + var(--safe-right)); }
+#btn-mute { right: calc(12px + var(--safe-right)); }
+#btn-pause { right: calc(64px + var(--safe-right)); }
+.panel-close { right: calc(10px + var(--safe-right)); }
+.screen.panel-screen, .screen.settings-screen, .screen.pause-screen {
+  padding-left: calc(16px + var(--safe-left));
+  padding-right: calc(16px + var(--safe-right));
+}
