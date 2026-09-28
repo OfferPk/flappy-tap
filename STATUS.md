@@ -1,32 +1,28 @@
-# STATUS — Urr Jaa! v3.12.0-urrjaa
+# STATUS — Urr Jaa! v3.13.0-urrjaa
 
 **Path:** `/workspace/games/flappy-tap` (repo OfferPk/flappy-tap; UI title **Urr Jaa!**)
 **Owner:** Mia Smith
-**Updated:** 2026-09-28 ~20:10 Asia/Karachi (PKT)
-**Version:** **3.12.0-urrjaa**
-**SW cache:** `urrjaa-v21-20260928`
-**Capacitor appId:** `com.offerpk.urrjaa`
+**Updated:** 2026-09-28 ~20:20 Asia/Karachi (PKT)
+**Version:** **3.13.0-urrjaa**
+**SW cache:** `urrjaa-v22-20260928`
 
 ## Sync
-- Fetched/merged `origin/main` before work (already up to date @ 3.11.0).
-- Shipped: commit `1d9d3ef` · tag `v3.12.0-urrjaa` · Pages `docs/` · release zip
+- Fetched/merged `origin/main` (up to date @ 3.12.0).
+- Shipped: commit TBD · tag `v3.13.0-urrjaa` · Pages · release zip
 
-## ADD — v3.12.0 pack (different from 3.11)
-- [x] Daily mission variety (PERFECT/combo/gifts/fly + rotate full pool)
-- [x] Streak juice (progress, rewards, claim)
-- [x] Weather FX (fog wisps, rain splash, lightning)
-- [x] Power-up clarity + pickup FX + HUD timers
-- [x] Garage theme/seasonal filters + badges
-- [x] Combo x5 juice · Pause tip/stats · Settings groups + haptic preview
-- [x] Perf: adaptive particle budget · touch debounce
-- [x] SW `urrjaa-v21-20260928`
-- [x] KEEP all ≤3.11
-
-### Ship
-- [x] check + smoke + build:web + pack:windows
-- [x] push main · tag · Pages · release zip
+## ADD — v3.13.0 (new vs 3.11–3.12)
+- [x] Boss/chase juice (pulse veil, timer bar, multi-wave, clear confetti)
+- [x] Near-miss camera kick
+- [x] Medal gallery on Boards + medal pop
+- [x] Share card preview
+- [x] A2HS tip (after 2 runs, local dismiss)
+- [x] Night city window lights + neon pipes
+- [x] Magnet aura + suction trail
+- [x] Continue/revive stub UX
+- [x] a11y contrast + focus rings
+- [x] KEEP ≤3.12
 
 ## Links
 - Live: https://offerpk.github.io/flappy-tap/
-- Release: https://github.com/OfferPk/flappy-tap/releases/tag/v3.12.0-urrjaa
-- Zip: https://github.com/OfferPk/flappy-tap/releases/download/v3.12.0-urrjaa/urr-jaa-web-windows.zip
+- Release: https://github.com/OfferPk/flappy-tap/releases/tag/v3.13.0-urrjaa
+- Zip: https://github.com/OfferPk/flappy-tap/releases/download/v3.13.0-urrjaa/urr-jaa-web-windows.zip

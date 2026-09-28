@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.12.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.13.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,15 +29,14 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.12.0-urrjaa)
+## Features (v3.13.0-urrjaa)
 
-- **Missions 3.12:** larger daily pool (PERFECT, combo, gifts, fly…) · 3 rotate/day
-- **Streak 3.12:** progress bar · richer day rewards · claim juice
-- **Weather 3.12:** fog wisps · rain splash · storm lightning flash
-- **Power-ups 3.12:** glow + labels · pickup FX · HUD countdown chips
-- **Garage 3.12:** All / Themes / Seasonals filter · theme badges
-- **Combo / Pause / Perf:** x5 pulse · pause tip+stats · adaptive particle caps · touch debounce
-- **Theme skins + Mystery spin** kept from ≤3.11
+- **Chase 3.13:** boss DANGER pulse + timer bar · multi-wave traffic · clear confetti
+- **Near-miss camera** kick toward graze edge
+- **Medal gallery** on Boards · share score-card preview
+- **Night city** window lights + neon pipes · magnet aura/trail
+- **Continue revive** stub UX · A2HS after 2 runs · a11y contrast/focus
+- **≤3.12 systems kept** (missions, weather FX, garage filters, Classic feel, 3D, Mystery…)
 
 - **Polish 3.6.0:** richer bird/vehicle art · juice/toasts · Mystery progress · voice variety · Guide/menu polish
 - **Collection depth:** +8 desi birds · +6 areas · 4 offline seasonal packs (Azadi / Eid / Winter / Basant)

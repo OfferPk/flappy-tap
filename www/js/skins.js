@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.12.0-urrjaa — garage theme badges/filters + prior 3D motion; keeps ≤3.11.
+ * Urr Jaa! v3.13.0-urrjaa — night neon lighting + prior garage/3D; keeps ≤3.12.
  * Canvas-drawn; wings/hats/mouth are visual-only (hitbox ignores them).
  */
 (function (global) {
@@ -1143,6 +1143,16 @@
       pal.sun = 'rgba(220,220,255,0.55)';
       pal.cloud = 'rgba(180,190,220,0.35)';
       pal.stars = true;
+      pal.night = true;
+      // Neon city accents (3.13)
+      if (envId === 'city' || envId === 'lahore' || envId === 'karachi' || envId === 'oldcity') {
+        pal.pipe = '#1a3d5c';
+        pal.pipeCap = '#e91e8c';
+        pal.neon = '#4ecdc4';
+        pal.grass = '#2d5a3a';
+        pal.ground = '#2a2430';
+        pal.stripe = '#3d3550';
+      }
     }
     if (weatherId === 'fog') {
       pal.cloud = 'rgba(220,220,230,0.55)';

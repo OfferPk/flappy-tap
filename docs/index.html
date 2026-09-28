@@ -31,7 +31,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.12.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.13.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary btn-play-pulse" type="button">▶ Play</button>
@@ -53,9 +53,9 @@
       </div>
       <p class="hint">Tap / Space · Coins in gaps · Esc pause · 2s to learn</p>
       <p class="runs-line">Runs: <span id="total-runs">0</span></p>
-      <div id="a2hs" class="a2hs" hidden>
-        <span>Install Urr Jaa!: browser menu → <strong>Add to Home Screen</strong><br /><em class="a2hs-ur">Home screen par add karein — offline chalega.</em></span>
-        <button type="button" id="a2hs-ok" class="btn tiny">OK</button>
+      <div id="a2hs" class="a2hs" hidden role="status">
+        <span><strong>Install for offline play</strong> — browser menu → <strong>Add to Home Screen</strong><br /><em class="a2hs-ur">Home screen par add karein — offline chalega. 📱</em></span>
+        <button type="button" id="a2hs-ok" class="btn tiny" aria-label="Dismiss install tip">Got it</button>
       </div>
     </div>
 
@@ -187,7 +187,8 @@
         <div class="sum-row muted-row"><span id="mode-death-label">Mode</span><strong id="mode-death-value">Classic</strong></div>
       </div>
       <div class="btn-col">
-        <button id="btn-continue" class="btn reward" type="button">▶ Continue (Ad)</button>
+        <button id="btn-continue" class="btn reward continue-ready" type="button">▶ Revive · Continue (Ad stub)</button>
+        <p id="continue-hint" class="hint continue-hint">Watch a short stub ad to revive at your score (once per run).</p>
         <button id="btn-mystery-ad" class="btn reward" type="button">🎁 +1 Gift (Ad)</button>
         <button id="btn-retry" class="btn primary" type="button">RETRY</button>
         <button id="btn-share" class="btn secondary" type="button">📤 Share</button>
@@ -296,6 +297,8 @@
           <li><strong>Feel:</strong> Classic is smoother &amp; forgiving; Hard and One Life stay strict.</li>
           <li><strong>Run grade:</strong> S–E on the summary — PERFECT &amp; CLOSE boost it.</li>
           <li><strong>Daily missions:</strong> 3 rotate each day (PERFECT, combo, gifts, fly…).</li>
+          <li><strong>Chase events:</strong> DANGER bosses every stretch — survive the timer.</li>
+          <li><strong>Share:</strong> preview your score card before sending.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant packs unlock by local date windows or score milestones — no server seasons.</li>
@@ -349,6 +352,20 @@
         <div class="btn-col">
           <button id="btn-spin-unlock-go" class="btn primary" type="button">Open Mystery Rewards</button>
           <button id="btn-spin-unlock-dismiss" class="btn ghost" type="button">Later</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Share card preview (3.13) -->
+    <div id="share-preview" class="share-preview" hidden>
+      <div class="share-card" role="dialog" aria-modal="true" aria-labelledby="share-preview-heading">
+        <h3 id="share-preview-heading">Share run</h3>
+        <div id="share-preview-body" class="share-card-body"></div>
+        <p id="share-preview-text" class="share-preview-text hint"></p>
+        <div class="btn-col">
+          <button id="btn-share-confirm" class="btn primary" type="button">📤 Share</button>
+          <button id="btn-share-copy" class="btn secondary" type="button">Copy text</button>
+          <button id="btn-share-close" class="btn ghost" type="button">Close</button>
         </div>
       </div>
     </div>

@@ -1601,3 +1601,135 @@ html.reduce-motion .btn-streak-ready { animation: none !important; }
 #game, #app {
   touch-action: manipulation;
 }
+
+/* ——— v3.13: boss/chase, share card, medals, A2HS, continue, a11y contrast ——— */
+.share-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8,12,24,.72);
+  backdrop-filter: blur(4px);
+}
+.share-preview[hidden] { display: none !important; }
+.share-card {
+  width: min(320px, 100%);
+  padding: 16px 16px 14px;
+  border-radius: 18px;
+  background: linear-gradient(165deg, #1e293b, #0f172a);
+  border: 1px solid rgba(255,217,61,.35);
+  box-shadow: 0 16px 40px rgba(0,0,0,.45);
+  color: #f8fafc;
+}
+.share-card h3 { margin: 0 0 10px; text-align: center; color: #ffe082; }
+.share-card-body {
+  text-align: center;
+  padding: 14px 10px;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+}
+.share-card-title { font-size: 0.85rem; font-weight: 700; color: #99f6e4; margin-bottom: 6px; }
+.share-card-score {
+  font-size: 2.6rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(78,205,196,.35);
+}
+.share-card-meta { margin-top: 8px; font-size: 0.78rem; color: rgba(255,255,255,.78); }
+.share-preview-text {
+  font-size: 0.72rem !important;
+  max-height: 4.5em;
+  overflow: auto;
+  color: rgba(255,255,255,.7) !important;
+}
+.share-preview.share-pop .share-card { animation: share-pop-in .28s ease-out; }
+@keyframes share-pop-in {
+  from { transform: translateY(10px) scale(.96); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.medal-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: min(340px, 100%);
+  margin: 0 auto 14px;
+}
+.medal-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+.medal-tile .medal-disc {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+.medal-tile em { font-style: normal; font-size: 0.62rem; color: rgba(255,255,255,.65); }
+.medal-tile.locked { opacity: 0.45; filter: grayscale(.7); }
+.medal-tile.earned { box-shadow: 0 0 0 1px rgba(255,217,61,.35); }
+.medal.medal-pop { animation: medal-pop .45s cubic-bezier(.2,.8,.2,1); }
+@keyframes medal-pop {
+  0% { transform: scale(.7); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.continue-hint {
+  margin: -4px 0 8px !important;
+  font-size: 0.72rem !important;
+  color: #fde68a !important;
+  max-width: 280px;
+}
+.btn.continue-ready {
+  box-shadow: 0 0 0 0 rgba(74,222,128,.4);
+  animation: play-pulse 2.2s ease-in-out infinite;
+}
+.btn.continue-used { opacity: 0.7; }
+
+.a2hs {
+  border: 1px solid rgba(255,217,61,.45) !important;
+  background: rgba(15,23,42,.94) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.a2hs strong { color: #ffe082; }
+.a2hs-ur { color: #c4b5fd !important; }
+.a2hs-visible { animation: a2hs-in .4s ease-out; }
+@keyframes a2hs-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* a11y contrast */
+.hint, .setting-hint, .tagline, .runs-line, .muted-row span {
+  color: rgba(248,250,252,.78) !important;
+}
+.btn:focus-visible, .skin-card:focus-visible, .chip:focus-visible, .garage-filter:focus-visible,
+.guide-tab:focus-visible, .icon-btn:focus-visible {
+  outline: 2px solid #ffe082;
+  outline-offset: 2px;
+}
+.board-row span { color: rgba(248,250,252,.82); }
+.board-row strong { color: #fff; }
+
+html.reduce-motion .share-preview.share-pop .share-card,
+html.reduce-motion .medal.medal-pop,
+html.reduce-motion .a2hs-visible,
+html.reduce-motion .btn.continue-ready {
+  animation: none !important;
+}

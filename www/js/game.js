@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.12.0-urrjaa — missions/streak, weather FX, power-ups, garage themes, combo, pause/perf.
+ * Urr Jaa! v3.13.0-urrjaa — boss juice, near-miss camera, medals/share/A2HS, night lights, magnet, continue, a11y.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all prior features — different pack from 3.11 feel/3D/mystery.
+ * KEEP all prior features — different pack from 3.11–3.12.
  */
 (function () {
   'use strict';
@@ -75,6 +75,12 @@
   let rainDrops = [];
   let fogWisps = [];
   let weatherFlash = 0; // storm lightning alpha
+  let camKickX = 0;
+  let camKickY = 0;
+  let camKickZoom = 0;
+  let nearMissCamUntil = 0;
+  let bossPulse = 0;
+
 
   let scorePops = [];
   let score = 0;
@@ -134,6 +140,7 @@
   let runBestCoinCombo = 0;
   let bossActive = false;
   let bossUntil = 0;
+  let bossDurMs = 30000;
   let bossKind = null;
   let nextBossAt = BOSS_EVERY_M;
   let weatherDynId = null; // dynamic weather override during run
@@ -980,7 +987,7 @@
     if (!medalEl) return;
     if (!m || isPractice()) { medalEl.hidden = true; return; }
     medalEl.hidden = false;
-    medalEl.className = 'medal medal-' + m;
+    medalEl.className = 'medal medal-' + m + ' medal-pop';
     if (medalLabelEl) {
       var names = { platinum: 'Platinum', gold: 'Gold', silver: 'Silver', bronze: 'Bronze', legend: 'Legend' };
       if (isOneLife()) {
@@ -1010,10 +1017,46 @@
     var n = score;
     var b = FTStorage.getBest();
     var modeLabel = MODE_SHARE_LABELS[playMode] || playMode;
-    if (playMode && playMode !== 'classic') {
-      return 'Urr Jaa! — score ' + n + ' (' + modeLabel + ') · best ' + b;
+    var m = medalFor(n);
+    var medalBit = m ? (' · ' + m + ' medal') : '';
+    var dist = Math.floor(metersFlown);
+    var line = 'Urr Jaa! اڑ جا! — ' + n + ' pts (' + modeLabel + ')' + medalBit +
+      ' · ' + dist + 'm · best ' + b;
+    if (runPerfects) line += ' · ' + runPerfects + ' PERFECT';
+    line += ' · https://offerpk.github.io/flappy-tap/';
+    return line;
+  }
+
+  function openSharePreview() {
+    var overlay = document.getElementById('share-preview');
+    var body = document.getElementById('share-preview-body');
+    var textEl = document.getElementById('share-preview-text');
+    if (!overlay || !body) {
+      shareRunSummary();
+      return;
     }
-    return 'Urr Jaa! — score ' + n + ' · best ' + b;
+    var m = medalFor(score);
+    var modeLabel = MODE_SHARE_LABELS[playMode] || playMode;
+    body.innerHTML = '';
+    var title = document.createElement('div');
+    title.className = 'share-card-title';
+    title.textContent = 'Urr Jaa! · ' + modeLabel;
+    var sc = document.createElement('div');
+    sc.className = 'share-card-score';
+    sc.textContent = String(score);
+    var meta = document.createElement('div');
+    meta.className = 'share-card-meta';
+    meta.textContent = Math.floor(metersFlown) + 'm · Best ' + FTStorage.getBest() +
+      (m ? ' · ' + m.toUpperCase() : '') +
+      (runPerfects ? ' · ✨' + runPerfects : '');
+    body.appendChild(title);
+    body.appendChild(sc);
+    body.appendChild(meta);
+    if (textEl) textEl.textContent = buildShareText();
+    overlay.hidden = false;
+    overlay.classList.remove('share-pop');
+    void overlay.offsetWidth;
+    overlay.classList.add('share-pop');
   }
 
   function legacyCopyShare(text) {
@@ -1046,7 +1089,7 @@
   function shareRunSummary() {
     var text = buildShareText();
     if (navigator.share) {
-      navigator.share({ title: 'Urr Jaa!', text: text }).catch(function () {
+      navigator.share({ title: 'Urr Jaa!', text: text, url: 'https://offerpk.github.io/flappy-tap/' }).catch(function () {
         copyShareText(text);
       });
       return;
@@ -1060,13 +1103,16 @@
     var a2hs = document.getElementById('a2hs');
     if (!a2hs) return;
     try {
-      if (sessionStorage.getItem(A2HS_SESSION_KEY) === '1') {
+      if (sessionStorage.getItem(A2HS_SESSION_KEY) === '1' || localStorage.getItem(A2HS_SESSION_KEY) === '1') {
         a2hs.hidden = true;
         return;
       }
     } catch (_) { /* private mode */ }
-    // Tip lives inside #screen-start; only show when home is visible
-    a2hs.hidden = !screenStart || screenStart.hidden;
+    // 3.13: show after a few runs so first visit stays clean
+    var runs = FTStorage.getRunCount ? FTStorage.getRunCount() : 0;
+    var show = screenStart && !screenStart.hidden && runs >= 2;
+    a2hs.hidden = !show;
+    if (show) a2hs.classList.add('a2hs-visible');
   }
 
   function hideAllScreens() {
@@ -1159,7 +1205,16 @@
       var allow = !isPractice() && !isChallenge() && !isOneLife() && !isTimeAttack();
       btnContinue.hidden = !allow;
       btnContinue.disabled = continuedThisRun || !allow || oneLifeLocked;
-      btnContinue.textContent = continuedThisRun ? 'Continue used' : '▶ Continue (Ad)';
+      btnContinue.classList.toggle('continue-used', !!continuedThisRun);
+      btnContinue.classList.toggle('continue-ready', allow && !continuedThisRun && !oneLifeLocked);
+      btnContinue.textContent = continuedThisRun ? '✓ Continue used this run' : '▶ Revive · Continue (Ad stub)';
+      var contHint = document.getElementById('continue-hint');
+      if (contHint) {
+        contHint.hidden = !allow;
+        contHint.textContent = continuedThisRun
+          ? 'Revive already used — retry for a fresh run.'
+          : 'Watch a short stub ad to revive at your score (once per run).';
+      }
     }
     if (runGiftsEl) runGiftsEl.textContent = runBoxes > 0 ? ('+' + runBoxes) : '0';
     var flightSec = runStartTs ? Math.max(0, (performance.now() - runStartTs) / 1000) : 0;
@@ -2235,12 +2290,21 @@
     var botClear = p.gapY + gap - (bird.y + halfH);
     var clear = Math.min(topClear, botClear);
     if (clear >= 0 && clear < NEAR_MISS_PX) {
-      spawnNearMissSparks(p.x + PIPE_W / 2, topClear < botClear ? p.gapY + 4 : p.gapY + gap - 4);
+      var nmY = topClear < botClear ? p.gapY + 4 : p.gapY + gap - 4;
+      spawnNearMissSparks(p.x + PIPE_W / 2, nmY);
       FTAudio.nearmiss();
       haptic('nearmiss');
       nearMissStreak += 1;
       runNearMisses += 1;
       p._wasNearMiss = true;
+      // 3.13 near-miss camera kick toward the graze edge
+      if (!reduceMotion) {
+        nearMissCamUntil = performance.now() + 220;
+        camKickX = (p.x + PIPE_W / 2 > bird.x ? 1 : -1) * 5;
+        camKickY = (topClear < botClear ? -1 : 1) * 7;
+        camKickZoom = 0.028;
+        triggerShake();
+      }
       showToast('CLOSE!', 850, 'close');
       showBanner('CLOSE!', 500);
       triggerChirpMouth('close');
@@ -2346,6 +2410,15 @@
     }
 
     if (hitFlash > 0) hitFlash = Math.max(0, hitFlash - dt * (1000 / HIT_FLASH_MS));
+    // Near-miss camera kick decay (3.13)
+    if (performance.now() >= nearMissCamUntil) {
+      camKickX *= Math.max(0, 1 - dt * 10);
+      camKickY *= Math.max(0, 1 - dt * 10);
+      camKickZoom *= Math.max(0, 1 - dt * 10);
+      if (Math.abs(camKickX) < 0.05) camKickX = 0;
+      if (Math.abs(camKickY) < 0.05) camKickY = 0;
+      if (camKickZoom < 0.001) camKickZoom = 0;
+    }
 
     if (state === 'dying') {
       if (performance.now() >= deathFreezeUntil) showDeath();
@@ -2396,32 +2469,43 @@
     // Boss / Chase events every N distance (30–60s then normal)
     if (!bossActive && metersFlown >= nextBossAt && !isPractice()) {
       bossActive = true;
+      bossPulse = 1;
       var dur = (BOSS_MIN_S + rng() * (BOSS_MAX_S - BOSS_MIN_S)) * 1000;
       bossUntil = now + dur;
+      bossDurMs = dur;
       bossKind = FTSkins.pickBossKind ? FTSkins.pickBossKind(rng) : { id: 'truck', label: 'GIANT TRUCK', emoji: '🚛' };
       nextBossAt = metersFlown + BOSS_EVERY_M + rng() * 40;
       if (FTAudio.boss) FTAudio.boss();
-      showBanner('DANGER — ' + (bossKind.label || 'CHASE') + '!', 1600);
+      showBanner((bossKind.emoji || '⚠') + ' DANGER — ' + (bossKind.label || 'CHASE') + '!', 1800);
+      showToast((bossKind.emoji || '⚠') + ' Chase incoming!', 1400, 'close');
       voiceCue('bach_ke');
-      // Spawn heavy traffic / giant obstacle feel
+      triggerShake();
+      if (!reduceMotion) spawnConfettiBurst(W * 0.5, 80, 8);
+      // Spawn heavy traffic / giant obstacle feel (3.13: eagle uses bird-height hawk-ish truck, police multi-wave)
       if (bossKind.id === 'storm') weatherDynId = 'storm';
       else if (bossKind.id === 'eagle') {
-        traffic.push({ x: W + 60, y: bird.y, vx: -180, kind: 'truck', dir: -1, boss: true });
+        traffic.push({ x: W + 60, y: Math.max(60, bird.y - 20), vx: -200, kind: 'truck', dir: -1, boss: true, scale: 1.25 });
+        traffic.push({ x: W + 140, y: Math.min(H - GROUND_H - 40, bird.y + 30), vx: -170, kind: 'bike', dir: -1, boss: true });
       } else if (bossKind.id === 'police') {
-        traffic.push({ x: -50, y: H - GROUND_H - 36, vx: 200, kind: 'taxi', dir: 1, boss: true });
-        traffic.push({ x: -90, y: H - GROUND_H - 56, vx: 210, kind: 'bike', dir: 1, boss: true });
+        traffic.push({ x: -50, y: H - GROUND_H - 36, vx: 220, kind: 'taxi', dir: 1, boss: true, scale: 1.15 });
+        traffic.push({ x: -90, y: H - GROUND_H - 56, vx: 235, kind: 'bike', dir: 1, boss: true });
+        traffic.push({ x: -140, y: H - GROUND_H - 28, vx: 200, kind: 'taxi', dir: 1, boss: true });
       } else if (bossKind.id === 'truck' || bossKind.id === 'giant') {
-        traffic.push({ x: W + 80, y: H - GROUND_H - 40, vx: -160, kind: 'truck', dir: -1, boss: true });
+        traffic.push({ x: W + 80, y: H - GROUND_H - 40, vx: -175, kind: 'truck', dir: -1, boss: true, scale: 1.35 });
       }
       difficultyFor(score);
     }
     if (bossActive && now >= bossUntil) {
       bossActive = false;
       bossKind = null;
+      bossPulse = 0;
       if (weatherDynId === 'storm') weatherDynId = null;
-      showToast('All clear!', 1000);
+      showToast('Chase clear! ✅', 1200, 'lucky');
+      showBanner('ALL CLEAR!', 900);
+      if (!reduceMotion) spawnConfettiBurst(bird.x, bird.y, 14);
       difficultyFor(score);
     }
+    if (bossPulse > 0) bossPulse = Math.max(0, bossPulse - sdt * 0.85);
 
     // Mild dynamic weather drift (not unfair)
     if (!bossActive && state === 'playing' && metersFlown >= nextWeatherAt) {
@@ -2487,9 +2571,20 @@
       if (magOn) {
         var cdx = bird.x - c.x, cdy = bird.y - c.y;
         var dist = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
-        if (dist < 120) {
-          c.x += (cdx / dist) * 220 * sdt;
-          c.y += (cdy / dist) * 220 * sdt;
+        if (dist < 140) {
+          c.x += (cdx / dist) * 240 * sdt;
+          c.y += (cdy / dist) * 240 * sdt;
+          // 3.13 magnet suction trail
+          if (!reduceMotion && rng() < 0.35) {
+            particles.push({
+              x: c.x, y: c.y,
+              vx: (cdx / dist) * 40, vy: (cdy / dist) * 40,
+              life: 0.25, max: 0.35,
+              color: rng() < 0.5 ? '#f9a8d4' : '#ffd93d',
+              r: 1.6 + rng() * 1.2,
+              kind: 'trail'
+            });
+          }
         } else {
           c.x -= currentSpeed * sdt;
         }
@@ -2547,6 +2642,23 @@
       for (var i = 0; i < 18; i++) {
         ctx.fillRect((i * 97 + 40) % W, (i * 53 + 20) % 220, 2, 2);
       }
+      // 3.13 night city window lights + street glow
+      var gy = H - GROUND_H;
+      for (var bi = 0; bi < 6; bi++) {
+        var bx = ((bi * 78 + groundX * 0.6) % (W + 40)) - 10;
+        var bh = 28 + (bi % 3) * 14;
+        ctx.fillStyle = 'rgba(20,28,48,0.85)';
+        ctx.fillRect(bx, gy - bh, 36, bh);
+        for (var wy = 0; wy < 3; wy++) {
+          for (var wx = 0; wx < 2; wx++) {
+            if ((bi + wy + wx + Math.floor(performance.now() / 2000)) % 5 === 0) continue;
+            ctx.fillStyle = (bi + wy) % 2 ? 'rgba(255,220,120,0.85)' : 'rgba(120,200,255,0.7)';
+            ctx.fillRect(bx + 6 + wx * 14, gy - bh + 6 + wy * 10, 8, 6);
+          }
+        }
+      }
+      ctx.fillStyle = 'rgba(255,180,80,0.12)';
+      ctx.fillRect(0, gy - 18, W, 18);
     } else {
       ctx.arc(W - 60, 70, 28, 0, Math.PI * 2);
       ctx.fill();
@@ -2889,7 +3001,28 @@
     ctx.restore();
   }
 
+  function drawMagnetAura() {
+    if (!bird || performance.now() >= magnetUntil) return;
+    var t = performance.now() / 1000;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(249,168,212,' + (0.35 + 0.25 * Math.sin(t * 8)).toFixed(3) + ')';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.arc(bird.x, bird.y, 38 + Math.sin(t * 6) * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
   function drawFrame(idle) {
+    var kick = !reduceMotion && (camKickX || camKickY || camKickZoom);
+    if (kick) {
+      ctx.save();
+      ctx.translate(W / 2 + camKickX, H / 2 + camKickY);
+      ctx.scale(1 + camKickZoom, 1 + camKickZoom);
+      ctx.translate(-W / 2, -H / 2);
+    }
     drawSky();
     pipes.forEach(drawPipe);
     traffic.forEach(function (t) { FTSkins.drawTraffic(ctx, t); });
@@ -2902,6 +3035,7 @@
     if (bird) {
       drawShieldAura();
       drawGhostAura();
+      drawMagnetAura();
       ctx.globalAlpha = ghostActive() ? 0.55 : 1;
       FTSkins.draw(ctx, birdId, bird.x, bird.y, bird.rot, 1, cosmeticsOpts());
       ctx.globalAlpha = 1;
@@ -2923,7 +3057,6 @@
       ctx.fillStyle = 'rgba(255,100,80,0.12)';
       ctx.fillRect(0, 0, W, H);
     }
-    // Weather visibility veil (mild)
     if (state === 'playing' || state === 'dying') {
       var vis = weatherMul().visibility;
       if (vis < 0.98) {
@@ -2931,19 +3064,28 @@
         ctx.fillRect(0, 0, W, H);
       }
     }
-    // Boss DANGER banner strip
     if (state === 'playing' && bossActive && bossKind) {
-      ctx.fillStyle = 'rgba(180,20,20,0.55)';
-      ctx.fillRect(0, 40, W, 28);
+      var left = Math.max(0, (bossUntil - performance.now()) / 1000);
+      var pulseA = 0.10 + 0.08 * Math.sin(performance.now() / 180) + bossPulse * 0.2;
+      ctx.fillStyle = 'rgba(180,20,40,' + pulseA.toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(120,10,20,0.82)';
+      ctx.fillRect(0, 36, W, 40);
       ctx.fillStyle = '#ffd93d';
       ctx.font = 'bold 13px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText((bossKind.emoji || '⚠') + ' DANGER — ' + bossKind.label, W / 2, 59);
-      var left = Math.max(0, (bossUntil - performance.now()) / 1000);
+      ctx.fillText((bossKind.emoji || '⚠') + ' DANGER — ' + bossKind.label, W / 2, 54);
+      var barW = 160;
+      var pct = Math.max(0, Math.min(1, (left * 1000) / Math.max(1, bossDurMs)));
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(W / 2 - barW / 2, 60, barW, 6);
+      ctx.fillStyle = '#ff6b6b';
+      ctx.fillRect(W / 2 - barW / 2, 60, barW * pct, 6);
       ctx.fillStyle = '#fff';
-      ctx.font = '11px system-ui';
-      ctx.fillText(Math.ceil(left) + 's', W / 2, 72);
+      ctx.font = 'bold 10px system-ui';
+      ctx.fillText(Math.ceil(left) + 's left', W / 2, 78);
     }
+    if (kick) ctx.restore();
     drawHitFlash();
   }
 
@@ -3026,23 +3168,48 @@
   }
   btnRetry.addEventListener('click', function () { retryFlow(); });
   btnMenu.addEventListener('click', function () { showMenu(); });
-  if (btnShare) btnShare.addEventListener('click', function () { shareRunSummary(); });
+  if (btnShare) btnShare.addEventListener('click', function () { openSharePreview(); });
+  var btnShareConfirm = document.getElementById('btn-share-confirm');
+  var btnShareCopy = document.getElementById('btn-share-copy');
+  var btnShareClose = document.getElementById('btn-share-close');
+  if (btnShareConfirm) btnShareConfirm.addEventListener('click', function () {
+    var ov = document.getElementById('share-preview');
+    if (ov) ov.hidden = true;
+    shareRunSummary();
+  });
+  if (btnShareCopy) btnShareCopy.addEventListener('click', function () {
+    copyShareText(buildShareText());
+  });
+  if (btnShareClose) btnShareClose.addEventListener('click', function () {
+    var ov = document.getElementById('share-preview');
+    if (ov) ov.hidden = true;
+  });
+
   var a2hsOk = document.getElementById('a2hs-ok');
   if (a2hsOk) {
     a2hsOk.addEventListener('click', function () {
-      try { sessionStorage.setItem(A2HS_SESSION_KEY, '1'); } catch (_) {}
+      try {
+        sessionStorage.setItem(A2HS_SESSION_KEY, '1');
+        localStorage.setItem(A2HS_SESSION_KEY, '1');
+      } catch (_) {}
       var tip = document.getElementById('a2hs');
       if (tip) tip.hidden = true;
     });
   }
   btnContinue.addEventListener('click', async function () {
     if (continuedThisRun || isPractice() || isOneLife()) return;
+    btnContinue.disabled = true;
+    btnContinue.textContent = 'Loading revive…';
     var res = await Ads.showRewarded('continue');
     if (res && res.rewarded) {
       continuedThisRun = true;
-      showToast('Continue granted!');
+      showToast('Revived! Keep flying 🛡', 1600, 'lucky');
       startRun(true);
-    } else showToast('Continue skipped');
+    } else {
+      showToast('Revive skipped');
+      btnContinue.disabled = false;
+      btnContinue.textContent = '▶ Revive · Continue (Ad stub)';
+    }
   });
 
   if (btnPause) btnPause.addEventListener('click', function (e) { e.stopPropagation(); pauseGame(); });
@@ -3468,6 +3635,25 @@
   function refreshBoards() {
     if (!boardsList) return;
     var lb = FTStorage.getLeaderboards();
+    var best = lb.personalBest | 0;
+    var bestMedal = FTStorage.getBestMedal ? FTStorage.getBestMedal() : null;
+    var tiers = [
+      { id: 'bronze', label: 'Bronze', need: MEDAL_BRONZE },
+      { id: 'silver', label: 'Silver', need: MEDAL_SILVER },
+      { id: 'gold', label: 'Gold', need: MEDAL_GOLD },
+      { id: 'platinum', label: 'Platinum', need: MEDAL_PLATINUM }
+    ];
+    var order = { bronze: 1, silver: 2, gold: 3, platinum: 4, legend: 5 };
+    var gallery = '<div class="medal-gallery" aria-label="Medal gallery">';
+    tiers.forEach(function (t) {
+      var earned = best >= t.need || (order[bestMedal] || 0) >= order[t.id];
+      gallery += '<div class="medal-tile medal-' + t.id + (earned ? ' earned' : ' locked') + '" title="' +
+        t.label + ' at ' + t.need + '+">' +
+        '<div class="medal-disc" aria-hidden="true"></div>' +
+        '<span>' + t.label + '</span>' +
+        '<em>' + (earned ? '✓ ' + t.need + '+' : '🔒 ' + t.need) + '</em></div>';
+    });
+    gallery += '</div>';
     var rows = [
       ['Personal Best', lb.personalBest],
       ['Today Best', lb.todayBest],
@@ -3477,11 +3663,14 @@
       ['Time Attack', lb.timeAttack],
       ['Hard Best', lb.hard],
       ['No Coin Best', lb.noCoin],
-      ['One Life PB', lb.oneLife]
+      ['One Life PB', lb.oneLife],
+      ['Best Medal', bestMedal ? String(bestMedal) : '—']
     ];
-    boardsList.innerHTML = rows.map(function (r) {
-      return '<div class="board-row"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';
-    }).join('');
+    boardsList.innerHTML = '<h3 class="section-title">Medal Gallery</h3>' + gallery +
+      '<h3 class="section-title">Scores</h3>' +
+      rows.map(function (r) {
+        return '<div class="board-row"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';
+      }).join('');
   }
   if (btnBoards) btnBoards.addEventListener('click', function () {
     hideAllScreens();
