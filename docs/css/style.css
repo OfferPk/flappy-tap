@@ -3355,3 +3355,22 @@ html.reduce-motion .combo-meter-fill { transition: none !important; }
   font-weight: 800;
 }
 html.reduce-motion .missions-claim-all { animation: none !important; }
+
+
+/* ——— v3.40 milestone: claim-all juice, garage CTA ——— */
+.missions-claim-all.claim-all-juice {
+  animation: claim-all-pop 0.7s cubic-bezier(.2,1.2,.3,1);
+  box-shadow: 0 0 0 2px rgba(255,217,61,.55), 0 0 22px rgba(255,140,66,.45);
+}
+@keyframes claim-all-pop {
+  0% { transform: scale(0.92); }
+  40% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+html.reduce-motion .missions-claim-all.claim-all-juice { animation: none; }
+.panel-empty-cta {
+  margin-top: 10px;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}

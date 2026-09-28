@@ -1,19 +1,20 @@
 # Urr Jaa! STATUS
 
-## Current: **3.39.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.40.0-urrjaa** (2026-09-28 PKT) · milestone
 
-### This pack (NEW vs 3.11–3.38)
-- **Dusk/night flare** — moon halo + cool rays at night; dusk mode for sunset
-- **Better empty states** — Garage filter, Boards (no scores), Collection filter polish
-- **Ribbon trail on gifts** — gold/purple trail samples behind flying boxes
-- **Mission claim batch** — Claim all when 2+ missions ready
-- Bugfixes: night no longer skips celestial flare; claimMissionsBatch export
-- KEEP ALL ≤3.38 incl. **15s Mystery Spin once**, Close (X), …
+### This pack (NEW vs 3.11–3.39)
+- **Starfield night polish** — cached twinkling starfield + milky band
+- **Claim-all juice** — banner, fireworks/confetti, fanfare, claim-all-pop
+- **Garage empty CTA** — Show all / Mystery Rewards buttons
+- **Perf pass** — starfield cache, cloud sort reuse, gift trail throttle, night tick cache
+- **Guide note** — 3.40 milestone in EN (+ RU/UR)
+- Bugfixes: spawnCoinRain arity on claim-all; starfield rebuild on reduce-motion
+- KEEP ALL ≤3.39 incl. **15s Mystery Spin once**, Close (X), …
 
-SW cache: `urrjaa-v48-20260928`
+SW cache: `urrjaa-v49-20260928`
 
-**Ship commit:** `ac8e65d` · tag `v3.39.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.39.0-urrjaa  
+**Ship commit:** (pending) · tag `v3.40.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.40.0-urrjaa  
 **Live:** https://offerpk.github.io/flappy-tap/
 
 

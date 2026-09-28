@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.39.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.40.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -123,6 +123,8 @@
   let groundX = 0;
   var lastLandingDustAt = 0;
   let clouds = [];
+  var _cloudsSorted = null;
+  var _cloudsSortedLen = 0;
   let lastTs = 0;
   let flapCooldown = 0;
   let hitFlash = 0;
@@ -611,6 +613,8 @@
 
   function initClouds() {
     clouds = [];
+    _cloudsSorted = null;
+    _cloudsSortedLen = 0;
     // 3.37: three parallax layers — far / mid / near
     var layers = [
       { n: 4, depth: 0.22, y0: 30, y1: 120, w0: 50, w1: 90, a: 0.45 },
@@ -4120,8 +4124,13 @@ function updateComboMeter(visible) {
       // 3.39 ribbon trail samples
       if (!reduceMotion) {
         if (!b.trail) b.trail = [];
-        b.trail.push({ x: b.x, y: b.y + (Math.sin(performance.now() / 220 + b.x * 0.08) * 5) });
-        if (b.trail.length > 10) b.trail.shift();
+        // 3.40 perf: sample trail every other frame-ish via distance
+        var last = b.trail.length ? b.trail[b.trail.length - 1] : null;
+        var by = b.y + (Math.sin(performance.now() / 220 + b.x * 0.08) * 5);
+        if (!last || (last.x - b.x) * (last.x - b.x) + (last.y - by) * (last.y - by) > 36) {
+          b.trail.push({ x: b.x, y: by });
+          if (b.trail.length > 8) b.trail.shift();
+        }
       }
       if (b.x < -30) { boxes.splice(bi, 1); continue; }
       var bx = bird.x - b.x, by2 = bird.y - b.y;
@@ -4230,6 +4239,57 @@ function updateComboMeter(visible) {
     }
   }
 
+
+  // 3.40: cached night starfield (perf + polish)
+  var starfieldCache = null;
+  var starfieldW = 0, starfieldH = 0;
+  function ensureStarfield() {
+    if (starfieldCache && starfieldW === W && starfieldH === H) return starfieldCache;
+    starfieldW = W; starfieldH = H;
+    var n = reduceMotion ? 28 : 56;
+    starfieldCache = [];
+    for (var i = 0; i < n; i++) {
+      var layer = i % 3; // 0 far, 1 mid, 2 near
+      starfieldCache.push({
+        x: (i * 97 + 40) % W,
+        y: (i * 53 + 17) % Math.max(120, H * 0.42),
+        r: layer === 2 ? 1.6 : (layer === 1 ? 1.2 : 0.9),
+        a: layer === 2 ? 0.95 : (layer === 1 ? 0.7 : 0.45),
+        tw: Math.random() * Math.PI * 2,
+        spd: 0.8 + layer * 0.6,
+        bright: i % 11 === 0
+      });
+    }
+    return starfieldCache;
+  }
+  function drawStarfield() {
+    var stars = ensureStarfield();
+    var t = performance.now() / 1000;
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      var twinkle = reduceMotion ? 1 : (0.55 + 0.45 * Math.sin(t * s.spd + s.tw));
+      ctx.globalAlpha = s.a * twinkle;
+      ctx.fillStyle = s.bright ? '#fff8e7' : '#e8eeff';
+      if (s.bright && !reduceMotion) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r + 0.8 * twinkle, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(s.x, s.y, s.r * 2, s.r * 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+    // soft milky band
+    if (!reduceMotion) {
+      var band = ctx.createLinearGradient(0, H * 0.08, W, H * 0.28);
+      band.addColorStop(0, 'rgba(160,180,255,0)');
+      band.addColorStop(0.45, 'rgba(180,200,255,0.06)');
+      band.addColorStop(1, 'rgba(160,180,255,0)');
+      ctx.fillStyle = band;
+      ctx.fillRect(0, 0, W, H * 0.35);
+    }
+  }
+
   function drawSky() {
     var area = activeArea();
     var weather = effectiveWeather();
@@ -4262,11 +4322,9 @@ function updateComboMeter(visible) {
       ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
       ctx.fill();
       drawSunFlare(moonX, moonY, moonR, weather, pal, 'night');
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      for (var i = 0; i < 18; i++) {
-        ctx.fillRect((i * 97 + 40) % W, (i * 53 + 20) % 220, 2, 2);
-      }
-      // 3.13 night city window lights + street glow
+      drawStarfield();
+      // 3.13/3.40 night city window lights (tick cached ~2s)
+      drawSky._nightTick = Math.floor(performance.now() / 2000);
       var gy = H - GROUND_H;
       for (var bi = 0; bi < 6; bi++) {
         var bx = ((bi * 78 + groundX * 0.6) % (W + 40)) - 10;
@@ -4275,7 +4333,7 @@ function updateComboMeter(visible) {
         ctx.fillRect(bx, gy - bh, 36, bh);
         for (var wy = 0; wy < 3; wy++) {
           for (var wx = 0; wx < 2; wx++) {
-            if ((bi + wy + wx + Math.floor(performance.now() / 2000)) % 5 === 0) continue;
+            if ((bi + wy + wx + (drawSky._nightTick || 0)) % 5 === 0) continue;
             ctx.fillStyle = (bi + wy) % 2 ? 'rgba(255,220,120,0.85)' : 'rgba(120,200,255,0.7)';
             ctx.fillRect(bx + 6 + wx * 14, gy - bh + 6 + wy * 10, 8, 6);
           }
@@ -4371,12 +4429,16 @@ function updateComboMeter(visible) {
       ctx.fill();
     }
 
-    // 3.37/3.38: draw far→near for parallax depth (skip sort under reduce-motion)
+    // 3.37/3.40: draw far→near — reuse sorted list
     var sortedClouds = clouds;
     if (!reduceMotion && clouds.length > 1) {
-      sortedClouds = clouds.slice().sort(function (a, b) {
-        return (a.depth != null ? a.depth : a.s) - (b.depth != null ? b.depth : b.s);
-      });
+      if (!_cloudsSorted || _cloudsSortedLen !== clouds.length) {
+        _cloudsSorted = clouds.slice().sort(function (a, b) {
+          return (a.depth != null ? a.depth : a.s) - (b.depth != null ? b.depth : b.s);
+        });
+        _cloudsSortedLen = clouds.length;
+      }
+      sortedClouds = _cloudsSorted;
     }
     sortedClouds.forEach(function (c) {
       var depth = c.depth != null ? c.depth : c.s;
@@ -5581,6 +5643,7 @@ function updateComboMeter(visible) {
   }
   /** 3.23: honor OS prefers-reduced-motion when unset; keep listening for changes. */
   function syncPrefersReducedMotion() {
+    starfieldCache = null; // 3.40 rebuild density when motion pref changes
     try {
       var mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
       if (!mq) return;
@@ -5938,7 +6001,30 @@ function updateComboMeter(visible) {
       if (!anyVisible) {
         gEmpty.innerHTML = '<div class="panel-empty-ico" aria-hidden="true">🧺</div>' +
           '<p class="panel-empty-title">Nothing in this filter</p>' +
-          '<p class="hint">Try All / Theme / Seasonal — or unlock more in a run.</p>';
+          '<p class="hint">Switch filter or grab unlocks from Mystery Rewards.</p>' +
+          '<div class="panel-empty-cta btn-row">' +
+          '<button type="button" class="btn primary btn-sm" data-garage-empty-cta="all">Show all</button>' +
+          '<button type="button" class="btn ghost btn-sm" data-garage-empty-cta="mystery">Mystery Rewards</button>' +
+          '</div>';
+        gEmpty.querySelectorAll('[data-garage-empty-cta]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var act = btn.getAttribute('data-garage-empty-cta');
+            if (act === 'all') {
+              garageFilter = 'all';
+              document.querySelectorAll('.garage-filter').forEach(function (b) {
+                var on = b.getAttribute('data-garage-filter') === 'all';
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+              });
+              applyGarageFilter();
+              showToast('Showing all skins', 900);
+            } else if (act === 'mystery') {
+              hideAllScreens();
+              if (typeof openGiftsScreen === 'function') openGiftsScreen();
+              else if (screenGifts) { screenGifts.hidden = false; if (typeof refreshGiftsUI === 'function') refreshGiftsUI(); }
+            }
+          });
+        });
       }
     }
   }
@@ -6170,16 +6256,26 @@ function updateComboMeter(visible) {
       batchBtn.addEventListener('click', function () {
         var r = FTStorage.claimMissionsBatch && FTStorage.claimMissionsBatch();
         if (!r) return;
-        haptic('gift');
-        if (!reduceMotion) spawnConfettiBurst(W * 0.5, H * 0.35, 18);
-        if (FTAudio.combo) FTAudio.combo();
+        // 3.40 claim-all juice
+        batchBtn.classList.remove('claim-all-juice');
+        void batchBtn.offsetWidth;
+        batchBtn.classList.add('claim-all-juice');
+        haptic('boss');
+        if (!reduceMotion) {
+          spawnConfettiBurst(W * 0.5, H * 0.32, 22);
+          if (typeof spawnFireworks === 'function') spawnFireworks(W * 0.5, H * 0.28, 3);
+          if (typeof spawnCoinRain === 'function' && r.coins >= 40) spawnCoinRain(12);
+        }
+        if (FTAudio.fanfare) FTAudio.fanfare();
+        else if (FTAudio.combo) FTAudio.combo();
+        showBanner('CLAIM ALL ×' + r.count + '!', 1100);
         var bits = [];
         if (r.coins) bits.push('+' + r.coins + '🪙');
         if (r.fragments) bits.push('+' + r.fragments + '✦');
         if (r.gifts) bits.push('+' + r.gifts + '🎁');
-        showToast('Claimed ' + r.count + ': ' + (bits.join(' · ') || 'done!'), 2000, 'medal');
+        showToast('Claimed ' + r.count + ': ' + (bits.join(' · ') || 'done!'), 2200, 'medal');
         if (r.gifts) detectSpinUnlockFromDelta(r.gifts);
-        voiceCue('shabaash');
+        voiceCue('zabardast');
         refreshMissions(); updateCoinHud();
       });
       batchRow.appendChild(batchBtn);
