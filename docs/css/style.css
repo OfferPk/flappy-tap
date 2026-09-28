@@ -3264,3 +3264,70 @@ html.reduce-motion .magnet-hud.magnet-expiring { animation: none; }
   box-shadow: 0 0 0 1px rgba(249,168,212,.45), 0 0 12px rgba(236,72,153,.25);
   border-radius: 10px;
 }
+
+
+/* ——— v3.38: missions empty, gift bob, reduce-motion sweep ——— */
+.missions-empty {
+  margin: 14px 0 8px;
+  padding: 18px 14px;
+  text-align: center;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+}
+.missions-empty-ico {
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+.missions-empty-title {
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+.missions-all-done {
+  border-style: solid;
+  border-color: rgba(255, 217, 61, 0.4);
+  background: rgba(92, 61, 12, 0.35);
+}
+.gift-bob {
+  display: inline-block;
+  transform-origin: 50% 80%;
+  animation: gift-bob-ui 1.4s ease-in-out infinite;
+}
+@keyframes gift-bob-ui {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-3px) rotate(5deg); }
+}
+
+/* 3.38: broader reduce-motion coverage */
+html.reduce-motion .gift-bob,
+html.reduce-motion .magnet-hud,
+html.reduce-motion .magnet-hud.magnet-expiring,
+html.reduce-motion .streak-flame,
+html.reduce-motion .streak-flame-icon,
+html.reduce-motion .streak-flame-btn,
+html.reduce-motion .a2hs.a2hs-can-install .a2hs-icon,
+html.reduce-motion .offline-banner.offline-show,
+html.reduce-motion .wheel-wrap.pointer-bounce .wheel-pointer,
+html.reduce-motion #score-display.score-milestone,
+html.reduce-motion #score-display.score-juice-big,
+html.reduce-motion .resume-countdown-num.resume-pop,
+html.reduce-motion .a2hs.a2hs-flow .a2hs-install-btn,
+html.reduce-motion .combo-meter-fill,
+html.reduce-motion .power-chip.power-expiring,
+html.reduce-motion .btn-streak-ready,
+html.reduce-motion .wheel-wrap.wheel-jackpot .wheel-rim {
+  animation: none !important;
+  transition: none !important;
+}
+html.reduce-motion .combo-meter-fill { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .gift-bob,
+  .magnet-hud,
+  .streak-flame,
+  .streak-flame-icon,
+  .resume-countdown-num.resume-pop,
+  .offline-banner.offline-show {
+    animation: none !important;
+  }
+}

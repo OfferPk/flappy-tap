@@ -13,7 +13,7 @@ const game = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');
 const need = [
   'timeattack', 'nocoin', 'onelife', 'RISKY', 'CLOSE!', 'Ghost',
   'Turbo', 'magnet', 'claimStreak', 'getLeaderboards', 'pickTrafficKind',
-  '3.37.0', 'squashTarget', 'voiceCue',
+  '3.38.0', 'squashTarget', 'voiceCue',
   'PERFECT!', 'DANGER', 'coinComboMult', 'grantMysteryReward', 'birdPass',
   'runPerfects', 'bossActive', 'effectiveWeather',
   'LUCKY!', 'isForgivingMode', 'firstRunProtect', 'calibMods', 'applyLuckySave', 'resolveCollision',
@@ -70,7 +70,8 @@ const need = [
   'A2HS_LATER_KEY', 'a2hsHowToText', 'haptic(\'perfect\')', 'isIosSafari',
   'FLAP_UI_BLOCK', 'score-juice', 'medal-shine', 'is-landscape',
   'updateComboMeter', 'spawnGroundBounceJuice', 'bindSettingsSections', 'combo-meter',
-  'runResumeCountdown', 'magnetHudEl', 'sortedClouds', 'finishResumeFromPause'
+  'runResumeCountdown', 'magnetHudEl', 'sortedClouds', 'finishResumeFromPause',
+  'drawSunFlare', 'missions-empty', 'missions-all-done'
 ];
 for (const n of need) {
   if (!game.includes(n)) { console.error('MISSING in game.js:', n); ok = false; }
@@ -94,11 +95,11 @@ for (const n of ['BIRD_PASSIVES', 'weatherMods', 'sunset', 'pickBossKind', 'SEAS
   if (!skins.includes(n)) { console.error('MISSING in skins.js:', n); ok = false; }
 }
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-if (!sw.includes('urrjaa-v46-20260928')) { console.error('SW cache not bumped'); ok = false; }
+if (!sw.includes('urrjaa-v47-20260928')) { console.error('SW cache not bumped'); ok = false; }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (pkg.version !== '3.37.0-urrjaa') { console.error('package version', pkg.version); ok = false; }
+if (pkg.version !== '3.38.0-urrjaa') { console.error('package version', pkg.version); ok = false; }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-if (!html.includes('v3.37.0-urrjaa')) { console.error('index version tag missing'); ok = false; }
+if (!html.includes('v3.38.0-urrjaa')) { console.error('index version tag missing'); ok = false; }
 if (!html.includes('data-mode="timeattack"')) { console.error('modes missing'); ok = false; }
 if (!html.includes('run-summary')) { console.error('run summary missing'); ok = false; }
 if (!html.includes('btn-voice-preview')) { console.error('voice preview btn missing'); ok = false; }
@@ -142,7 +143,7 @@ if (!html.includes('seasonal-hint') || !html.includes('splash-progress-fill')) {
 if (!html.includes('minimum-scale=1')) { console.error('viewport zoom harden missing'); ok = false; }
 if (!html.includes('3.22:')) { console.error('guide 3.22 missing'); ok = false; }
 if (!html.includes('btn-share-image') || !html.includes('Share score card')) { console.error('3.23 share image missing'); ok = false; }
-if (!html.includes('settings-credits') || !html.includes('v3.37.0-urrjaa')) { console.error('3.23 credits missing'); ok = false; }
+if (!html.includes('settings-credits') || !html.includes('v3.38.0-urrjaa')) { console.error('3.23 credits missing'); ok = false; }
 if (!html.includes('3.23:')) { console.error('guide 3.23 missing'); ok = false; }
 if (!html.includes('coach-marks') || !html.includes('btn-coach-next')) { console.error('3.24 coach missing'); ok = false; }
 if (!html.includes('ghost-opacity-slider') || !html.includes('Practice ghost opacity')) { console.error('3.24 ghost opacity missing'); ok = false; }
@@ -176,6 +177,8 @@ if (!html.includes('3.36:')) { console.error('guide 3.36 missing'); ok = false; 
 if (!html.includes('combo-meter') || !html.includes('settings-section') || !html.includes('notch-pad')) { console.error('3.36 UI missing'); ok = false; }
 if (!html.includes('3.37:')) { console.error('guide 3.37 missing'); ok = false; }
 if (!html.includes('resume-countdown') || !html.includes('magnet-hud') || !html.includes('resume-countdown-toggle')) { console.error('3.37 UI missing'); ok = false; }
+if (!html.includes('3.38:')) { console.error('guide 3.38 missing'); ok = false; }
+if (!html.includes('gift-bob')) { console.error('3.38 gift bob missing'); ok = false; }
 if (!html.includes('Quick tips (3.23')) { console.error('3.30 guide refresh missing'); ok = false; }
 
 if (!html.includes('Tips &amp; fireworks') && !html.includes('Tips & fireworks')) { console.error('guide 3.17 missing'); ok = false; }
@@ -215,9 +218,10 @@ if (!css.includes('a2hs-how') || !css.includes('a2hs-step') || !css.includes('to
 if (!css.includes('score-juice-big') || !css.includes('medal-shine-sweep') || !css.includes('is-landscape')) { console.error('3.35 CSS missing'); ok = false; }
 if (!css.includes('combo-meter') || !css.includes('settings-section') || !css.includes('notch-pad') || !css.includes('--hud-top')) { console.error('3.36 CSS missing'); ok = false; }
 if (!css.includes('resume-countdown') || !css.includes('magnet-hud') || !css.includes('resume-pop')) { console.error('3.37 CSS missing'); ok = false; }
+if (!css.includes('missions-empty') || !css.includes('gift-bob-ui')) { console.error('3.38 CSS missing'); ok = false; }
 if (!css.includes('menu-tools') || !css.includes('gift-progress') || !css.includes('toast-close')) { console.error('3.6 polish CSS missing'); ok = false; }
 if (!html.includes('gift-progress') || !html.includes('menu-tools')) { console.error('3.6 polish HTML missing'); ok = false; }
 // Ensure post-death rarity auto-open path is gone (no Duplicate → Fragments in openMysteryBox flow)
 if (game.includes("text = 'Duplicate → +'")) { console.error('legacy duplicate fragment popup text still present'); ok = false; }
-if (ok) console.log('SMOKE OK · Urr Jaa! 3.37.0-urrjaa');
+if (ok) console.log('SMOKE OK · Urr Jaa! 3.38.0-urrjaa');
 else { console.error('SMOKE FAIL'); process.exit(1); }

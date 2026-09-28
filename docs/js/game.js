@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.37.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.38.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -3716,7 +3716,7 @@ function updateComboMeter(visible) {
       var depth = c.depth != null ? c.depth : c.s;
       var spd = state === 'playing' ? currentSpeed * (0.08 + depth * 0.22) * sdt : (4 + depth * 10) * dt;
       c.x -= spd;
-      if (c.bob != null) c.bob += dt * (0.35 + depth * 0.4);
+      if (!reduceMotion && c.bob != null) c.bob += dt * (0.35 + depth * 0.4);
       if (c.x < -c.w - 40) {
         c.x = W + 30 + Math.random() * 60;
         if (c.depth != null) c.y = (c.depth < 0.35 ? 30 : (c.depth < 0.6 ? 50 : 70)) + Math.random() * 90;
@@ -4134,6 +4134,72 @@ function updateComboMeter(visible) {
     resolveCollision();
   }
 
+
+  /** 3.38: time-of-day sun flare (clear / sunset). Skip under reduce-motion. */
+  function drawSunFlare(sx, sy, sr, weather, pal) {
+    if (reduceMotion) return;
+    if (weather === 'storm' || weather === 'rain' || weather === 'night') return;
+    var t = performance.now() / 1000;
+    var isSunset = weather === 'sunset';
+    var halo = ctx.createRadialGradient(sx, sy, sr * 0.4, sx, sy, sr * (isSunset ? 5.5 : 4.2));
+    if (isSunset) {
+      halo.addColorStop(0, 'rgba(255,200,120,0.55)');
+      halo.addColorStop(0.35, 'rgba(255,120,60,0.22)');
+      halo.addColorStop(1, 'rgba(255,80,40,0)');
+    } else {
+      halo.addColorStop(0, 'rgba(255,250,200,0.5)');
+      halo.addColorStop(0.4, 'rgba(255,230,140,0.18)');
+      halo.addColorStop(1, 'rgba(255,255,255,0)');
+    }
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr * (isSunset ? 5.5 : 4.2), 0, Math.PI * 2);
+    ctx.fill();
+    // soft rays
+    var rays = isSunset ? 8 : 6;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(t * (isSunset ? 0.08 : 0.05));
+    for (var r = 0; r < rays; r++) {
+      ctx.rotate((Math.PI * 2) / rays);
+      var len = sr * (isSunset ? 3.2 : 2.6) + Math.sin(t * 2 + r) * 4;
+      var grd = ctx.createLinearGradient(0, 0, len, 0);
+      grd.addColorStop(0, isSunset ? 'rgba(255,180,80,0.35)' : 'rgba(255,255,220,0.28)');
+      grd.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.moveTo(sr * 0.6, -2.5);
+      ctx.lineTo(len, 0);
+      ctx.lineTo(sr * 0.6, 2.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    // lens ghost
+    if (!isSunset) {
+      var gx = W * 0.35 + Math.sin(t * 0.7) * 6;
+      var gy = H * 0.45;
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = '#fff8dc';
+      ctx.beginPath();
+      ctx.arc(gx, gy, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.08;
+      ctx.beginPath();
+      ctx.arc(gx * 0.7 + 40, gy + 30, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else {
+      // sunset warm wash near horizon
+      var wash = ctx.createLinearGradient(0, H * 0.45, 0, H - GROUND_H);
+      wash.addColorStop(0, 'rgba(255,100,40,0)');
+      wash.addColorStop(0.6, 'rgba(255,90,40,0.12)');
+      wash.addColorStop(1, 'rgba(255,60,30,0.18)');
+      ctx.fillStyle = wash;
+      ctx.fillRect(0, H * 0.45, W, H - GROUND_H - H * 0.45);
+    }
+  }
+
   function drawSky() {
     var area = activeArea();
     var weather = effectiveWeather();
@@ -4186,8 +4252,14 @@ function updateComboMeter(visible) {
       ctx.fillStyle = 'rgba(255,180,80,0.12)';
       ctx.fillRect(0, gy - 18, W, 18);
     } else {
-      ctx.arc(W - 60, 70, 28, 0, Math.PI * 2);
+      var sunX = W - 60;
+      var sunY = 70;
+      var sunR = weather === 'sunset' ? 32 : 28;
+      if (weather === 'sunset') { sunX = W - 50; sunY = H * 0.38; sunR = 34; }
+      else if (weather === 'clear' || weather === 'fog') { sunY = 62; }
+      ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
       ctx.fill();
+      drawSunFlare(sunX, sunY, sunR, weather, pal);
     }
 
     ctx.fillStyle = 'rgba(0,0,0,0.12)';
@@ -4267,13 +4339,16 @@ function updateComboMeter(visible) {
       ctx.fill();
     }
 
-    // 3.37: draw far→near for parallax depth
-    var sortedClouds = clouds.slice().sort(function (a, b) {
-      return (a.depth != null ? a.depth : a.s) - (b.depth != null ? b.depth : b.s);
-    });
+    // 3.37/3.38: draw far→near for parallax depth (skip sort under reduce-motion)
+    var sortedClouds = clouds;
+    if (!reduceMotion && clouds.length > 1) {
+      sortedClouds = clouds.slice().sort(function (a, b) {
+        return (a.depth != null ? a.depth : a.s) - (b.depth != null ? b.depth : b.s);
+      });
+    }
     sortedClouds.forEach(function (c) {
       var depth = c.depth != null ? c.depth : c.s;
-      var bobY = c.bob != null ? Math.sin(c.bob) * (2 + depth * 3) : 0;
+      var bobY = (!reduceMotion && c.bob != null) ? Math.sin(c.bob) * (2 + depth * 3) : 0;
       var alpha = c.a != null ? c.a : (0.4 + depth * 0.5);
       ctx.globalAlpha = Math.max(0.2, Math.min(1, alpha));
       ctx.fillStyle = pal.cloud;
@@ -4411,23 +4486,33 @@ function updateComboMeter(visible) {
   function drawBox(b) {
     if (b.taken) return;
     var t = performance.now();
-    var bob = reduceMotion ? 0 : Math.sin(t / 250 + b.x) * 3;
-    var pulse = reduceMotion ? 1 : (0.85 + 0.15 * Math.sin(t / 180 + b.x * 0.05));
+    // 3.38: richer bob + tilt (still static under reduce-motion)
+    var bob = reduceMotion ? 0 : Math.sin(t / 220 + b.x * 0.08) * 5;
+    var tilt = reduceMotion ? 0 : Math.sin(t / 320 + b.x * 0.05) * 0.12;
+    var pulse = reduceMotion ? 1 : (0.82 + 0.18 * Math.sin(t / 160 + b.x * 0.05));
     ctx.save();
     ctx.translate(b.x, b.y + bob);
-    // 3.18: soft outer glow + pulse ring so gifts read clearer mid-flight
+    if (!reduceMotion) ctx.rotate(tilt);
+    // 3.18/3.38: soft outer glow + pulse ring
     if (!reduceMotion) {
-      ctx.globalAlpha = 0.28 * pulse;
+      ctx.globalAlpha = 0.3 * pulse;
       ctx.fillStyle = '#c084fc';
       ctx.beginPath();
-      ctx.arc(0, 0, 22 * pulse, 0, Math.PI * 2);
+      ctx.arc(0, 0, 24 * pulse, 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = 0.55;
+      ctx.globalAlpha = 0.6;
       ctx.strokeStyle = '#ffd93d';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(0, 0, 16 + 3 * pulse, 0, Math.PI * 2);
+      ctx.arc(0, 0, 17 + 4 * pulse, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.globalAlpha = 1;
+      // shadow under bobbing box
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(0, 16 - bob * 0.3, 10, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = '#8e44ad';
@@ -4438,6 +4523,18 @@ function updateComboMeter(visible) {
     ctx.fillStyle = '#ffd93d';
     ctx.fillRect(-12, -2, 24, 4);
     ctx.fillRect(-2, -12, 4, 24);
+    // ribbon ends sway
+    if (!reduceMotion) {
+      var sway = Math.sin(t / 180 + b.x) * 2;
+      ctx.strokeStyle = '#ffd93d';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -12);
+      ctx.quadraticCurveTo(-6 + sway, -20, -4, -26);
+      ctx.moveTo(0, -12);
+      ctx.quadraticCurveTo(6 - sway, -20, 4, -26);
+      ctx.stroke();
+    }
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 12px system-ui';
     ctx.textAlign = 'center';
@@ -5993,65 +6090,86 @@ function updateComboMeter(visible) {
     var calWrap = document.createElement('div');
     calWrap.innerHTML = buildMissionCalendarHtml();
     while (calWrap.firstChild) missionsList.appendChild(calWrap.firstChild);
-    FTStorage.getMissions().forEach(function (m) {
-      var card = document.createElement('div');
-      card.className = 'mission-card' + (m.done ? ' done' : '') + (m.claimed ? ' claimed' : '');
-      var pct = Math.min(100, Math.max(0, Math.floor((Number(m.progress) / Math.max(1, Number(m.target))) * 100)));
-      var rewardLabel = m.rewardType === 'fragment' ? (m.reward + ' ✦ frag') :
-        m.rewardType === 'mystery' ? '🎁 Gift box' : ('🪙 ' + m.reward);
-      var unitIco = { coins: '🪙', pipes: '🧱', nearmiss: '⚡', score: '🏆', m: '🛫', boxes: '🎁', perfect: '✨', combo: '🔥' };
+    var missions = FTStorage.getMissions ? FTStorage.getMissions() : [];
+    if (!missions.length) {
+      var empty = document.createElement('div');
+      empty.className = 'missions-empty';
+      empty.setAttribute('role', 'status');
+      empty.innerHTML = '<div class="missions-empty-ico" aria-hidden="true">📋</div>' +
+        '<p class="missions-empty-title">No missions right now</p>' +
+        '<p class="hint">Fly a run — daily challenges refresh each day. Come back after the reset countdown!</p>';
+      missionsList.appendChild(empty);
+    } else {
+      var allClaimed = true;
+      missions.forEach(function (m) {
+        if (!m.claimed) allClaimed = false;
+        var card = document.createElement('div');
+        card.className = 'mission-card' + (m.done ? ' done' : '') + (m.claimed ? ' claimed' : '');
+        var pct = Math.min(100, Math.max(0, Math.floor((Number(m.progress) / Math.max(1, Number(m.target))) * 100)));
+        var rewardLabel = m.rewardType === 'fragment' ? (m.reward + ' ✦ frag') :
+          m.rewardType === 'mystery' ? '🎁 Gift box' : ('🪙 ' + m.reward);
+        var unitIco = { coins: '🪙', pipes: '🧱', nearmiss: '⚡', score: '🏆', m: '🛫', boxes: '🎁', perfect: '✨', combo: '🔥' };
 
-      var title = document.createElement('div');
-      title.className = 'mission-title';
-      title.textContent = m.label || 'Mission';
+        var title = document.createElement('div');
+        title.className = 'mission-title';
+        title.textContent = m.label || 'Mission';
 
-      var bar = document.createElement('div');
-      bar.className = 'mission-bar';
-      var fill = document.createElement('span');
-      fill.style.width = pct + '%';
-      bar.appendChild(fill);
+        var bar = document.createElement('div');
+        bar.className = 'mission-bar';
+        var fill = document.createElement('span');
+        fill.style.width = pct + '%';
+        bar.appendChild(fill);
 
-      var meta = document.createElement('div');
-      meta.className = 'mission-meta';
-      meta.textContent = (unitIco[m.unit] || '•') + ' ' + Math.min(m.progress, m.target) + ' / ' + m.target + ' · ' + rewardLabel;
+        var meta = document.createElement('div');
+        meta.className = 'mission-meta';
+        meta.textContent = (unitIco[m.unit] || '•') + ' ' + Math.min(m.progress, m.target) + ' / ' + m.target + ' · ' + rewardLabel;
 
-      card.appendChild(title);
-      card.appendChild(bar);
-      card.appendChild(meta);
+        card.appendChild(title);
+        card.appendChild(bar);
+        card.appendChild(meta);
 
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'btn primary btn-sm';
-      btn.textContent = m.claimed ? 'Claimed' : m.done ? 'Claim' : 'In progress';
-      btn.disabled = !m.done || m.claimed;
-      btn.addEventListener('click', function () {
-        var r = FTStorage.claimMission(m.id);
-        if (r) {
-          // 3.18 mission claim juice
-          card.classList.remove('claim-juice');
-          void card.offsetWidth;
-          card.classList.add('claim-juice');
-          haptic('gift');
-          if (!reduceMotion) spawnConfettiBurst(W * 0.5, H * 0.35, 14);
-          if (FTAudio.combo) FTAudio.combo();
-          if (r.mystery) {
-            showToast('Mission: +' + (r.gifts || 1) + ' Gift 🎁', 1600, 'gift');
-            if (FTAudio.mystery) FTAudio.mystery();
-            voiceGiftCue();
-            detectSpinUnlockFromDelta(r.gifts || 1);
-          } else if (r.fragments) {
-            showToast('+' + r.fragments + ' fragments!', 1400, 'medal');
-            voiceCue('wah_ji');
-          } else {
-            showToast('+' + r.coins + ' coins!', 1400, 'medal');
-            voiceCue('shabaash');
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn primary btn-sm';
+        btn.textContent = m.claimed ? 'Claimed' : m.done ? 'Claim' : 'In progress';
+        btn.disabled = !m.done || m.claimed;
+        btn.addEventListener('click', function () {
+          var r = FTStorage.claimMission(m.id);
+          if (r) {
+            card.classList.remove('claim-juice');
+            void card.offsetWidth;
+            card.classList.add('claim-juice');
+            haptic('gift');
+            if (!reduceMotion) spawnConfettiBurst(W * 0.5, H * 0.35, 14);
+            if (FTAudio.combo) FTAudio.combo();
+            if (r.mystery) {
+              showToast('Mission: +' + (r.gifts || 1) + ' Gift 🎁', 1600, 'gift');
+              if (FTAudio.mystery) FTAudio.mystery();
+              voiceGiftCue();
+              detectSpinUnlockFromDelta(r.gifts || 1);
+            } else if (r.fragments) {
+              showToast('+' + r.fragments + ' fragments!', 1400, 'medal');
+              voiceCue('wah_ji');
+            } else {
+              showToast('+' + r.coins + ' coins!', 1400, 'medal');
+              voiceCue('shabaash');
+            }
+            refreshMissions(); updateCoinHud();
           }
-          refreshMissions(); updateCoinHud();
-        }
+        });
+        card.appendChild(btn);
+        missionsList.appendChild(card);
       });
-      card.appendChild(btn);
-      missionsList.appendChild(card);
-    });
+      if (allClaimed) {
+        var doneBanner = document.createElement('div');
+        doneBanner.className = 'missions-empty missions-all-done';
+        doneBanner.setAttribute('role', 'status');
+        doneBanner.innerHTML = '<div class="missions-empty-ico" aria-hidden="true">✅</div>' +
+          '<p class="missions-empty-title">All missions claimed</p>' +
+          '<p class="hint">Shabaash! New set after daily reset — keep flying for tomorrow\'s three.</p>';
+        missionsList.appendChild(doneBanner);
+      }
+    }
   }
   if (btnMissions) btnMissions.addEventListener('click', function () {
     hideAllScreens();
