@@ -4481,6 +4481,7 @@
       ctx.translate(-cx, -cy);
     }
     drawSky();
+    drawPipeParallaxMicro();
     pipes.forEach(drawPipe);
     drawPerfectRails();
     // 3.24 micro-perf: skip empty entity passes
@@ -4547,7 +4548,10 @@
       ctx.font = 'bold 10px system-ui';
       ctx.fillText(Math.ceil(left) + 's left', W / 2, 78);
     }
+    if (state === 'dying') drawReplayPathStub();
     if (kick) ctx.restore();
+    if (state === 'playing') drawNearMissEdgeFlash();
+    if (state === 'dying') drawDeathFreezeOverlay();
     drawHitFlash();
   }
 
