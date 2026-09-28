@@ -1,0 +1,11 @@
+{
+  "appId": "com.offerpk.urrjaa",
+  "appName": "Urr Jaa!",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

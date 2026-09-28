@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#4ecdc4" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Urr Jaa! — offline one-tap fly arcade. Pakistani birds, vehicles, cities. Tap to flap." />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>Urr Jaa!</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" width="400" height="600" aria-label="Urr Jaa! game"></canvas>
+
+    <div id="hud" class="overlay-layer" hidden>
+      <div id="score-display">0</div>
+      <div id="combo-display" hidden>COMBO 0</div>
+      <div id="mode-badge" hidden></div>
+      <div id="coin-hud">🪙 0</div>
+      <div id="timer-hud" hidden>60s</div>
+      <div id="power-hud" hidden></div>
+      <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause" title="Pause">⏸</button>
+      <button id="btn-mute" class="icon-btn" type="button" aria-label="Toggle sound" title="Sound">🔊</button>
+    </div>
+
+    <!-- Start / Menu -->
+    <div id="screen-start" class="screen">
+      <h1 class="logo">Urr Jaa!</h1>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.1.0-urrjaa</p>
+      <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
+      <div class="btn-col">
+        <button id="btn-play" class="btn primary" type="button">▶ Play</button>
+        <button id="btn-modes" class="btn secondary" type="button">🎮 Modes</button>
+        <button id="btn-garage" class="btn secondary" type="button">🐦 Garage</button>
+        <div class="btn-row">
+          <button id="btn-missions" class="btn ghost btn-sm" type="button">📋 Missions</button>
+          <button id="btn-collection" class="btn ghost btn-sm" type="button">📚 Album</button>
+        </div>
+        <div class="btn-row">
+          <button id="btn-boards" class="btn ghost btn-sm" type="button">🏆 Boards</button>
+          <button id="btn-streak" class="btn ghost btn-sm" type="button">🔥 Streak</button>
+        </div>
+        <button id="btn-settings" class="btn ghost" type="button">⚙ Settings</button>
+      </div>
+      <p class="hint">Tap / Space · Coins in gaps · Esc pause · 2s to learn</p>
+      <p class="runs-line">Runs: <span id="total-runs">0</span></p>
+    </div>
+
+    <!-- Modes -->
+    <div id="screen-modes" class="screen panel-screen" hidden>
+      <h2>Modes</h2>
+      <div class="btn-col">
+        <button class="btn primary" type="button" data-mode="classic">Classic Endless</button>
+        <button class="btn secondary" type="button" data-mode="timeattack">⏱ Time Attack 60s</button>
+        <button class="btn secondary" type="button" data-mode="hard">🔥 Hard (Faster)</button>
+        <button class="btn secondary" type="button" data-mode="nocoin">🚫 No Coin (Survive)</button>
+        <button class="btn secondary" type="button" data-mode="challenge">🏔 Challenge Stages</button>
+        <button class="btn secondary" type="button" data-mode="onelife">1️⃣ One Life Challenge</button>
+        <button class="btn ghost btn-sm" type="button" data-mode="daily">📅 Daily</button>
+        <button class="btn ghost btn-sm" type="button" data-mode="practice">🛡 Practice</button>
+        <button class="btn ghost" type="button" data-close="modes">Back</button>
+      </div>
+    </div>
+
+    <!-- Garage -->
+    <div id="screen-garage" class="screen panel-screen scroll-screen" hidden>
+      <h2>Garage</h2>
+      <p class="coins-line">🪙 <span id="garage-coins">0</span></p>
+      <h3 class="section-title">Birds</h3>
+      <div class="skin-row" id="garage-birds"></div>
+      <h3 class="section-title">Vehicles (pair)</h3>
+      <div class="skin-row" id="garage-vehicles"></div>
+      <h3 class="section-title">Environments</h3>
+      <div class="skin-row" id="garage-envs"></div>
+      <h3 class="section-title">Weather (visual)</h3>
+      <div class="chip-row" id="weather-row"></div>
+      <h3 class="section-title">Accessories</h3>
+      <div class="skin-row" id="garage-hats"></div>
+      <h3 class="section-title">Trails</h3>
+      <div class="skin-row" id="garage-trails"></div>
+      <button class="btn primary" type="button" data-close="garage">Done</button>
+    </div>
+
+    <!-- Missions -->
+    <div id="screen-missions" class="screen panel-screen scroll-screen" hidden>
+      <h2>Daily Missions</h2>
+      <p class="hint">Local day · claim coin rewards</p>
+      <div id="missions-list" class="missions-list"></div>
+      <button class="btn primary" type="button" data-close="missions">Back</button>
+    </div>
+
+    <!-- Collection -->
+    <div id="screen-collection" class="screen panel-screen scroll-screen" hidden>
+      <h2>Collection Album</h2>
+      <div id="collection-list" class="collection-list"></div>
+      <button class="btn primary" type="button" data-close="collection">Back</button>
+    </div>
+
+    <!-- Death -->
+    <div id="screen-death" class="screen" hidden>
+      <h2>Game Over</h2>
+      <div id="medal-display" class="medal" hidden>
+        <div class="medal-disc" aria-hidden="true"></div>
+        <span id="medal-label">Medal</span>
+      </div>
+      <p class="score-big">Score: <span id="final-score">0</span></p>
+      <p class="best-line"><span id="mode-death-label">Best</span>: <span id="best-death">0</span> · Run 🪙 <span id="run-coins">0</span></p>
+      <div class="btn-col">
+        <button id="btn-continue" class="btn reward" type="button">▶ Continue (Ad)</button>
+        <button id="btn-retry" class="btn primary" type="button">Try Again</button>
+        <button id="btn-menu" class="btn ghost" type="button">Menu</button>
+      </div>
+    </div>
+
+    <!-- Pause -->
+    <div id="screen-pause" class="screen pause-screen" hidden>
+      <h2>Paused</h2>
+      <p class="hint">Take a breath. Resume or quit to menu.</p>
+      <div class="btn-col">
+        <button id="btn-resume" class="btn primary" type="button">Resume</button>
+        <button id="btn-quit-pause" class="btn ghost" type="button">Quit to Menu</button>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="screen-settings" class="screen settings-screen" hidden>
+      <h2>Settings</h2>
+      <div class="settings-card">
+        <label class="setting-row check-row" for="sound-toggle">
+          <span>Sound</span>
+          <input id="sound-toggle" type="checkbox" checked />
+        </label>
+        <p class="setting-hint">Web Audio beeps (also HUD mute)</p>
+        <label class="setting-row check-row" for="haptics-toggle">
+          <span>Haptics</span>
+          <input id="haptics-toggle" type="checkbox" checked />
+        </label>
+        <p class="setting-hint">Vibration stub when supported</p>
+        <label class="setting-row" for="sens-slider">
+          <span>Sensitivity</span>
+          <span id="sens-value">1.00</span>
+        </label>
+        <input id="sens-slider" type="range" min="0.7" max="1.3" step="0.05" value="1" aria-label="Flap sensitivity" />
+        <p class="setting-hint">Scales gravity &amp; flap strength</p>
+        <label class="setting-row check-row" for="reduce-motion">
+          <span>Reduce motion</span>
+          <input id="reduce-motion" type="checkbox" />
+        </label>
+        <p class="setting-hint">Less shake, no trail, fewer particles</p>
+        <label class="setting-row check-row" for="voice-toggle">
+          <span>Desi voice cues</span>
+          <input id="voice-toggle" type="checkbox" checked />
+        </label>
+        <p class="setting-hint">Short toasts: Oye hoye, Bach ke, Wah ji wah…</p>
+      </div>
+      <button id="btn-settings-close" class="btn primary" type="button">Done</button>
+    </div>
+
+    <!-- Leaderboards -->
+    <div id="screen-boards" class="screen panel-screen scroll-screen" hidden>
+      <h2>Local Boards</h2>
+      <div id="boards-list" class="boards-list"></div>
+      <button class="btn primary" type="button" data-close="boards">Back</button>
+    </div>
+
+    <!-- Daily streak -->
+    <div id="screen-streak" class="screen panel-screen scroll-screen" hidden>
+      <h2>Daily Streak</h2>
+      <div id="streak-body"></div>
+      <button id="btn-claim-streak" class="btn primary" type="button">Claim</button>
+      <button class="btn ghost" type="button" data-close="streak">Back</button>
+    </div>
+
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/ads.js"></script>
+  <script src="js/skins.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
