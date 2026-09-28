@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.8.0-urrjaa — Jungle/Mountains/Sea theme skins + deeper pseudo-3D; keeps ≤3.7 features.
+ * Urr Jaa! v3.9.0-urrjaa — deeper pseudo-3D (wings/head/mouth) + relaxed collision feel; keeps ≤3.8 features.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all v3.2 features — polish difficulty/collision/voice only.
+ * KEEP all prior features — polish difficulty/collision/character anim only.
  */
 (function () {
   'use strict';
@@ -20,25 +20,25 @@
   const TERMINAL_V = 620;
   const FLAP_COOLDOWN = 0.08;
   const PIPE_W = 64;
-  const BASE_SPEED = 148;
-  const BASE_GAP = 172;          // Classic: wider reactable gaps
-  const BASE_SPAWN = 220;
-  const SPEED_CAP = 270;
-  const GAP_FLOOR = 120;
-  const SPAWN_FLOOR = 155;
-  const SPEED_PER_SCORE = 1.85;
-  const GAP_SHRINK_PER = 0.72;
-  const SPAWN_SHRINK_PER = 0.95;
-  const HITBOX_INSET = 0.18;     // ~18% body shrink already in skins; extra soft inset
-  const CORNER_TOL = 11;         // obstacle corner forgiveness (px)
-  const LUCKY_COOLDOWN_MS = 2800;
+  const BASE_SPEED = 142;
+  const BASE_GAP = 186;          // Classic: roomier reactable gaps (3.9)
+  const BASE_SPAWN = 228;
+  const SPEED_CAP = 260;
+  const GAP_FLOOR = 128;
+  const SPAWN_FLOOR = 160;
+  const SPEED_PER_SCORE = 1.55;
+  const GAP_SHRINK_PER = 0.58;
+  const SPAWN_SHRINK_PER = 0.82;
+  const HITBOX_INSET = 0.28;     // extra soft inset on top of smaller body hitbox (3.9)
+  const CORNER_TOL = 16;         // obstacle corner forgiveness (px) — more grace
+  const LUCKY_COOLDOWN_MS = 2000;
   const MEDAL_BRONZE = 10;
   const MEDAL_SILVER = 25;
   const MEDAL_GOLD = 50;
   const MEDAL_PLATINUM = 100;
   const DEATH_FREEZE_MS = 700;
   const HIT_FLASH_MS = 220;
-  const NEAR_MISS_PX = 18;
+  const NEAR_MISS_PX = 24;
   const SLOWMO_MS = 3000;
   const SLOWMO_SCALE = 0.45;
   const POWERUP_CHANCE = 0.10;
@@ -46,7 +46,7 @@
   const TURBO_MS = 2500;
   const GHOST_MS = 2500;
   const TRAIL_INTERVAL = 0.035;
-  const COIN_R = 12;
+  const COIN_R = 14;
   const BOX_CHANCE = 0.10;
   const M_PER_PX = 0.08;
   const TIME_ATTACK_S = 60;
@@ -139,6 +139,7 @@
   let nextWeatherAt = 90;
   let runStartTs = 0;
   let luckyCooldownUntil = 0;
+  let mouthChirpUntil = 0; // visual mouth open (chirp) until ts
   let phaseSimple = true; // first ~10s / early classic: simple patterns
 
   const hud = document.getElementById('hud');
@@ -395,11 +396,11 @@
     return (performance.now() - runStartTs) / 1000;
   }
 
-  /** First 2–3 competitive runs: extra-wide gaps, fewer vehicles, slower, earlier power-up. */
+  /** First 5 competitive runs: extra-wide gaps, fewer vehicles, slower, earlier power-up (3.9 stronger). */
   function firstRunProtect() {
     if (!isForgivingMode()) return false;
     var rc = FTStorage.getRunCount();
-    return rc <= 3;
+    return rc <= 5;
   }
 
   /** Calibration from last 5 run durations (forgiving modes only). */
@@ -407,8 +408,8 @@
     if (!isForgivingMode() || !FTStorage.getAvgRunDuration) return { gap: 1, speed: 1, traffic: 1, power: 1 };
     var avg = FTStorage.getAvgRunDuration();
     if (!avg || avg <= 0) return { gap: 1, speed: 1, traffic: 1, power: 1 };
-    if (avg < 18) return { gap: 1.14, speed: 0.90, traffic: 0.65, power: 1.35 }; // short → ease
-    if (avg < 30) return { gap: 1.08, speed: 0.94, traffic: 0.80, power: 1.2 };
+    if (avg < 18) return { gap: 1.20, speed: 0.86, traffic: 0.55, power: 1.45 }; // short → ease
+    if (avg < 30) return { gap: 1.12, speed: 0.91, traffic: 0.72, power: 1.28 };
     if (avg > 80) return { gap: 0.94, speed: 1.07, traffic: 1.18, power: 0.9 }; // long → gently harden
     if (avg > 55) return { gap: 0.97, speed: 1.03, traffic: 1.08, power: 0.95 };
     return { gap: 1, speed: 1, traffic: 1, power: 1 };
@@ -423,26 +424,29 @@
     var t = runElapsedSec();
     var m = { gap: 1, speed: 1, spawn: 1, traffic: 1, simple: false, power: 1 };
     if (isHard()) {
-      // Aggressive from the start
-      m.gap = 0.92; m.speed = 1.05; m.spawn = 0.92; m.traffic = 1.25; m.simple = false;
+      // Slightly less brutal than pre-3.9, still aggressive
+      m.gap = 0.95; m.speed = 1.02; m.spawn = 0.95; m.traffic = 1.15; m.simple = false;
       return m;
     }
     if (isChallenge() || isOneLife()) {
-      m.simple = t < 6;
+      m.simple = t < 8;
+      if (t < 8) { m.gap = 1.08; m.speed = 0.94; m.spawn = 1.06; m.traffic = 0.7; }
       return m;
     }
-    // First ~10s: slow, wide, simple, almost no hard vehicle combos
-    if (t < 10) {
-      m.gap = 1.28; m.speed = 0.72; m.spawn = 1.18; m.traffic = 0.15; m.simple = true; m.power = 1.4;
+    // First ~18s: slow, wide, simple, almost no hard vehicle combos (3.9 longer ease-in)
+    if (t < 18) {
+      var ease = t < 10 ? 1 : (1 - (t - 10) / 16); // soft blend toward normal by ~18s
+      m.gap = 1.22 + 0.14 * ease; m.speed = 0.78 - 0.08 * ease; m.spawn = 1.12 + 0.1 * ease;
+      m.traffic = 0.12 + 0.2 * (1 - ease); m.simple = true; m.power = 1.35 + 0.15 * ease;
       phaseSimple = true;
       return m;
     }
     phaseSimple = false;
-    if (sc < 10) { m.gap = 1.18; m.speed = 0.82; m.spawn = 1.12; m.traffic = 0.35; m.simple = true; m.power = 1.25; }
-    else if (sc < 25) { m.gap = 1.10; m.speed = 0.90; m.spawn = 1.06; m.traffic = 0.55; m.simple = true; m.power = 1.1; }
-    else if (sc < 45) { m.gap = 1.00; m.speed = 1.00; m.spawn = 1.00; m.traffic = 0.85; }
-    else if (sc < 75) { m.gap = 0.94; m.speed = 1.08; m.spawn = 0.94; m.traffic = 1.1; }
-    else { m.gap = 0.88; m.speed = 1.16; m.spawn = 0.88; m.traffic = 1.3; }
+    if (sc < 10) { m.gap = 1.20; m.speed = 0.84; m.spawn = 1.12; m.traffic = 0.32; m.simple = true; m.power = 1.28; }
+    else if (sc < 25) { m.gap = 1.12; m.speed = 0.90; m.spawn = 1.08; m.traffic = 0.50; m.simple = true; m.power = 1.15; }
+    else if (sc < 45) { m.gap = 1.02; m.speed = 0.98; m.spawn = 1.02; m.traffic = 0.78; }
+    else if (sc < 75) { m.gap = 0.96; m.speed = 1.05; m.spawn = 0.96; m.traffic = 1.02; }
+    else { m.gap = 0.90; m.speed = 1.12; m.spawn = 0.90; m.traffic = 1.2; }
     return m;
   }
 
@@ -462,22 +466,22 @@
   }
 
   function modeSpeedMul() {
-    if (isHard()) return 1.48; // Hard starts aggressive
+    if (isHard()) return 1.38; // Hard still tough, slightly less brutal (3.9)
     if (isChallenge()) {
       var st = CHALLENGE_STAGES[challengeStageIdx] || CHALLENGE_STAGES[0];
-      return st.speedMul || 1.05;
+      return (st.speedMul || 1.05) * 0.97;
     }
-    if (isOneLife()) return 1.12;
+    if (isOneLife()) return 1.08;
     return 1;
   }
 
   function modeGapMul() {
-    if (isHard()) return 0.80;
+    if (isHard()) return 0.86;
     if (isChallenge()) {
       var st = CHALLENGE_STAGES[challengeStageIdx] || CHALLENGE_STAGES[0];
-      return st.gapMul || 1;
+      return (st.gapMul || 1) * 1.04;
     }
-    if (isOneLife()) return 0.94;
+    if (isOneLife()) return 0.97;
     return 1;
   }
 
@@ -527,15 +531,15 @@
     var cal = calibMods();
     var frGap = 1, frSpd = 1, frSpawn = 1;
     if (firstRunProtect()) {
-      frGap = 1.16; frSpd = 0.88; frSpawn = 1.12;
+      frGap = 1.24; frSpd = 0.82; frSpawn = 1.18;
     }
     var speed = (BASE_SPEED + sc * SPEED_PER_SCORE) * sm * turboMul * wMul * phase.speed * cal.speed * frSpd;
     var gap = (BASE_GAP - sc * GAP_SHRINK_PER) * gm * phase.gap * cal.gap * frGap;
     var spawn = (BASE_SPAWN - sc * SPAWN_SHRINK_PER) * phase.spawn * frSpawn;
     // Practice: always roomy
-    if (isPractice()) { gap *= 1.2; speed *= 0.85; spawn *= 1.1; }
+    if (isPractice()) { gap *= 1.28; speed *= 0.80; spawn *= 1.14; }
     // Daily: mildly forgiving like classic
-    if (playMode === 'daily' && !isHard()) { gap *= 1.04; speed *= 0.96; }
+    if (playMode === 'daily' && !isHard()) { gap *= 1.08; speed *= 0.93; }
     currentSpeed = Math.min(SPEED_CAP * (isHard() ? 1.25 : 1), speed);
     currentGap = Math.max(GAP_FLOOR * gm * (isHard() ? 0.95 : 1), gap);
     currentSpawn = Math.max(SPAWN_FLOOR, spawn);
@@ -668,30 +672,42 @@
     var sx = squash < 1 ? 1.12 : (squash > 1 ? 0.92 : 1);
     var sy = squash;
     var t = performance.now() / 1000;
+    var now = performance.now();
     var wingFlap = 0;
     var headTilt = 0;
+    var headBob = 0;
+    var mouthOpen = 0;
     var wheelRot = 0;
     var vehBob = 0;
     if (!reduceMotion) {
       var vy = (bird && typeof bird.vy === 'number') ? bird.vy : 0;
       var rising = Math.max(0, -vy / 380);
       var falling = Math.max(0, vy / 520);
-      // Burst flap after tap (squash compress) + continuous flight flap
+      // Burst flap after tap (squash compress) + continuous flight flap — stronger 3.9 motion
       var burst = (squash < 0.95) ? 1 : 0;
-      var flapHz = 7 + rising * 12 + burst * 16;
-      var flapAmp = 0.28 + rising * 0.55 + burst * 0.45;
+      var flapHz = 8.5 + rising * 14 + burst * 18;
+      var flapAmp = 0.38 + rising * 0.72 + burst * 0.62;
       if (state === 'playing' || state === 'dying') {
         wingFlap = Math.sin(t * flapHz) * flapAmp;
         // Independent near/far already handled in skins; add glide tuck when diving
-        if (falling > 0.35 && burst === 0) wingFlap *= 0.45;
-        headTilt = Math.max(-0.5, Math.min(0.55, vy / 480));
+        if (falling > 0.35 && burst === 0) wingFlap *= 0.42;
+        headTilt = Math.max(-0.62, Math.min(0.68, vy / 420));
+        headBob = Math.sin(t * 11) * (0.4 + rising * 0.8) + (burst ? Math.sin(t * 22) * 1.2 : 0);
       } else {
         // Menu idle: gentle wing + head bob
-        wingFlap = Math.sin(t * 5.5) * 0.22;
-        headTilt = Math.sin(t * 2.2) * 0.1;
+        wingFlap = Math.sin(t * 6.2) * 0.32;
+        headTilt = Math.sin(t * 2.4) * 0.14;
+        headBob = Math.sin(t * 3.5) * 0.55;
       }
-      wheelRot = t * (4 + (currentSpeed || 148) / 40);
-      vehBob = Math.sin(t * 7) * 0.9;
+      // Mouth open during chirp window (tap / near-miss / gift)
+      if (now < mouthChirpUntil) {
+        var rem = (mouthChirpUntil - now) / 280;
+        mouthOpen = Math.max(0, Math.min(1, rem > 0.55 ? 1 : rem * 1.6));
+      } else if (burst) {
+        mouthOpen = 0.35; // slight open on flap squash
+      }
+      wheelRot = t * (5 + (currentSpeed || 142) / 36);
+      vehBob = Math.sin(t * 7.5) * 1.15 + Math.sin(t * 3.1) * 0.35;
     }
     var vehTheme = null;
     if (birdId === 'jungle') vehTheme = 'jungle';
@@ -705,12 +721,20 @@
       squashY: reduceMotion ? 1 : sy,
       wingFlap: wingFlap,
       headTilt: headTilt,
+      headBob: headBob,
+      mouthOpen: mouthOpen,
       animT: t,
       wheelRot: wheelRot,
       vehBob: vehBob,
       reduceMotion: reduceMotion,
       vehicleTheme: vehTheme
     };
+  }
+
+  /** Open beak briefly + optional chirp SFX (visual mouth; hitbox unchanged). */
+  function triggerChirpMouth(kind) {
+    mouthChirpUntil = performance.now() + (kind === 'gift' ? 420 : 280);
+    if (FTAudio.chirp) FTAudio.chirp(kind || 'tap');
   }
 
   function resetBird() {
@@ -1179,6 +1203,7 @@
       nextWeatherAt = 90;
       runStartTs = performance.now();
       luckyCooldownUntil = 0;
+      mouthChirpUntil = 0;
       phaseSimple = true;
       setScore(0);
       resetBird();
@@ -1250,6 +1275,7 @@
       flapCooldown = FLAP_COOLDOWN;
       squashTarget = 0.72;
       FTAudio.flap();
+      triggerChirpMouth('tap');
       spawnFlapFeathers();
       return;
     }
@@ -1259,6 +1285,7 @@
     flapCooldown = FLAP_COOLDOWN;
     squashTarget = 0.68;
     FTAudio.flap();
+    triggerChirpMouth('tap');
     spawnFlapFeathers();
   }
 
@@ -1269,9 +1296,9 @@
   function ghostActive() { return performance.now() < ghostUntil; }
 
   /**
-   * Collision with forgiveness:
-   * - Hitbox already ~15–20% smaller than sprite (body only; wings/hats ignored)
-   * - Extra inset + obstacle corner tolerance
+   * Collision with forgiveness (3.9 more relaxed on Classic/Daily/Practice):
+   * - Hitbox already ~22–28% smaller than sprite (body only; wings/hats/mouth ignored)
+   * - Extra inset + wider obstacle corner tolerance
    * - Returns: false | 'hard' | 'soft' (soft → LUCKY on forgiving modes)
    */
   function checkCollision() {
@@ -1280,19 +1307,27 @@
     var halfH = bird.h / 2;
     var left = bird.x - halfW;
     var top = bird.y - halfH;
+    var cornerTol = CORNER_TOL;
+    if (isForgivingMode()) {
+      if (firstRunProtect()) cornerTol = CORNER_TOL + 6;
+      else cornerTol = CORNER_TOL + 2;
+    } else {
+      cornerTol = Math.max(10, CORNER_TOL - 3); // Hard/Challenge/OneLife: milder than pre-3.9 but stricter
+    }
     // Ground / ceiling — soft near-edge on forgiving modes
     var groundY = H - GROUND_H;
     if (bird.y + halfH >= groundY) {
       var overG = bird.y + halfH - groundY;
-      if (isForgivingMode() && overG < CORNER_TOL * 0.7) return 'soft';
+      if (isForgivingMode() && overG < cornerTol * 0.85) return 'soft';
       return 'hard';
     }
     if (bird.y - halfH <= 0) {
       var overC = halfH - bird.y;
-      if (isForgivingMode() && overC < CORNER_TOL * 0.7) return 'soft';
+      if (isForgivingMode() && overC < cornerTol * 0.85) return 'soft';
       return 'hard';
     }
-    var inset = Math.max(3, Math.round(Math.min(bird.w, bird.h) * HITBOX_INSET * 0.5));
+    var insetMul = isForgivingMode() ? 0.72 : 0.48;
+    var inset = Math.max(4, Math.round(Math.min(bird.w, bird.h) * HITBOX_INSET * insetMul));
     var bx = left + inset, by0 = top + inset, bw = bird.w - inset * 2, bh = bird.h - inset * 2;
     var softHit = false;
     for (var i = 0; i < pipes.length; i++) {
@@ -1303,28 +1338,28 @@
       if (rectsOverlap(bx, by0, bw, bh, p.x, 0, pw, p.gapY)) {
         var penTop = (by0 + bh) - p.gapY; // how far into the pipe edge
         var cornerX = Math.min(Math.abs((bx + bw) - p.x), Math.abs(bx - (p.x + pw)));
-        if (isForgivingMode() && penTop > 0 && penTop <= CORNER_TOL && cornerX <= CORNER_TOL + 6) softHit = true;
+        if (isForgivingMode() && penTop > 0 && penTop <= cornerTol && cornerX <= cornerTol + 10) softHit = true;
         else return 'hard';
       }
       var botY = p.gapY + gap;
       if (rectsOverlap(bx, by0, bw, bh, p.x, botY, pw, groundY - botY)) {
         var penBot = botY - by0;
         var cornerXb = Math.min(Math.abs((bx + bw) - p.x), Math.abs(bx - (p.x + pw)));
-        if (isForgivingMode() && penBot > 0 && penBot <= CORNER_TOL && cornerXb <= CORNER_TOL + 6) softHit = true;
+        if (isForgivingMode() && penBot > 0 && penBot <= cornerTol && cornerXb <= cornerTol + 10) softHit = true;
         else return 'hard';
       }
     }
     for (var j = 0; j < traffic.length; j++) {
       var tv = traffic[j];
       var thb = FTSkins.trafficHitbox(tv);
-      var tw = thb.w * 0.88, th = thb.h * 0.88;
+      var tw = thb.w * (isForgivingMode() ? 0.82 : 0.88), th = thb.h * (isForgivingMode() ? 0.82 : 0.88);
       var tx = tv.x - tw / 2, ty = tv.y - th / 2;
       if (rectsOverlap(bx, by0, bw, bh, tx, ty, tw, th)) {
         if (isForgivingMode() && !tv.boss) {
           // Shallow graze only → soft; deep overlap → hard
           var overlapX = Math.min(bx + bw, tx + tw) - Math.max(bx, tx);
           var overlapY = Math.min(by0 + bh, ty + th) - Math.max(by0, ty);
-          if (overlapX <= CORNER_TOL + 4 || overlapY <= CORNER_TOL + 2) softHit = true;
+          if (overlapX <= cornerTol + 6 || overlapY <= cornerTol + 4) softHit = true;
           else return 'hard';
         } else return 'hard';
       }
@@ -1356,6 +1391,7 @@
     else FTAudio.nearmiss();
     showBanner('LUCKY!', 750);
     showToast('LUCKY!', 1000, 'lucky');
+    triggerChirpMouth('close');
     voiceCue('lucky');
     haptic('nearmiss');
   }
@@ -1540,6 +1576,7 @@
     FTAudio.powerup();
     if (FTAudio.mystery) FTAudio.mystery();
     haptic('coin');
+    triggerChirpMouth('gift');
     noteGiftAdd(1);
     voiceGiftCue();
     spawnGiftPop(box.x, box.y);
@@ -1871,6 +1908,7 @@
       p._wasNearMiss = true;
       showToast('CLOSE!', 850, 'close');
       showBanner('CLOSE!', 500);
+      triggerChirpMouth('close');
       if (nearMissStreak === 1 && rng() < 0.45) voiceCue('bach_ke');
       if (nearMissStreak >= 3) {
         riskyUntil = performance.now() + 5000;
@@ -2065,7 +2103,7 @@
       } else pu.x -= currentSpeed * sdt;
       if (pu.x < -30) { powerups.splice(pui, 1); continue; }
       var dx = bird.x - pu.x, dy = bird.y - pu.y;
-      if (dx * dx + dy * dy < (POWERUP_R + bird.w * 0.35) * (POWERUP_R + bird.w * 0.35)) {
+      if (dx * dx + dy * dy < (POWERUP_R + bird.w * 0.48) * (POWERUP_R + bird.w * 0.48)) {
         collectPowerup(pu);
         powerups.splice(pui, 1);
       }
@@ -2088,7 +2126,7 @@
       }
       if (c.x < -30) { coins.splice(ci, 1); coinCombo = 0; continue; }
       var cx = bird.x - c.x, cy = bird.y - c.y;
-      if (cx * cx + cy * cy < (COIN_R + bird.w * 0.4) * (COIN_R + bird.w * 0.4)) {
+      if (cx * cx + cy * cy < (COIN_R + bird.w * 0.55) * (COIN_R + bird.w * 0.55)) {
         collectCoin(c);
         coins.splice(ci, 1);
       }
@@ -2101,7 +2139,7 @@
       else b.x -= currentSpeed * sdt;
       if (b.x < -30) { boxes.splice(bi, 1); continue; }
       var bx = bird.x - b.x, by2 = bird.y - b.y;
-      if (bx * bx + by2 * by2 < (16 + bird.w * 0.35) * (16 + bird.w * 0.35)) {
+      if (bx * bx + by2 * by2 < (20 + bird.w * 0.5) * (20 + bird.w * 0.5)) {
         openMysteryBox(b);
         boxes.splice(bi, 1);
       }

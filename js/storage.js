@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.8.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards.
+ * Urr Jaa! v3.9.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {

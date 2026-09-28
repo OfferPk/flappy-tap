@@ -111,6 +111,22 @@
     noiseBurst(0.04, 0.04);
   }
 
+  /** Short bird chirp for mouth-open moments (tap / close / gift). Respects mute. */
+  function chirp(kind) {
+    kind = kind || 'tap';
+    if (kind === 'gift') {
+      tone(1400, 0.05, 'sine', 0.07);
+      setTimeout(function () { tone(1800, 0.06, 'triangle', 0.06); }, 40);
+      setTimeout(function () { tone(2100, 0.05, 'sine', 0.04); }, 85);
+    } else if (kind === 'close') {
+      tone(1600, 0.035, 'triangle', 0.06);
+      setTimeout(function () { tone(2100, 0.04, 'sine', 0.045); }, 28);
+    } else {
+      tone(1250, 0.035, 'sine', 0.055);
+      setTimeout(function () { tone(1650, 0.04, 'triangle', 0.04); }, 30);
+    }
+  }
+
   function combo() {
     tone(990, 0.06, 'square', 0.07);
     setTimeout(function () { tone(1320, 0.08, 'square', 0.06); }, 45);
@@ -698,7 +714,7 @@
   hookVoices();
 
   global.FTAudio = {
-    flap: flap, score: score, coin: coin, hit: hit, powerup: powerup, nearmiss: nearmiss,
+    flap: flap, score: score, coin: coin, hit: hit, powerup: powerup, nearmiss: nearmiss, chirp: chirp,
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,

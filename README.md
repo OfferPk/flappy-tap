@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.8.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.9.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,11 +29,12 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.8.0-urrjaa)
+## Features (v3.9.0-urrjaa)
 
+- **Feel 3.9:** smaller body hitbox · more corner/LUCKY grace · larger early gaps · slower first 15–20s ramp · bigger coin/gift pickup
+- **Pseudo-3D 3.9:** stronger wing flap · moveable head bob · mouth open/close chirp on tap / CLOSE / gift
 - **Theme skins:** Jungle wali · Mountains wali · Sea wali (+ matching vehicles)
 - **Mystery spin:** ~7s wheel decelerate, grant coins on land
-- Pseudo-3D birds/vehicles (wing flap + head tilt)
 
 - **Polish 3.6.0:** richer bird/vehicle art · juice/toasts · Mystery progress · voice variety · Guide/menu polish
 - **Collection depth:** +8 desi birds · +6 areas · 4 offline seasonal packs (Azadi / Eid / Winter / Basant)
@@ -63,7 +64,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v17-20260928** |
+| PWA | `sw.js` cache **urrjaa-v18-20260928** |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)
@@ -87,7 +88,7 @@ flappy-tap/          # repo path kept
   www/               # Capacitor webDir
   docs/              # GitHub Pages + urr-jaa-web-windows.zip
   dist/              # urr-jaa-web-windows.zip
-  package.json       # name urr-jaa, version 3.8.0-urrjaa
+  package.json       # name urr-jaa, version 3.9.0-urrjaa
   capacitor.config.json
   README.md STATUS.md
 ```

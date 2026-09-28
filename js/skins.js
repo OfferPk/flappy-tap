@@ -1,6 +1,6 @@
 /**
- * Urr Jaa! v3.8.0-urrjaa — theme skins (Jungle/Mountains/Sea) + deeper pseudo-3D; hitboxes unchanged.
- * Canvas-drawn; forgiving hitboxes unchanged.
+ * Urr Jaa! v3.9.0-urrjaa — deeper pseudo-3D (wings/head/mouth) + smaller body hitboxes.
+ * Canvas-drawn; wings/hats/mouth are visual-only (hitbox ignores them).
  */
 (function (global) {
   'use strict';
@@ -244,13 +244,15 @@
     return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
   }
 
-  /** Pseudo-3D bird: independent flapping wings + head tilt. Visual only — hitbox unchanged. */
+  /** Pseudo-3D bird: flapping wings + moveable head + mouth open/close. Visual only — hitbox body-only. */
   function drawBirdBody(ctx, id, scale, opts) {
     opts = opts || {};
     const c = BIRD_COLORS[id] || BIRD_COLORS.sparrow;
     const s = scale == null ? 1 : scale;
     const wingFlap = opts.wingFlap || 0; // radians-ish, ~-1..1
     const headTilt = opts.headTilt || 0;
+    const headBob = opts.headBob || 0;
+    const mouthOpen = Math.max(0, Math.min(1, opts.mouthOpen || 0));
     const animT = opts.animT || 0;
     ctx.scale(s, s);
 
@@ -360,12 +362,12 @@
     // NEAR wing (in front) — primary flap, independent
     drawWing(ctx, c, wingFlap, false);
 
-    // Moveable head group: tilts / bobs with velocity look-direction
+    // Moveable head group: tilts / bobs with velocity look-direction + chirp bob
     ctx.save();
-    ctx.translate(6, -2);
+    ctx.translate(6, -2 + (opts.reduceMotion ? 0 : headBob * 0.35));
     ctx.rotate(headTilt);
-    // subtle bob
-    ctx.translate(0, Math.sin(animT * 9) * (opts.reduceMotion ? 0 : 0.6));
+    // subtle idle bob + stronger when chirping
+    ctx.translate(0, Math.sin(animT * 9) * (opts.reduceMotion ? 0 : 0.7) - mouthOpen * 0.8);
 
     // Head sphere with depth
     const headGrad = ctx.createRadialGradient(-2, -3, 1, 2, 0, 11);
@@ -424,28 +426,61 @@
     if (c.shades) {
       ctx.fillStyle = '#111'; ctx.fillRect(0,-5,13,4.5); ctx.fillStyle = '#4ecdc4'; ctx.fillRect(1,-4,4.5,2.5); ctx.fillRect(7.5,-4,4.5,2.5);
     }
-    // Beak with slight 3D edge
+    // Beak / mouth — opens on chirp (tap / near-miss / gift); visual only
     ctx.fillStyle = c.beak;
     ctx.strokeStyle = 'rgba(15,23,42,.35)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(10,1); ctx.lineTo(20,3); ctx.lineTo(10,5.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    const jaw = mouthOpen * 4.2;
+    // Upper mandible
+    ctx.beginPath();
+    ctx.moveTo(10, 1 - mouthOpen * 0.6);
+    ctx.lineTo(20, 3 - jaw * 0.35);
+    ctx.lineTo(10, 2.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
     ctx.fillStyle = shadeColor(c.beak, 30);
-    ctx.beginPath(); ctx.moveTo(10,1); ctx.lineTo(20,3); ctx.lineTo(10,2.2); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(10, 1 - mouthOpen * 0.6);
+    ctx.lineTo(20, 3 - jaw * 0.35);
+    ctx.lineTo(10, 1.6);
+    ctx.closePath();
+    ctx.fill();
+    // Lower mandible (drops when mouthOpen)
+    ctx.fillStyle = shadeColor(c.beak, -12);
+    ctx.beginPath();
+    ctx.moveTo(10, 2.6);
+    ctx.lineTo(19.2, 3 + jaw * 0.55);
+    ctx.lineTo(10, 5.5 + jaw);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Mouth cavity when open
+    if (mouthOpen > 0.15) {
+      ctx.fillStyle = 'rgba(60,20,30,' + (0.35 + mouthOpen * 0.4) + ')';
+      ctx.beginPath();
+      ctx.moveTo(11, 2.4);
+      ctx.lineTo(17.5, 3 + jaw * 0.1);
+      ctx.lineTo(11, 4.2 + jaw * 0.7);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     ctx.restore();
   }
 
   function drawWing(ctx, c, flap, far) {
     ctx.save();
-    // Pivot near shoulder
+    // Pivot near shoulder — stronger 3.9 flap (scaleY + rotate + tip lift)
     const px = far ? -5 : -2;
     const py = far ? 0 : 1;
     ctx.translate(px, py);
-    // Flap rotates around X-ish axis simulated by scaleY + rotate
-    const ang = flap * (far ? 0.55 : 0.9);
-    ctx.rotate(-0.35 + ang * 0.35);
-    const sy = Math.max(0.28, Math.cos(ang));
-    ctx.scale(far ? 0.92 : 1, sy * (far ? 0.88 : 1));
+    const ang = flap * (far ? 0.75 : 1.15);
+    ctx.rotate(-0.38 + ang * 0.48);
+    const sy = Math.max(0.22, Math.cos(ang * 1.05));
+    ctx.scale(far ? 0.94 : 1.05, sy * (far ? 0.86 : 1));
+    // Tip rises on upstroke
+    ctx.translate(0, -Math.sin(Math.max(0, ang)) * (far ? 1.5 : 2.8));
     if (far) ctx.globalAlpha = 0.72;
 
     const wingGrad = ctx.createLinearGradient(-12, -6, 8, 8);
@@ -829,9 +864,9 @@
     drawBirdBody(ctx, birdId || 'sparrow', sc, opts);
     // Hats follow head tilt lightly
     ctx.save();
-    if (!opts.reduceMotion && opts.headTilt) {
-      ctx.translate(6, -2);
-      ctx.rotate(opts.headTilt * 0.7);
+    if (!opts.reduceMotion && (opts.headTilt || opts.headBob || opts.mouthOpen)) {
+      ctx.translate(6, -2 + (opts.headBob || 0) * 0.25);
+      ctx.rotate((opts.headTilt || 0) * 0.7);
       ctx.translate(-6, 2);
     }
     drawHat(ctx, hat);
@@ -850,12 +885,12 @@
 
   function hitbox(birdId, opts) {
     opts = opts || {};
-    // Body-only hitbox (~18% smaller than drawn sprite). Wings / hats / trails ignored.
-    let w = 18, h = 14;
+    // Body-only hitbox (~25% smaller than drawn sprite). Wings / hats / mouth / trails ignored.
+    let w = 15, h = 12;
     if (opts.vehicle && opts.vehicle !== 'none') {
       // Vehicle body only — ignore mirrors / spoilers visually larger than hitbox
-      w = 24;
-      h = 19;
+      w = 21;
+      h = 16;
     }
     if (opts.giant) {
       w = Math.round(w * 1.5);
