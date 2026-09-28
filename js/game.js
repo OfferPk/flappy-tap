@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.2.0-urrjaa — missions, perfect pass, passives, weather, boss, mystery rarity, run summary.
+ * Urr Jaa! v3.3.0-urrjaa — forgiving feel (30–60s survival), Desi voice fix, calibration.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all v3.1 features — only ADD.
+ * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
 (function () {
   'use strict';
@@ -20,15 +20,18 @@
   const TERMINAL_V = 620;
   const FLAP_COOLDOWN = 0.08;
   const PIPE_W = 64;
-  const BASE_SPEED = 160;
-  const BASE_GAP = 152;
-  const BASE_SPAWN = 210;
-  const SPEED_CAP = 280;
-  const GAP_FLOOR = 108;
-  const SPAWN_FLOOR = 150;
-  const SPEED_PER_SCORE = 2.2;
-  const GAP_SHRINK_PER = 0.9;
-  const SPAWN_SHRINK_PER = 1.1;
+  const BASE_SPEED = 148;
+  const BASE_GAP = 172;          // Classic: wider reactable gaps
+  const BASE_SPAWN = 220;
+  const SPEED_CAP = 270;
+  const GAP_FLOOR = 120;
+  const SPAWN_FLOOR = 155;
+  const SPEED_PER_SCORE = 1.85;
+  const GAP_SHRINK_PER = 0.72;
+  const SPAWN_SHRINK_PER = 0.95;
+  const HITBOX_INSET = 0.18;     // ~18% body shrink already in skins; extra soft inset
+  const CORNER_TOL = 11;         // obstacle corner forgiveness (px)
+  const LUCKY_COOLDOWN_MS = 2800;
   const MEDAL_BRONZE = 10;
   const MEDAL_SILVER = 25;
   const MEDAL_GOLD = 50;
@@ -43,7 +46,7 @@
   const TURBO_MS = 2500;
   const GHOST_MS = 2500;
   const TRAIL_INTERVAL = 0.035;
-  const COIN_R = 10;
+  const COIN_R = 12;
   const BOX_CHANCE = 0.10;
   const M_PER_PX = 0.08;
   const TIME_ATTACK_S = 60;
@@ -134,6 +137,9 @@
   let lastAreaMusic = null;
   let mysteryAdUsed = false;
   let nextWeatherAt = 90;
+  let runStartTs = 0;
+  let luckyCooldownUntil = 0;
+  let phaseSimple = true; // first ~10s / early classic: simple patterns
 
   const hud = document.getElementById('hud');
   const scoreEl = document.getElementById('score-display');
@@ -234,9 +240,13 @@
   }
 
   function voiceCue(id) {
-    if (!FTAudio.isVoicePack || !FTAudio.isVoicePack()) return;
+    if (!FTAudio || typeof FTAudio.isVoicePack !== 'function') return;
+    if (!FTAudio.isVoicePack()) return;
+    if (FTAudio.unlock) FTAudio.unlock();
     var label = FTAudio.voice(id);
-    if (label) showToast(label, 1100);
+    // Always toast when Desi voice ON (works even if true TTS unavailable)
+    if (label) showToast(label, 1200);
+    else if (FTAudio.VOICE_LABELS && FTAudio.VOICE_LABELS[id]) showToast(FTAudio.VOICE_LABELS[id], 1200);
   }
 
   function haptic(kind) {
@@ -293,6 +303,67 @@
   function isOneLife() { return playMode === 'onelife'; }
   function isPractice() { return playMode === 'practice'; }
 
+  /** Classic / Daily / Practice (and mild modes) get forgiveness; Hard/Challenge/One Life do not. */
+  function isForgivingMode() {
+    return !isHard() && !isChallenge() && !isOneLife();
+  }
+
+  function runElapsedSec() {
+    if (!runStartTs) return 0;
+    return (performance.now() - runStartTs) / 1000;
+  }
+
+  /** First 2–3 competitive runs: extra-wide gaps, fewer vehicles, slower, earlier power-up. */
+  function firstRunProtect() {
+    if (!isForgivingMode()) return false;
+    var rc = FTStorage.getRunCount();
+    return rc <= 3;
+  }
+
+  /** Calibration from last 5 run durations (forgiving modes only). */
+  function calibMods() {
+    if (!isForgivingMode() || !FTStorage.getAvgRunDuration) return { gap: 1, speed: 1, traffic: 1, power: 1 };
+    var avg = FTStorage.getAvgRunDuration();
+    if (!avg || avg <= 0) return { gap: 1, speed: 1, traffic: 1, power: 1 };
+    if (avg < 18) return { gap: 1.14, speed: 0.90, traffic: 0.65, power: 1.35 }; // short → ease
+    if (avg < 30) return { gap: 1.08, speed: 0.94, traffic: 0.80, power: 1.2 };
+    if (avg > 80) return { gap: 0.94, speed: 1.07, traffic: 1.18, power: 0.9 }; // long → gently harden
+    if (avg > 55) return { gap: 0.97, speed: 1.03, traffic: 1.08, power: 0.95 };
+    return { gap: 1, speed: 1, traffic: 1, power: 1 };
+  }
+
+  /**
+   * Classic curve by score + first-10s ease:
+   * 0–10 Easy → 10–25 Easy+ → 25–45 Normal → 45–75 Difficult → 75+ Hard.
+   * Hard Mode starts aggressive via modeSpeedMul/modeGapMul.
+   */
+  function classicPhaseMods(sc) {
+    var t = runElapsedSec();
+    var m = { gap: 1, speed: 1, spawn: 1, traffic: 1, simple: false, power: 1 };
+    if (isHard()) {
+      // Aggressive from the start
+      m.gap = 0.92; m.speed = 1.05; m.spawn = 0.92; m.traffic = 1.25; m.simple = false;
+      return m;
+    }
+    if (isChallenge() || isOneLife()) {
+      m.simple = t < 6;
+      return m;
+    }
+    // First ~10s: slow, wide, simple, almost no hard vehicle combos
+    if (t < 10) {
+      m.gap = 1.28; m.speed = 0.72; m.spawn = 1.18; m.traffic = 0.15; m.simple = true; m.power = 1.4;
+      phaseSimple = true;
+      return m;
+    }
+    phaseSimple = false;
+    if (sc < 10) { m.gap = 1.18; m.speed = 0.82; m.spawn = 1.12; m.traffic = 0.35; m.simple = true; m.power = 1.25; }
+    else if (sc < 25) { m.gap = 1.10; m.speed = 0.90; m.spawn = 1.06; m.traffic = 0.55; m.simple = true; m.power = 1.1; }
+    else if (sc < 45) { m.gap = 1.00; m.speed = 1.00; m.spawn = 1.00; m.traffic = 0.85; }
+    else if (sc < 75) { m.gap = 0.94; m.speed = 1.08; m.spawn = 0.94; m.traffic = 1.1; }
+    else { m.gap = 0.88; m.speed = 1.16; m.spawn = 0.88; m.traffic = 1.3; }
+    return m;
+  }
+
   function activeArea() {
     if (areaOverride) return areaOverride;
     if (isChallenge()) {
@@ -309,21 +380,22 @@
   }
 
   function modeSpeedMul() {
-    if (isHard()) return 1.4;
+    if (isHard()) return 1.48; // Hard starts aggressive
     if (isChallenge()) {
       var st = CHALLENGE_STAGES[challengeStageIdx] || CHALLENGE_STAGES[0];
       return st.speedMul || 1.05;
     }
-    if (isOneLife()) return 1.08;
+    if (isOneLife()) return 1.12;
     return 1;
   }
 
   function modeGapMul() {
-    if (isHard()) return 0.86;
+    if (isHard()) return 0.80;
     if (isChallenge()) {
       var st = CHALLENGE_STAGES[challengeStageIdx] || CHALLENGE_STAGES[0];
       return st.gapMul || 1;
     }
+    if (isOneLife()) return 0.94;
     return 1;
   }
 
@@ -369,9 +441,22 @@
     var turboMul = performance.now() < turboUntil ? 1.35 : 1;
     var wMul = weatherMul().speedMul || 1;
     if (bossActive) wMul *= 1.08;
-    currentSpeed = Math.min(SPEED_CAP * (isHard() ? 1.2 : 1), (BASE_SPEED + sc * SPEED_PER_SCORE) * sm * turboMul * wMul);
-    currentGap = Math.max(GAP_FLOOR * gm, (BASE_GAP - sc * GAP_SHRINK_PER) * gm);
-    currentSpawn = Math.max(SPAWN_FLOOR, BASE_SPAWN - sc * SPAWN_SHRINK_PER);
+    var phase = classicPhaseMods(sc);
+    var cal = calibMods();
+    var frGap = 1, frSpd = 1, frSpawn = 1;
+    if (firstRunProtect()) {
+      frGap = 1.16; frSpd = 0.88; frSpawn = 1.12;
+    }
+    var speed = (BASE_SPEED + sc * SPEED_PER_SCORE) * sm * turboMul * wMul * phase.speed * cal.speed * frSpd;
+    var gap = (BASE_GAP - sc * GAP_SHRINK_PER) * gm * phase.gap * cal.gap * frGap;
+    var spawn = (BASE_SPAWN - sc * SPAWN_SHRINK_PER) * phase.spawn * frSpawn;
+    // Practice: always roomy
+    if (isPractice()) { gap *= 1.2; speed *= 0.85; spawn *= 1.1; }
+    // Daily: mildly forgiving like classic
+    if (playMode === 'daily' && !isHard()) { gap *= 1.04; speed *= 0.96; }
+    currentSpeed = Math.min(SPEED_CAP * (isHard() ? 1.25 : 1), speed);
+    currentGap = Math.max(GAP_FLOOR * gm * (isHard() ? 0.95 : 1), gap);
+    currentSpawn = Math.max(SPAWN_FLOOR, spawn);
   }
 
   function medalFor(sc) {
@@ -526,7 +611,13 @@
   }
 
   function maybeSpawnPowerup(pipe) {
-    if (rng() > POWERUP_CHANCE) return;
+    var chance = POWERUP_CHANCE;
+    var phase = classicPhaseMods(score);
+    var cal = calibMods();
+    chance *= (phase.power || 1) * (cal.power || 1);
+    if (firstRunProtect()) chance *= 1.55; // earlier / more frequent power-up
+    if (runElapsedSec() < 12 && isForgivingMode()) chance *= 1.35;
+    if (rng() > chance) return;
     if (isNoCoin() && rng() > 0.5) return;
     var gap = pipe.gap != null ? pipe.gap : currentGap;
     powerups.push({
@@ -569,7 +660,15 @@
     var margin = 55;
     var maxTop = H - GROUND_H - g - margin;
     var gapY = margin + rng() * Math.max(10, maxTop - margin);
-    var kind = FTSkins.pickObstacleKind(rng, activeArea());
+    var phase = classicPhaseMods(score);
+    var kind;
+    if (phase.simple || firstRunProtect()) {
+      // Simple patterns: mostly pipes / soft props
+      var simple = ['pipe', 'pipe', 'pipe', 'signboard', 'tree', 'kite'];
+      kind = simple[Math.floor(rng() * simple.length)];
+    } else {
+      kind = FTSkins.pickObstacleKind(rng, activeArea());
+    }
     var pipe = {
       x: x, gapY: gapY, gap: g, scored: false, nearMissChecked: false,
       kind: kind, w: PIPE_W
@@ -582,13 +681,26 @@
 
   function maybeSpawnTraffic() {
     if (state !== 'playing') return;
-    if (rng() > TRAFFIC_CHANCE) return;
-    if (traffic.length >= 3) return;
-    var kind = FTSkins.pickTrafficKind(score, rng);
+    var phase = classicPhaseMods(score);
+    var cal = calibMods();
+    var chance = TRAFFIC_CHANCE * (phase.traffic || 1) * (cal.traffic || 1);
+    if (firstRunProtect()) chance *= 0.4;
+    if (phase.simple) chance *= 0.35; // almost no hard vehicle combos early
+    if (rng() > chance) return;
+    if (traffic.length >= (phase.simple ? 1 : 3)) return;
+    // Early / simple: only light vehicles
+    var kind;
+    if (phase.simple || firstRunProtect()) {
+      var light = ['bike', 'scooty', 'rickshaw', 'car'];
+      kind = light[Math.floor(rng() * light.length)];
+    } else {
+      kind = FTSkins.pickTrafficKind(score, rng);
+    }
     var dir = rng() < 0.5 ? 1 : -1;
-    var dual = score >= 25 && rng() < 0.18;
+    var dual = !phase.simple && !firstRunProtect() && score >= 28 && rng() < 0.16;
+    if (isHard()) dual = score >= 12 && rng() < 0.28;
     var yBase = H - GROUND_H - 28 - rng() * 40;
-    var speed = (90 + rng() * 80 + score * 1.2) * dir;
+    var speed = (90 + rng() * 80 + score * 1.2) * dir * (phase.simple ? 0.75 : 1);
     function spawn(yy, spd, k) {
       traffic.push({
         x: spd > 0 ? -40 : W + 40,
@@ -725,6 +837,10 @@
     hideAllScreens();
     screenDeath.hidden = false;
     hud.hidden = true;
+    // Calibration: last 5 run durations (forgiving modes only)
+    if (runStartTs && isForgivingMode() && !isPractice() && FTStorage.pushRunDuration) {
+      FTStorage.pushRunDuration((performance.now() - runStartTs) / 1000);
+    }
     if (FTAudio.stopAreaMusic) FTAudio.stopAreaMusic();
     lastAreaMusic = null;
     bossActive = false;
@@ -863,6 +979,9 @@
       weatherDynId = null;
       mysteryAdUsed = false;
       nextWeatherAt = 90;
+      runStartTs = performance.now();
+      luckyCooldownUntil = 0;
+      phaseSimple = true;
       setScore(0);
       resetBird();
       resetPipes();
@@ -870,10 +989,12 @@
       if (isChallenge()) {
         var st = CHALLENGE_STAGES[challengeStageIdx];
         showToast(st.label + ' · score ' + st.target, 2000);
+        setTimeout(function () { voiceCue('kya_udaan'); }, 400);
       } else if (isOneLife()) {
         showToast('One Life · no continue!', 1800);
         voiceCue('kya_udaan');
       } else {
+        if (firstRunProtect()) showToast('Easy start · learn the flap!', 1600);
         voiceCue('oye_hoye');
       }
     } else {
@@ -928,29 +1049,113 @@
 
   function ghostActive() { return performance.now() < ghostUntil; }
 
+  /**
+   * Collision with forgiveness:
+   * - Hitbox already ~15–20% smaller than sprite (body only; wings/hats ignored)
+   * - Extra inset + obstacle corner tolerance
+   * - Returns: false | 'hard' | 'soft' (soft → LUCKY on forgiving modes)
+   */
   function checkCollision() {
     if (ghostActive()) return false;
     var halfW = bird.w / 2;
     var halfH = bird.h / 2;
     var left = bird.x - halfW;
     var top = bird.y - halfH;
-    if (bird.y + halfH >= H - GROUND_H) return true;
-    if (bird.y - halfH <= 0) return true;
-    var inset = 3;
+    // Ground / ceiling — soft near-edge on forgiving modes
+    var groundY = H - GROUND_H;
+    if (bird.y + halfH >= groundY) {
+      var overG = bird.y + halfH - groundY;
+      if (isForgivingMode() && overG < CORNER_TOL * 0.7) return 'soft';
+      return 'hard';
+    }
+    if (bird.y - halfH <= 0) {
+      var overC = halfH - bird.y;
+      if (isForgivingMode() && overC < CORNER_TOL * 0.7) return 'soft';
+      return 'hard';
+    }
+    var inset = Math.max(3, Math.round(Math.min(bird.w, bird.h) * HITBOX_INSET * 0.5));
+    var bx = left + inset, by0 = top + inset, bw = bird.w - inset * 2, bh = bird.h - inset * 2;
+    var softHit = false;
     for (var i = 0; i < pipes.length; i++) {
       var p = pipes[i];
       var gap = p.gap != null ? p.gap : currentGap;
       var pw = p.w || PIPE_W;
-      if (rectsOverlap(left + inset, top + inset, bird.w - inset * 2, bird.h - inset * 2, p.x, 0, pw, p.gapY)) return true;
-      var by = p.gapY + gap;
-      if (rectsOverlap(left + inset, top + inset, bird.w - inset * 2, bird.h - inset * 2, p.x, by, pw, H - GROUND_H - by)) return true;
+      // Top pipe
+      if (rectsOverlap(bx, by0, bw, bh, p.x, 0, pw, p.gapY)) {
+        var penTop = (by0 + bh) - p.gapY; // how far into the pipe edge
+        var cornerX = Math.min(Math.abs((bx + bw) - p.x), Math.abs(bx - (p.x + pw)));
+        if (isForgivingMode() && penTop > 0 && penTop <= CORNER_TOL && cornerX <= CORNER_TOL + 6) softHit = true;
+        else return 'hard';
+      }
+      var botY = p.gapY + gap;
+      if (rectsOverlap(bx, by0, bw, bh, p.x, botY, pw, groundY - botY)) {
+        var penBot = botY - by0;
+        var cornerXb = Math.min(Math.abs((bx + bw) - p.x), Math.abs(bx - (p.x + pw)));
+        if (isForgivingMode() && penBot > 0 && penBot <= CORNER_TOL && cornerXb <= CORNER_TOL + 6) softHit = true;
+        else return 'hard';
+      }
     }
     for (var j = 0; j < traffic.length; j++) {
-      var t = traffic[j];
-      var thb = FTSkins.trafficHitbox(t);
-      if (rectsOverlap(left + 2, top + 2, bird.w - 4, bird.h - 4, t.x - thb.w / 2, t.y - thb.h / 2, thb.w, thb.h)) return true;
+      var tv = traffic[j];
+      var thb = FTSkins.trafficHitbox(tv);
+      var tw = thb.w * 0.88, th = thb.h * 0.88;
+      var tx = tv.x - tw / 2, ty = tv.y - th / 2;
+      if (rectsOverlap(bx, by0, bw, bh, tx, ty, tw, th)) {
+        if (isForgivingMode() && !tv.boss) {
+          // Shallow graze only → soft; deep overlap → hard
+          var overlapX = Math.min(bx + bw, tx + tw) - Math.max(bx, tx);
+          var overlapY = Math.min(by0 + bh, ty + th) - Math.max(by0, ty);
+          if (overlapX <= CORNER_TOL + 4 || overlapY <= CORNER_TOL + 2) softHit = true;
+          else return 'hard';
+        } else return 'hard';
+      }
     }
-    return false;
+    return softHit ? 'soft' : false;
+  }
+
+  function applyLuckySave() {
+    luckyCooldownUntil = performance.now() + LUCKY_COOLDOWN_MS;
+    hitFlash = 0.35;
+    // Nudge bird toward nearest gap center
+    var nearest = null, bestDx = 1e9;
+    for (var i = 0; i < pipes.length; i++) {
+      var dx = Math.abs(pipes[i].x + PIPE_W / 2 - bird.x);
+      if (dx < bestDx) { bestDx = dx; nearest = pipes[i]; }
+    }
+    if (nearest) {
+      var g = nearest.gap != null ? nearest.gap : currentGap;
+      var cy = nearest.gapY + g / 2;
+      bird.y += (cy - bird.y) * 0.45;
+      if (bird.vy > 80) bird.vy *= 0.35;
+      if (bird.vy < -120) bird.vy *= 0.5;
+    } else {
+      if (bird.y + bird.h / 2 >= H - GROUND_H) bird.y = H - GROUND_H - bird.h / 2 - 4;
+      if (bird.y - bird.h / 2 <= 0) bird.y = bird.h / 2 + 4;
+      bird.vy *= 0.4;
+    }
+    if (FTAudio.lucky) FTAudio.lucky();
+    else FTAudio.nearmiss();
+    showBanner('LUCKY!', 750);
+    showToast('LUCKY!', 900);
+    voiceCue('wah_ji');
+    haptic('nearmiss');
+  }
+
+  function resolveCollision() {
+    var hit = checkCollision();
+    if (!hit) return;
+    if (hit === 'soft' && isForgivingMode()) {
+      if (performance.now() >= luckyCooldownUntil) {
+        applyLuckySave();
+      } else {
+        // Still in soft zone on cooldown: micro-nudge, no death (forgiveness holds)
+        if (bird.y + bird.h / 2 > H - GROUND_H - 2) bird.y -= 2;
+        if (bird.y - bird.h / 2 < 2) bird.y += 2;
+        bird.vy *= 0.92;
+      }
+      return;
+    }
+    beginDeath();
   }
 
   function spawnNearMissSparks(x, y) {
@@ -1243,6 +1448,8 @@
       runNearMisses += 1;
       p._wasNearMiss = true;
       showToast('CLOSE!', 700);
+      showBanner('CLOSE!', 500);
+      if (nearMissStreak === 1 && rng() < 0.45) voiceCue('bach_ke');
       if (nearMissStreak >= 3) {
         riskyUntil = performance.now() + 5000;
         FTAudio.risky();
@@ -1312,6 +1519,10 @@
     if (state !== 'playing' || !bird) return;
 
     if (flapCooldown > 0) flapCooldown -= sdt;
+    // Refresh difficulty curve (time-based first 10s + score bands)
+    if (Math.floor(runElapsedSec() * 2) !== Math.floor((runElapsedSec() - sdt) * 2)) {
+      difficultyFor(score);
+    }
     if (slowActive) updatePowerHud();
     else if (slowMoUntil && now >= slowMoUntil) { slowMoUntil = 0; updatePowerHud(); }
     if (turboUntil && now >= turboUntil) { turboUntil = 0; difficultyFor(score); updatePowerHud(); }
@@ -1475,7 +1686,7 @@
       pipes.push(makePipe(last.x + currentSpawn, currentGap));
     }
 
-    if (checkCollision()) beginDeath();
+    resolveCollision();
   }
 
   function drawSky() {
@@ -1891,6 +2102,12 @@
     var on = !!voiceToggleChk.checked;
     FTStorage.setVoicePack(on);
     FTAudio.setVoicePack(on);
+    if (on) {
+      FTAudio.unlock();
+      voiceCue('oye_hoye'); // preview: toast + beep (independent of mute)
+    } else {
+      showToast('Desi voice off', 900);
+    }
   });
 
   async function tryUnlock(item, kind) {

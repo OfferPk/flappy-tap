@@ -1,4 +1,4 @@
-/* Urr Jaa! — mobile-first polished UI (v3.2.0-urrjaa) */
+/* Urr Jaa! — mobile-first polished UI (v3.3.0-urrjaa) */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -650,7 +650,7 @@ html.reduce-motion #score-display.score-bump { animation: none; }
 }
 
 
-/* ——— v3.2.0 Run Summary · Mystery · Album ——— */
+/* ——— v3.3.0 Run Summary · Mystery · Album ——— */
 .run-summary {
   width: 100%;
   max-width: 300px;

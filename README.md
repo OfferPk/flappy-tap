@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.2.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.3.0-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -29,7 +29,7 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.2.0-urrjaa)
+## Features (v3.3.0-urrjaa)
 
 | Feature | Notes |
 |---------|--------|
@@ -49,10 +49,11 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Ads stubs | Continue once / Mystery Box — never mid-flight |
 | Traffic | Escalating rickshaw→truck · dual cross |
 | Areas | City · Bridge · Mountains · Village · Rain · Night · Desert (+ cities) |
-| Desi voices | Oye hoye · Bach ke · Wah ji wah · Kya udaan · Haye oye · Shabaash |
+| Feel / forgiveness | Smaller hitbox · corner grace · **LUCKY** · first-10s ease · Classic curve · first-run protect · duration calib |
+| Desi voices | Oye hoye · Bach ke · Wah ji wah · Kya udaan · Haye oye · Shabaash · Settings ON/OFF (≠ mute) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v7-20260928** |
+| PWA | `sw.js` cache **urrjaa-v8-20260928** |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)
@@ -76,7 +77,7 @@ flappy-tap/          # repo path kept
   www/               # Capacitor webDir
   docs/              # GitHub Pages + urr-jaa-web-windows.zip
   dist/              # urr-jaa-web-windows.zip
-  package.json       # name urr-jaa, version 3.2.0-urrjaa
+  package.json       # name urr-jaa, version 3.3.0-urrjaa
   capacitor.config.json
   README.md STATUS.md
 ```

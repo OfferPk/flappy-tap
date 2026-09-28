@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.2.0 — birds, vehicles, accessories, trails, weather, passives, traffic.
+ * Urr Jaa! v3.3.0 — birds, vehicles, accessories, trails, weather, passives, traffic.
  * Canvas-drawn; forgiving hitboxes.
  */
 (function (global) {
@@ -352,11 +352,12 @@
 
   function hitbox(birdId, opts) {
     opts = opts || {};
-    // Forgiving visual vs collision: slightly smaller than drawn body
-    let w = 22, h = 17;
+    // Body-only hitbox (~18% smaller than drawn sprite). Wings / hats / trails ignored.
+    let w = 18, h = 14;
     if (opts.vehicle && opts.vehicle !== 'none') {
-      w = 30;
-      h = 24;
+      // Vehicle body only — ignore mirrors / spoilers visually larger than hitbox
+      w = 24;
+      h = 19;
     }
     if (opts.giant) {
       w = Math.round(w * 1.5);
@@ -716,7 +717,8 @@
 
   function trafficHitbox(t) {
     const big = t.kind === 'bus' || t.kind === 'truck' || t.kind === 'tractor';
-    return { w: big ? 48 : 36, h: big ? 28 : 22 };
+    // ~15% smaller than visual vehicle silhouette
+    return { w: big ? 40 : 30, h: big ? 24 : 18 };
   }
 
   global.FTSkins = {

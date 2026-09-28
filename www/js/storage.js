@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.2.0-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album.
+ * Urr Jaa! v3.3.0-urrjaa — localStorage: scores, coins, unlocks, streak, missions, fragments, album.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -52,6 +52,7 @@
     hardBest: PREFIX + 'hard-best',
     challengeStage: PREFIX + 'challenge-stage',
     voicePack: PREFIX + 'voice-pack',
+    runDurations: PREFIX + 'run-durations',
     // v3.2
     missionsActive: PREFIX + 'missions-active',
     fragments: PREFIX + 'fragments',
@@ -792,6 +793,30 @@
   function setHaptics(on) { set(KEYS.haptics, on ? '1' : '0'); }
   function getVoicePack() { return get(KEYS.voicePack, '1') === '1'; }
   function setVoicePack(on) { set(KEYS.voicePack, on ? '1' : '0'); }
+
+  function pushRunDuration(sec) {
+    let arr = [];
+    try { arr = JSON.parse(get(KEYS.runDurations, '[]')); } catch (e) { arr = []; }
+    if (!Array.isArray(arr)) arr = [];
+    const v = Math.max(0, Math.round((parseFloat(sec) || 0) * 10) / 10);
+    arr.push(v);
+    if (arr.length > 5) arr = arr.slice(-5);
+    set(KEYS.runDurations, JSON.stringify(arr));
+    return arr;
+  }
+  function getRunDurations() {
+    let arr = [];
+    try { arr = JSON.parse(get(KEYS.runDurations, '[]')); } catch (e) { arr = []; }
+    return Array.isArray(arr) ? arr : [];
+  }
+  function getAvgRunDuration() {
+    const arr = getRunDurations();
+    if (!arr.length) return 0;
+    let sum = 0;
+    for (let i = 0; i < arr.length; i++) sum += arr[i];
+    return sum / arr.length;
+  }
+
 
   function checkEnvMilestones(bestScore) {
     const gates = [
