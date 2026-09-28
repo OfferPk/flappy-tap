@@ -1,31 +1,33 @@
-# STATUS — Urr Jaa! v3.5.1-urrjaa
+# STATUS — Urr Jaa! v3.5.2-urrjaa
 
 **Path:** `/workspace/factory/projects/flappy-tap` (repo OfferPk/flappy-tap; UI title **Urr Jaa!**)
 **Owner:** Mia Smith · Olivia pick via Master
-**Updated:** 2026-09-28 ~17:40 Asia/Karachi (PKT)
-**Version:** **3.5.1-urrjaa**
-**SW cache:** `urrjaa-v13-20260928`
+**Updated:** 2026-09-28 ~17:55 Asia/Karachi (PKT)
+**Version:** **3.5.2-urrjaa**
+**SW cache:** `urrjaa-v14-20260928`
 **Capacitor appId:** `com.offerpk.urrjaa`
 
-## READY_FOR_QA ✅
+## Prior gate (v3.5.1) — CLEAR
+- QA **PASS** (`QA-REPORT-v3.5.1.md`)
+- Security **PASS_WITH_NOTES** (`SECURITY-REPORT.md`) — F1 Missions XSS was MEDIUM note
 
-### ADD — v3.5.1 (collection depth · no live-ops)
-- [x] **+8 birds:** Mynah, Bulbul, Cheel, Mor, Kawwa, Kabootar, Hoopoe, Baaz — costs + mild passives + colors + draw accents
-- [x] **+6 areas:** Canal, Hunza, Gwadar, Quetta Bazaar, Monsoon Fields, Old City Rooftops — unlockScore/cost + palettes + obstacles + sky silhouettes
-- [x] **4 offline seasonal packs:** Azadi · Eid Sparkle · Winter Shawl · Basant Kites — date windows (device local) **and/or** score milestones; persist forever once unlocked (no server seasons)
-- [x] Collection UI shows Seasonals section; garage hats/trails include seasonal cosmetics
-- [x] Guide EN / Roman Urdu / Urdu updated for collection + seasonals
-- [x] Ads remain stubs (no AdMob keys)
-- [x] Existing unlocks/saves: new ids locked until earned (graceful)
+## READY_FOR_QA ✅ (improve delta 3.5.2)
 
-### Kept from ≤3.5.0
-- Voice cooldown/variety · Mystery wheel · Guide · One Life · modes · juice
+### IMPROVE — v3.5.2 (post–3.5.1 CLEAR · no collection packs)
+- [x] **F1 closed — Missions XSS harden:** `getActiveMissionIds` allowlists against `MISSION_POOL` / `DAILY_MISSION_IDS`; `refreshMissions` uses `createElement` + `textContent` (no label HTML concat); unknown-id fallback label **Mission** (not raw id)
+- [x] **Run Summary Share:** `#btn-share` on `#screen-death` — `Urr Jaa! — score N (mode) · best B` (mode when not Classic); `navigator.share` or clipboard + `showToast`
+- [x] **Home A2HS tip:** soft tip on `#screen-start` only (EN + Roman Urdu); `sessionStorage` `urrjaa:a2hs` dismiss; no `beforeinstallprompt` required
+- [x] Docs: README local path → factory projects; STATUS reflects prior CLEAR + this delta READY_FOR_QA
+- [x] No new birds/areas/seasonals; ads remain stubs; `todayKey` unchanged
+
+### Kept from ≤3.5.1
+- Collection depth (+8 birds / +6 areas / 4 seasonals) · Voice · Mystery wheel · Guide · One Life · modes · juice
 
 ### Ship
-- [x] Offline PWA (`urrjaa-v13-20260928`)
-- [x] `www/` + `docs/` refreshed via `npm run build:web`
+- [x] Offline PWA (`urrjaa-v14-20260928`)
+- [x] `www/` + `docs/` via `npm run build:web`
 - [x] `npm run check` + `npm run smoke`
-- [ ] Push — **not required** (READY_FOR_QA handoff only)
+- [ ] Push / Pages publish — after Master re-QA of this improve delta
 
 ## How to open
 
@@ -35,6 +37,6 @@ npx --yes serve -l 4174 .
 # → http://localhost:4174
 ```
 
-Menu → **📖 Guide** · **📦 Collection** · Garage birds/areas/seasonal hats & trails.
+Menu → **📖 Guide** · **📦 Collection** · death **📤 Share** · home A2HS tip.
 
-See **HANDOFF.md** for unlock tables and QA notes.
+See **HANDOFF.md** for improve notes.

@@ -175,3 +175,19 @@ Optional follow-ups (non-blocking for CLEAR): fix F1 Missions DOM construction; 
 | Git push | None |
 
 Gate reference status mapping: CLEAR ≡ allowed to proceed; notes must be tracked for Engineer (F1 recommended before broad Pages publish on shared org origin).
+
+
+---
+
+## Follow-up — F1 closed (v3.5.2-urrjaa · 2026-09-28 ~17:55 PKT)
+
+**Engineer / Improver:** Missions XSS remediation shipped in **3.5.2-urrjaa**.
+
+| Item | Status |
+|------|--------|
+| F1 MEDIUM Missions innerHTML + unallowlisted ids | **CLOSED** |
+| getActiveMissionIds allowlist vs MISSION_POOL / DAILY_MISSION_IDS | Done — unknown ids dropped; storage rewritten |
+| refreshMissions createElement + textContent | Done — no label HTML concat; bar width via style.width |
+| Unknown-id fallback | Static label Mission (not raw id) |
+
+Prior verdict PASS_WITH_NOTES remains historical for 3.5.1; F1 no longer open for 3.5.2+. F2 (SW same-origin) unchanged LOW. Re-review optional with next Security pass on improve delta.

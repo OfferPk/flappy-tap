@@ -674,9 +674,18 @@
 
   function getActiveMissionIds() {
     ensureMissionsDay();
+    const allowed = new Set(MISSION_POOL.map((m) => m.id));
+    DAILY_MISSION_IDS.forEach((id) => allowed.add(id));
     const raw = String(get(KEYS.missionsActive, '')).split(',').filter(Boolean);
-    if (raw.length >= 3) return raw.slice(0, 3);
-    return pickDailyMissionIds(todayKey());
+    const filtered = raw.filter((id) => allowed.has(id));
+    if (filtered.length >= 3) {
+      const out = filtered.slice(0, 3);
+      if (raw.slice(0, 3).join(',') !== out.join(',')) set(KEYS.missionsActive, out.join(','));
+      return out;
+    }
+    const picked = pickDailyMissionIds(todayKey());
+    set(KEYS.missionsActive, picked.join(','));
+    return picked;
   }
 
   function missionDef(id) {
@@ -692,7 +701,7 @@
       if (id) claimed[id] = true;
     });
     return getActiveMissionIds().map((id) => {
-      const m = missionDef(id) || { id: id, label: id, target: 1, reward: 10, rewardType: 'coins' };
+      const m = missionDef(id) || { id: id, label: 'Mission', target: 1, reward: 10, rewardType: 'coins' };
       return {
         ...m,
         progress: progress[m.id] || 0,

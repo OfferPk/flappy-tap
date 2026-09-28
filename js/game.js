@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.5.1-urrjaa — collection depth: more birds/areas, offline seasonal packs, Guide update.
+ * Urr Jaa! v3.5.2-urrjaa — collection depth: more birds/areas, offline seasonal packs, Guide update.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -176,6 +176,7 @@
   const btnRetry = document.getElementById('btn-retry');
   const btnMenu = document.getElementById('btn-menu');
   const btnContinue = document.getElementById('btn-continue');
+  const btnShare = document.getElementById('btn-share');
   const btnMute = document.getElementById('btn-mute');
   const btnPause = document.getElementById('btn-pause');
   const btnResume = document.getElementById('btn-resume');
@@ -876,7 +877,76 @@
       screenMissions, screenCollection, screenGifts, screenGuide, screenBoards, screenStreak];
   }
 
+  var MODE_SHARE_LABELS = {
+    classic: 'Classic', timeattack: 'Time Attack', hard: 'Hard', nocoin: 'No Coin',
+    challenge: 'Challenge', onelife: 'One Life', daily: 'Daily', practice: 'Practice'
+  };
+
+  function buildShareText() {
+    var n = score;
+    var b = FTStorage.getBest();
+    var modeLabel = MODE_SHARE_LABELS[playMode] || playMode;
+    if (playMode && playMode !== 'classic') {
+      return 'Urr Jaa! — score ' + n + ' (' + modeLabel + ') · best ' + b;
+    }
+    return 'Urr Jaa! — score ' + n + ' · best ' + b;
+  }
+
+  function legacyCopyShare(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (_) { /* ignore */ }
+  }
+
+  function copyShareText(text) {
+    var done = function () { showToast('Copied share text'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () {
+        legacyCopyShare(text);
+        done();
+      });
+      return;
+    }
+    legacyCopyShare(text);
+    done();
+  }
+
+  function shareRunSummary() {
+    var text = buildShareText();
+    if (navigator.share) {
+      navigator.share({ title: 'Urr Jaa!', text: text }).catch(function () {
+        copyShareText(text);
+      });
+      return;
+    }
+    copyShareText(text);
+  }
+
+  var A2HS_SESSION_KEY = 'urrjaa:a2hs';
+
+  function updateA2hsTip() {
+    var a2hs = document.getElementById('a2hs');
+    if (!a2hs) return;
+    try {
+      if (sessionStorage.getItem(A2HS_SESSION_KEY) === '1') {
+        a2hs.hidden = true;
+        return;
+      }
+    } catch (_) { /* private mode */ }
+    // Tip lives inside #screen-start; only show when home is visible
+    a2hs.hidden = !screenStart || screenStart.hidden;
+  }
+
   function hideAllScreens() {
+
     allScreens().forEach(function (el) { if (el) el.hidden = true; });
   }
 
@@ -890,6 +960,7 @@
     oneLifeLocked = false;
     areaOverride = null;
     updateBestUI();
+    updateA2hsTip();
     drawFrame(true);
   }
 
@@ -2306,6 +2377,15 @@
   }
   btnRetry.addEventListener('click', function () { retryFlow(); });
   btnMenu.addEventListener('click', function () { showMenu(); });
+  if (btnShare) btnShare.addEventListener('click', function () { shareRunSummary(); });
+  var a2hsOk = document.getElementById('a2hs-ok');
+  if (a2hsOk) {
+    a2hsOk.addEventListener('click', function () {
+      try { sessionStorage.setItem(A2HS_SESSION_KEY, '1'); } catch (_) {}
+      var tip = document.getElementById('a2hs');
+      if (tip) tip.hidden = true;
+    });
+  }
   btnContinue.addEventListener('click', async function () {
     if (continuedThisRun || isPractice() || isOneLife()) return;
     var res = await Ads.showRewarded('continue');
@@ -2514,14 +2594,28 @@
     FTStorage.getMissions().forEach(function (m) {
       var card = document.createElement('div');
       card.className = 'mission-card' + (m.done ? ' done' : '') + (m.claimed ? ' claimed' : '');
-      var pct = Math.min(100, Math.floor((m.progress / m.target) * 100));
+      var pct = Math.min(100, Math.max(0, Math.floor((Number(m.progress) / Math.max(1, Number(m.target))) * 100)));
       var rewardLabel = m.rewardType === 'fragment' ? (m.reward + ' ✦ frag') :
         m.rewardType === 'mystery' ? '🎁 Gift box' : ('🪙 ' + m.reward);
-      card.innerHTML =
-        '<div class="mission-title">' + m.label + '</div>' +
-        '<div class="mission-bar"><span style="width:' + pct + '%"></span></div>' +
-        '<div class="mission-meta">' + Math.min(m.progress, m.target) + ' / ' + m.target +
-        ' · ' + rewardLabel + '</div>';
+
+      var title = document.createElement('div');
+      title.className = 'mission-title';
+      title.textContent = m.label || 'Mission';
+
+      var bar = document.createElement('div');
+      bar.className = 'mission-bar';
+      var fill = document.createElement('span');
+      fill.style.width = pct + '%';
+      bar.appendChild(fill);
+
+      var meta = document.createElement('div');
+      meta.className = 'mission-meta';
+      meta.textContent = Math.min(m.progress, m.target) + ' / ' + m.target + ' · ' + rewardLabel;
+
+      card.appendChild(title);
+      card.appendChild(bar);
+      card.appendChild(meta);
+
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn primary btn-sm';

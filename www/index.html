@@ -31,7 +31,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.5.1-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.5.2-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary" type="button">▶ Play</button>
@@ -53,6 +53,10 @@
       </div>
       <p class="hint">Tap / Space · Coins in gaps · Esc pause · 2s to learn</p>
       <p class="runs-line">Runs: <span id="total-runs">0</span></p>
+      <div id="a2hs" class="a2hs" hidden>
+        <span>Install Urr Jaa!: browser menu → <strong>Add to Home Screen</strong><br /><em class="a2hs-ur">Home screen par add karein — offline chalega.</em></span>
+        <button type="button" id="a2hs-ok" class="btn tiny">OK</button>
+      </div>
     </div>
 
     <!-- Modes -->
@@ -160,6 +164,7 @@
         <button id="btn-continue" class="btn reward" type="button">▶ Continue (Ad)</button>
         <button id="btn-mystery-ad" class="btn reward" type="button">🎁 +1 Gift (Ad)</button>
         <button id="btn-retry" class="btn primary" type="button">RETRY</button>
+        <button id="btn-share" class="btn secondary" type="button">📤 Share</button>
         <div class="btn-row">
           <button id="btn-death-collection" class="btn secondary btn-sm" type="button">COLLECTION</button>
           <button id="btn-menu" class="btn ghost btn-sm" type="button">HOME</button>

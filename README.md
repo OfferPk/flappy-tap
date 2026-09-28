@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.5.1-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.5.2-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -18,7 +18,7 @@ Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOC
 ## Play locally (web)
 
 ```bash
-cd /workspace/games/flappy-tap
+cd /workspace/factory/projects/flappy-tap
 npx --yes serve -l 4174 .
 # → http://localhost:4174
 ```
@@ -29,9 +29,10 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.5.1-urrjaa)
+## Features (v3.5.2-urrjaa)
 
 - **Collection depth:** +8 desi birds · +6 areas · 4 offline seasonal packs (Azadi / Eid / Winter / Basant)
+- **Improve 3.5.2:** Run Share · Home A2HS tip · Missions XSS harden (F1 closed)
 
 | Feature | Notes |
 |---------|--------|
@@ -48,14 +49,16 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Weather | Clear · Rain · Fog · Storm · Night · Sunset (light speed/visibility) |
 | Boss/Chase | Every ~180m · DANGER 30–60s · truck/eagle/police/storm/giant |
 | Daily Missions | 3/day from pool · coins / mystery / skin fragments |
-| Run Summary | Score · Best · Distance · Coins · Near Misses · Combo · Perfects · RETRY/COLLECTION/HOME |
+| Run Summary | Score · Best · Distance · Coins · Near Misses · Combo · Perfects · **Share** · RETRY/COLLECTION/HOME |
+| A2HS tip | Soft home tip (EN + Roman Urdu); session dismiss |
+| Missions XSS | Allowlisted ids + textContent cards (F1 closed) |
 | Collection | Birds · Vehicles · Accessories · Trails · Areas · Challenges · 25–100% rewards |
 | Ads stubs | Continue once / Mystery Box — never mid-flight |
 | Feel / forgiveness | Smaller hitbox · corner grace · **LUCKY** · first-10s ease · Classic curve · first-run protect |
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v13-20260928** |
+| PWA | `sw.js` cache **urrjaa-v14-20260928** |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)
@@ -79,7 +82,7 @@ flappy-tap/          # repo path kept
   www/               # Capacitor webDir
   docs/              # GitHub Pages + urr-jaa-web-windows.zip
   dist/              # urr-jaa-web-windows.zip
-  package.json       # name urr-jaa, version 3.5.1-urrjaa
+  package.json       # name urr-jaa, version 3.5.2-urrjaa
   capacitor.config.json
   README.md STATUS.md
 ```
