@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.57.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.58.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -2277,6 +2277,7 @@ function updateComboMeter(visible) {
     starCoinLastAt = 0;
     addPipeScore._lastPerfectToastAt = 0; // 3.57: fresh PERFECT toast window per run
     addPipeScore._lastPerfectHapticAt = 0;
+    addPipeScore._lastPerfectVoiceAt = 0; // 3.58
     if (mode) playMode = mode;
     if (isChallenge()) {
       challengeStageIdx = Math.max(0, Math.min(CHALLENGE_STAGES.length - 1, (FTStorage.getChallengeStage() || 1) - 1));
@@ -2711,8 +2712,11 @@ function updateComboMeter(visible) {
   function spawnPerfectStars(x, y) {
     if (reduceMotion) return;
     var cols = ['#ffd93d', '#fff', '#7dd3fc', '#f9a8d4', '#86efac'];
-    for (var i = 0; i < 10; i++) {
-      var a = (Math.PI * 2 * i) / 10 + rng() * 0.2;
+    // 3.58: scale star count under particle pressure
+    var cap = particleBudget();
+    var nStar = particles.length > cap * 0.75 ? 6 : 10;
+    for (var i = 0; i < nStar; i++) {
+      var a = (Math.PI * 2 * i) / nStar + rng() * 0.2;
       var sp = 40 + rng() * 90;
       particles.push({
         x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40,
@@ -2720,7 +2724,9 @@ function updateComboMeter(visible) {
         r: 3.2 + rng() * 2.2, kind: 'star', rot: rng() * Math.PI
       });
     }
-    particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.3, max: 0.3, color: 'rgba(125,211,252,.55)', r: 8, kind: 'ring', grow: 42 });
+    if (particles.length < cap * 0.9) {
+      particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.3, max: 0.3, color: 'rgba(125,211,252,.55)', r: 8, kind: 'ring', grow: 42 });
+    }
     trimParticles();
   }
 
@@ -3733,7 +3739,7 @@ function updateComboMeter(visible) {
   }
 
   function spawnPipeClearJuice(x, y, kind) {
-    // 3.50–3.57 soft clear ring — gold / CLOSE cyan / PERFECT mint + micro sparks
+    // 3.50–3.58 soft clear ring — gold / CLOSE cyan / PERFECT mint + micro sparks
     if (reduceMotion || !bird) return;
     var cap = particleBudget(); // 3.56: one budget read
     if (particles.length > cap * 0.9) return;
@@ -3742,6 +3748,7 @@ function updateComboMeter(visible) {
     if (kind === 'close') col = combo >= 5 ? 'rgba(125,211,252,0.58)' : 'rgba(125,211,252,0.45)';
     else if (kind === 'perfect') col = 'rgba(167,243,208,0.5)';
     var life = kind === 'close' ? 0.34 : 0.3;
+    if (combo >= 8) life += 0.04; // 3.58 tiny juice: longer ring on hot combo
     particles.push({
       x: x, y: y,
       vx: 0, vy: 0,
@@ -3814,7 +3821,11 @@ function updateComboMeter(visible) {
         }
         trimParticles();
       }
-      voiceCue(rng() < 0.5 ? 'perfect_pass' : 'wah_ji');
+      // 3.58: throttle PERFECT voice on rapid string (global voice cooldown still applies)
+      if (!addPipeScore._lastPerfectVoiceAt || (nowPerfect - addPipeScore._lastPerfectVoiceAt) > 1400) {
+        voiceCue(rng() < 0.5 ? 'perfect_pass' : 'wah_ji');
+        addPipeScore._lastPerfectVoiceAt = nowPerfect;
+      }
     }
     // Near-miss bonus score already tracked separately; if just near-missed this pipe, bump
     if (p._wasNearMiss) {
@@ -3825,7 +3836,7 @@ function updateComboMeter(visible) {
     }
     var gained = basePts * mult;
     setScore(score + gained);
-    // 3.51–3.57: soft pipe-clear SFX/mix; tinted ring; soft squash; micro cam on clear
+    // 3.51–3.58: soft pipe-clear SFX/mix; tinted ring; soft squash; micro cam on clear
     var juiceKind = tag === 'PERFECT!' ? 'perfect' : (tag.indexOf('CLOSE') === 0 ? 'close' : 'clear');
     if (!reduceMotion) {
       // skip clear ring on PERFECT when particle pressure high (stars already fire)
