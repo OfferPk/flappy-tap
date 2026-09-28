@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.13.0-urrjaa — night neon lighting + prior garage/3D; keeps ≤3.12.
+ * Urr Jaa! v3.15.0-urrjaa — bird unlock teaser bars + prior skins; keeps ≤3.14.
  * Canvas-drawn; wings/hats/mouth are visual-only (hitbox ignores them).
  */
 (function (global) {
@@ -1348,6 +1348,18 @@
         hint.className = 'skin-unlock-hint';
         hint.textContent = cost + ' 🪙';
         btn.appendChild(hint);
+      }
+      if (!unlocked && kind === 'bird' && cost > 0 && typeof FTStorage !== 'undefined' && FTStorage.getCoins) {
+        const have = FTStorage.getCoins() | 0;
+        const pct = Math.max(0, Math.min(100, Math.floor((have / cost) * 100)));
+        const bar = document.createElement('span');
+        bar.className = 'skin-teaser-bar';
+        bar.title = have + ' / ' + cost + ' coins';
+        const fill = document.createElement('span');
+        fill.style.width = pct + '%';
+        bar.appendChild(fill);
+        btn.appendChild(bar);
+        if (pct >= 70) btn.classList.add('skin-teaser-near');
       }
       btn.addEventListener('click', () => {
         if (!unlocked) {

@@ -34,6 +34,7 @@
       <div id="mode-badge" hidden></div>
       <div id="coin-hud">🪙 0</div>
       <div id="timer-hud" hidden>60s</div>
+      <div id="lives-hud" class="lives-hud" hidden aria-label="Lives"></div>
       <div id="power-hud" hidden></div>
       <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause" title="Pause">⏸</button>
       <button id="btn-mute" class="icon-btn" type="button" aria-label="Toggle sound" title="Sound">🔊</button>
@@ -42,7 +43,8 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.14.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.15.0-urrjaa</p>
+      <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary btn-play-pulse" type="button">▶ Play</button>
@@ -72,13 +74,21 @@
 
     <!-- Modes -->
     <div id="screen-modes" class="screen panel-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="modes" aria-label="Close">X</button>
       <h2>Modes</h2>
       <div class="btn-col">
         <button class="btn primary" type="button" data-mode="classic">Classic Endless</button>
         <button class="btn secondary" type="button" data-mode="timeattack">⏱ Time Attack 60s</button>
         <button class="btn secondary" type="button" data-mode="hard">🔥 Hard (Faster)</button>
         <button class="btn secondary" type="button" data-mode="nocoin">🚫 No Coin (Survive)</button>
-        <button class="btn secondary" type="button" data-mode="challenge">🏔 Challenge Stages</button>
+        <button class="btn secondary" type="button" id="btn-open-challenge" data-mode="challenge">🏔 Challenge Stages</button>
+        <div id="challenge-stage-panel" class="challenge-stage-panel" hidden>
+          <button type="button" class="panel-close" data-panel-close="challenge-stages" aria-label="Close">X</button>
+          <h3 class="section-title">Pick a stage</h3>
+          <p class="hint">Clear a stage to unlock the next · replay cleared stages anytime</p>
+          <div id="challenge-stage-list" class="challenge-stage-list"></div>
+          <button class="btn ghost btn-sm" type="button" id="btn-challenge-cancel">Cancel</button>
+        </div>
         <button class="btn secondary" type="button" data-mode="onelife">1️⃣ One Life Challenge</button>
         <button class="btn ghost btn-sm" type="button" data-mode="daily">📅 Daily</button>
         <button class="btn ghost btn-sm" type="button" data-mode="practice">🛡 Practice</button>
@@ -88,6 +98,7 @@
 
     <!-- Garage -->
     <div id="screen-garage" class="screen panel-screen scroll-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="garage" aria-label="Close">X</button>
       <h2>Garage</h2>
       <p class="coins-line">🪙 <span id="garage-coins">0</span></p>
       <div class="garage-filters" id="garage-filters" role="tablist" aria-label="Garage filter">
@@ -113,6 +124,7 @@
 
     <!-- Missions -->
     <div id="screen-missions" class="screen panel-screen scroll-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="missions" aria-label="Close">X</button>
       <h2>Daily Missions</h2>
       <p class="hint">3 rotating missions / day · coins · gifts · fragments · PERFECT &amp; combo</p>
       <div id="missions-list" class="missions-list"></div>
@@ -121,6 +133,7 @@
 
     <!-- Collection -->
     <div id="screen-collection" class="screen panel-screen scroll-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="collection" aria-label="Close">X</button>
       <h2>Collection Album</h2>
       <button id="btn-collection-gifts" class="btn reward btn-sm" type="button">🎁 Mystery Rewards</button>
       <div id="collection-list" class="collection-list"></div>
@@ -129,6 +142,7 @@
 
     <!-- Mystery Rewards + Spin Wheel (v3.4.1) -->
     <div id="screen-gifts" class="screen panel-screen scroll-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="gifts" aria-label="Close">X</button>
       <h2>Mystery Rewards</h2>
       <p class="hint mystery-intro">Collect 📦 while flying. Every <strong>10 gifts unlocks 1 spin</strong> worth <strong>444–999</strong> 🪙. Past spins stay in <strong>History</strong> below.</p>
       <div class="mystery-stats" aria-live="polite">
@@ -175,6 +189,7 @@
 
     <!-- Death / Run Summary -->
     <div id="screen-death" class="screen panel-screen scroll-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="death" aria-label="Close">X</button>
       <h2>Run Summary</h2>
       <div id="new-record-banner" class="new-record-banner" hidden>🏆 NEW RECORD!</div>
       <div id="medal-display" class="medal" hidden>
@@ -213,6 +228,7 @@
     <!-- Spin result overlay (gifts screen only — never auto after death) -->
     <div id="mystery-overlay" class="mystery-overlay" hidden>
       <div class="mystery-card">
+        <button type="button" class="panel-close" data-panel-close="mystery" aria-label="Close">X</button>
         <div id="mystery-rarity" class="mystery-rarity">SPIN!</div>
         <div id="mystery-reward" class="mystery-reward">+444 coins</div>
         <button id="btn-mystery-ok" class="btn primary" type="button">Nice!</button>
@@ -221,6 +237,7 @@
 
     <!-- Pause -->
     <div id="screen-pause" class="screen pause-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="pause" aria-label="Close">X</button>
       <h2>Paused</h2>
       <div class="pause-stats" aria-live="polite">
         <div class="pause-stat"><span>Score</span><strong id="pause-score">0</strong></div>
@@ -235,6 +252,7 @@
 
     <!-- Settings -->
     <div id="screen-settings" class="screen settings-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="settings" aria-label="Close">X</button>
       <h2>Settings</h2>
       <div class="settings-card">
         <h3 class="settings-group">Audio</h3>
@@ -273,6 +291,7 @@
 
     <!-- Leaderboards -->
     <div id="screen-boards" class="screen panel-screen scroll-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="boards" aria-label="Close">X</button>
       <h2>Local Boards</h2>
       <div id="boards-list" class="boards-list"></div>
       <button class="btn primary" type="button" data-close="boards">Back</button>
@@ -280,6 +299,7 @@
 
     <!-- Daily streak -->
     <div id="screen-streak" class="screen panel-screen scroll-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="streak" aria-label="Close">X</button>
       <h2>Daily Streak</h2>
       <div id="streak-body"></div>
       <button id="btn-claim-streak" class="btn primary" type="button">Claim</button>
@@ -289,6 +309,7 @@
 
     <!-- Guide / How to Play (EN · Roman Urdu · اردو) -->
     <div id="screen-guide" class="screen panel-screen scroll-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="guide" aria-label="Close">X</button>
       <h2>Guide · How to Play</h2>
       <div class="guide-tabs" role="tablist" aria-label="Guide language">
         <button type="button" class="guide-tab active" data-guide-lang="en" role="tab" aria-selected="true">English</button>
@@ -312,6 +333,9 @@
           <li><strong>Share:</strong> preview your score card before sending.</li>
           <li><strong>Perfect rail:</strong> center the cyan/gold rail for PERFECT.</li>
           <li><strong>Practice:</strong> follow the ghost bird through gaps.</li>
+          <li><strong>Power VFX:</strong> Slow-mo purple edge, Ghost afterimage, Turbo speed lines.</li>
+          <li><strong>One Life:</strong> heart HUD — no continue.</li>
+          <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant packs unlock by local date windows or score milestones — no server seasons.</li>
@@ -357,6 +381,7 @@
     <!-- One-time spin unlock popup (new 10-gift threshold only) -->
     <div id="spin-unlock-overlay" class="mystery-overlay" hidden>
       <div class="mystery-card spin-unlock-card">
+        <button type="button" class="panel-close" data-panel-close="spin-unlock" aria-label="Close">X</button>
         <div class="mystery-rarity rarity-legendary">🎰 Spin unlocked!</div>
         <p class="mystery-reward" id="spin-unlock-msg">
           10 gifts collected — your wheel spin is ready!<br />
@@ -372,6 +397,7 @@
     <!-- Share card preview (3.13) -->
     <div id="share-preview" class="share-preview" hidden>
       <div class="share-card" role="dialog" aria-modal="true" aria-labelledby="share-preview-heading">
+        <button type="button" class="panel-close" data-panel-close="share" aria-label="Close">X</button>
         <h3 id="share-preview-heading">Share run</h3>
         <div id="share-preview-body" class="share-card-body"></div>
         <p id="share-preview-text" class="share-preview-text hint"></p>

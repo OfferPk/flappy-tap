@@ -1,7 +1,8 @@
 /**
- * Urr Jaa! v3.14.0-urrjaa — Perfect rails, Time Attack HUD, Practice ghost, voice, gifts, pipes, splash, offline.
+ * Urr Jaa! v3.15.0-urrjaa — Power VFX, Challenge select, One Life HUD, coin balance, unlock teaser, gift haptic,
+ * landscape safe-area, universal panel Close (X), bugfixes.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
- * KEEP all prior features — different pack from 3.11–3.13.
+ * KEEP all prior features — different pack from 3.11–3.14.
  */
 (function () {
   'use strict';
@@ -162,6 +163,10 @@
   const comboEl = document.getElementById('combo-display');
   const modeBadgeEl = document.getElementById('mode-badge');
   const powerHudEl = document.getElementById('power-hud');
+  const livesHudEl = document.getElementById('lives-hud');
+  const unlockTeaserEl = document.getElementById('unlock-teaser');
+  const challengeStagePanel = document.getElementById('challenge-stage-panel');
+  const challengeStageList = document.getElementById('challenge-stage-list');
   const coinHudEl = document.getElementById('coin-hud');
   const timerHudEl = document.getElementById('timer-hud');
   const screenStart = document.getElementById('screen-start');
@@ -355,6 +360,7 @@
       if (!navigator.vibrate) return;
       if (kind === 'death') navigator.vibrate([40, 30, 80]);
       else if (kind === 'power') navigator.vibrate(18);
+      else if (kind === 'gift') navigator.vibrate([12, 40, 18, 40, 28]);
       else if (kind === 'nearmiss') navigator.vibrate(10);
       else if (kind === 'coin') navigator.vibrate(8);
       else navigator.vibrate(12);
@@ -655,22 +661,22 @@
     if (!powerHudEl) return;
     var now = performance.now();
     var bits = [];
-    if (shieldActive) bits.push('🛡 Shield');
-    if (now < slowMoUntil) bits.push('⏱ ' + powerRemainSec(slowMoUntil) + 's');
-    if (now < magnetUntil) bits.push('🧲 ' + powerRemainSec(magnetUntil) + 's');
-    if (now < turboUntil) bits.push('⚡ ' + powerRemainSec(turboUntil) + 's');
-    if (now < ghostUntil) bits.push('👻 ' + powerRemainSec(ghostUntil) + 's');
-    if (riskyActive()) bits.push('🎯x3');
-    if (isHard()) bits.push('🔥');
-    if (isNoCoin()) bits.push('🚫🪙');
-    if (isOneLife()) bits.push('1️⃣');
+    if (shieldActive) bits.push({ t: '🛡 Shield', k: 'shield' });
+    if (now < slowMoUntil) bits.push({ t: '⏱ ' + powerRemainSec(slowMoUntil) + 's', k: 'slowmo' });
+    if (now < magnetUntil) bits.push({ t: '🧲 ' + powerRemainSec(magnetUntil) + 's', k: 'magnet' });
+    if (now < turboUntil) bits.push({ t: '⚡ ' + powerRemainSec(turboUntil) + 's', k: 'turbo' });
+    if (now < ghostUntil) bits.push({ t: '👻 ' + powerRemainSec(ghostUntil) + 's', k: 'ghost' });
+    if (riskyActive()) bits.push({ t: '🎯x3', k: 'risky' });
+    if (isHard()) bits.push({ t: '🔥', k: 'hard' });
+    if (isNoCoin()) bits.push({ t: '🚫🪙', k: 'nocoin' });
+    if (isOneLife()) bits.push({ t: '1️⃣', k: 'onelife' });
     if (bits.length) {
       powerHudEl.hidden = false;
       powerHudEl.innerHTML = '';
       bits.forEach(function (b) {
         var chip = document.createElement('span');
-        chip.className = 'power-chip';
-        chip.textContent = b;
+        chip.className = 'power-chip power-' + (b.k || 'generic');
+        chip.textContent = b.t;
         powerHudEl.appendChild(chip);
       });
     } else powerHudEl.hidden = true;
@@ -724,10 +730,59 @@
     }
   }
 
+  function updateLivesHud() {
+    if (!livesHudEl) return;
+    if (isOneLife() && (state === 'playing' || state === 'dying' || state === 'paused' || state === 'dead')) {
+      livesHudEl.hidden = false;
+      var lost = state === 'dying' || state === 'dead' || !bird || (bird && !bird.alive);
+      livesHudEl.innerHTML = lost
+        ? '<span class="life-heart life-lost">🖤</span><span class="life-label">Gone</span>'
+        : '<span class="life-heart">❤️</span><span class="life-label">×1</span>';
+      livesHudEl.classList.toggle('lives-lost', !!lost);
+    } else {
+      livesHudEl.hidden = true;
+    }
+  }
+
+  function nextBirdUnlockTeaser() {
+    if (!FTSkins || !FTSkins.BIRDS) return null;
+    var coins = FTStorage.getCoins();
+    var best = FTStorage.getBest();
+    var bestCand = null;
+    FTSkins.BIRDS.forEach(function (b) {
+      if (!b || b.free || b.cost === 0) return;
+      if (FTStorage.isBirdUnlocked && FTStorage.isBirdUnlocked(b.id)) return;
+      var cost = b.cost || 0;
+      var scoreOk = b.unlockScore && best >= b.unlockScore;
+      var afford = coins >= cost || scoreOk;
+      var need = afford ? 0 : Math.max(0, cost - coins);
+      var cand = { bird: b, need: need, afford: afford, scoreOk: scoreOk };
+      if (!bestCand || need < bestCand.need || (need === bestCand.need && cost < (bestCand.bird.cost || 0))) {
+        bestCand = cand;
+      }
+    });
+    return bestCand;
+  }
+
+  function updateUnlockTeaser() {
+    if (!unlockTeaserEl) return;
+    var t = nextBirdUnlockTeaser();
+    if (!t) { unlockTeaserEl.hidden = true; unlockTeaserEl.textContent = ''; return; }
+    unlockTeaserEl.hidden = false;
+    if (t.afford) {
+      unlockTeaserEl.textContent = '✨ Ready to unlock ' + t.bird.label + ' in Garage!';
+      unlockTeaserEl.classList.add('teaser-ready');
+    } else {
+      unlockTeaserEl.textContent = '🔓 Next bird: ' + t.bird.label + ' · need ' + t.need + ' more 🪙';
+      unlockTeaserEl.classList.remove('teaser-ready');
+    }
+  }
+
   function updateCoinHud() {
     if (coinHudEl) coinHudEl.textContent = '🪙 ' + FTStorage.getCoins();
     if (coinsStartEl) coinsStartEl.textContent = String(FTStorage.getCoins());
     if (garageCoinsEl) garageCoinsEl.textContent = String(FTStorage.getCoins());
+    updateUnlockTeaser();
   }
 
   function cosmeticsOpts() {
@@ -865,7 +920,10 @@
   function spawnCoinsInGap(pipe) {
     if (isNoCoin()) return;
     var gap = pipe.gap != null ? pipe.gap : currentGap;
-    var n = 1 + (rng() < 0.4 ? 1 : 0);
+    // 3.15: fewer early doubles, rare late triple
+    var n = 1;
+    if (score >= 12 && rng() < 0.42) n = 2;
+    if (score >= 45 && rng() < 0.18) n = 3;
     for (var i = 0; i < n; i++) {
       coins.push({
         x: pipe.x + PIPE_W / 2 + (i === 1 ? 28 : 0),
@@ -1164,6 +1222,8 @@
     areaOverride = null;
     updateBestUI();
     updateA2hsTip();
+    updateUnlockTeaser();
+    updateLivesHud();
     drawFrame(true);
   }
 
@@ -1368,6 +1428,7 @@
     timeLeft = TIME_ATTACK_S;
     updateModeBadge();
     updateTimerHud();
+    updateLivesHud();
     initRain();
 
     if (!fromContinue) {
@@ -1786,6 +1847,14 @@
     updateComboUI();
   }
 
+  function coinEconomyScale() {
+    // 3.15: softer early economy, reward longer runs
+    if (score < 12) return 0.85;
+    if (score < 30) return 1.0;
+    if (score >= 60) return 1.2;
+    return 1.1;
+  }
+
   function collectCoin(c) {
     c.taken = true;
     coinCombo += 1;
@@ -1793,7 +1862,7 @@
     runBestCombo = Math.max(runBestCombo, coinCombo);
     var mult = coinComboMult();
     var pass = birdPass();
-    var gained = Math.max(1, Math.round(mult * (pass.coinMul || 1)));
+    var gained = Math.max(1, Math.round(mult * (pass.coinMul || 1) * coinEconomyScale()));
     // Owl night bonus
     var w = effectiveWeather();
     if (pass.nightBonus && (w === 'night' || activeArea() === 'night' || activeArea() === 'quetta')) {
@@ -1849,7 +1918,7 @@
     runBoxes += 1;
     FTAudio.powerup();
     if (FTAudio.mystery) FTAudio.mystery();
-    haptic('coin');
+    haptic('gift');
     triggerChirpMouth('gift');
     noteGiftAdd(1);
     voiceGiftCue();
@@ -1987,6 +2056,7 @@
 
   var wheelSpinning = false;
   var spinQueueActive = false;
+  var pendingUngrantedSpin = null; // {coins} spent but not granted — refund on abort
   var wheelAngle = 0;
   var wheelWrapEl = document.getElementById('wheel-wrap');
 
@@ -1995,11 +2065,33 @@
     var lock = busy || !!wheelSpinning || !!spinQueueActive;
     if (btnSpinOnce) btnSpinOnce.disabled = lock || s < 1;
     if (btnSpinAll) btnSpinAll.disabled = lock || s < 1;
-    document.querySelectorAll('[data-close="gifts"]').forEach(function (b) {
-      b.disabled = !!lock;
-      if (lock) b.setAttribute('aria-busy', 'true');
-      else b.removeAttribute('aria-busy');
+    // 3.15: Close (X) always available; mid-spin abort refunds gift charge
+    document.querySelectorAll('[data-close="gifts"], [data-panel-close="gifts"]').forEach(function (b) {
+      b.disabled = false;
+      if (lock) b.setAttribute('title', 'Close (keeps spin charge if mid-spin)');
+      else b.removeAttribute('title');
+      b.removeAttribute('aria-busy');
     });
+  }
+
+  function abortPendingSpinKeepCharge() {
+    if (!wheelSpinning && !spinQueueActive && !pendingUngrantedSpin) {
+      cancelWheelAnim();
+      return false;
+    }
+    cancelWheelAnim();
+    wheelSpinning = false;
+    spinQueueActive = false;
+    if (pendingUngrantedSpin) {
+      var per = (FTStorage.GIFTS_PER_SPIN || 10);
+      if (FTStorage.addGiftBoxes) FTStorage.addGiftBoxes(per);
+      pendingUngrantedSpin = null;
+      showToast('Spin cancelled · charge kept', 1400, 'lucky');
+    }
+    if (wheelWrapEl) wheelWrapEl.classList.remove('wheel-spinning', 'wheel-win');
+    setSpinButtonsBusy(false);
+    refreshGiftsUI();
+    return true;
   }
 
   /** Full dramatic spin duration for Spin once (~7s). Reduce-motion stays near-instant. */
@@ -2119,11 +2211,13 @@
     var r = begin ? begin(Math.random) : (FTStorage.spinWheelOnce ? FTStorage.spinWheelOnce(Math.random) : null);
     if (!r) { showToast('Need 10 gifts for a spin'); refreshGiftsUI(); return; }
     var alreadyGranted = !begin; // legacy path granted immediately
+    pendingUngrantedSpin = alreadyGranted ? null : { coins: r.coins };
     refreshGiftsUI(); // gifts already spent — show updated spin count while wheel turns
     if (FTAudio.mystery) FTAudio.mystery();
     flashSpinResult('Wheel spinning… hold tight! 🎰');
     animateWheelTo(r.coins, function () {
       if (!alreadyGranted && FTStorage.grantSpinCoins) FTStorage.grantSpinCoins(r.coins);
+      pendingUngrantedSpin = null;
       showMysteryResult(spinRarityLabel(r.coins) + '!', '+' + r.coins + ' coins');
       flashSpinResult('You won +' + r.coins + ' 🪙 · ' + (FTStorage.getGiftBoxes ? FTStorage.getGiftBoxes() : r.giftsLeft) + ' gifts left');
       showToast('+' + r.coins + ' 🪙 ' + spinRarityLabel(r.coins), 1600, r.coins >= 888 ? 'medal' : 'gift');
@@ -2173,10 +2267,12 @@
       var r = begin ? begin(Math.random) : (FTStorage.spinWheelOnce ? FTStorage.spinWheelOnce(Math.random) : null);
       if (!r) { finishAll(); return; }
       var alreadyGranted = !begin;
+      pendingUngrantedSpin = alreadyGranted ? null : { coins: r.coins };
       refreshGiftsUI();
       var dur = spinAllDurationMs(planned - results.length, planned);
       animateWheelTo(r.coins, function () {
         if (!alreadyGranted && FTStorage.grantSpinCoins) FTStorage.grantSpinCoins(r.coins);
+        pendingUngrantedSpin = null;
         results.push(r.coins);
         total += r.coins;
         flashSpinResult('+' + r.coins + ' 🪙  (' + results.length + '/' + planned + ')');
@@ -2228,6 +2324,7 @@
     nearMissStreak = 0;
     FTAudio.hit();
     haptic('death');
+    updateLivesHud();
     triggerShake();
     hitFlash = 1;
     deathFreezeUntil = performance.now() + DEATH_FREEZE_MS;
@@ -3056,15 +3153,82 @@
 
   function drawGhostAura() {
     if (!bird || !ghostActive()) return;
+    var t = performance.now() / 1000;
+    var rem = Math.max(0, (ghostUntil - performance.now()) / GHOST_MS);
     ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.strokeStyle = 'rgba(220,230,255,0.9)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 4]);
+    // Afterimage copies
+    if (!reduceMotion) {
+      for (var i = 1; i <= 3; i++) {
+        ctx.globalAlpha = 0.12 * rem;
+        FTSkins.draw(ctx, birdId, bird.x - i * 10, bird.y + Math.sin(t * 6 + i) * 2, bird.rot * 0.6, 0.9, {
+          vehicle: 'none', hat: 'none', reduceMotion: true
+        });
+      }
+    }
+    ctx.globalAlpha = 0.4 + 0.2 * Math.sin(t * 7);
+    ctx.strokeStyle = 'rgba(226,232,240,0.95)';
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([5, 4]);
     ctx.beginPath();
-    ctx.arc(bird.x, bird.y, Math.max(bird.w, bird.h) * 0.85 + 8, 0, Math.PI * 2);
+    ctx.arc(bird.x, bird.y, Math.max(bird.w, bird.h) * 0.85 + 8 + Math.sin(t * 5) * 2, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(148,163,184,0.55)';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('GHOST', bird.x, bird.y - Math.max(bird.w, bird.h) * 0.7 - 10);
+    ctx.restore();
+  }
+
+  function drawSlowMoVFX() {
+    if (!bird || performance.now() >= slowMoUntil) return;
+    var rem = Math.max(0, Math.min(1, (slowMoUntil - performance.now()) / SLOWMO_MS));
+    ctx.save();
+    var g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.15, W / 2, H / 2, Math.max(W, H) * 0.72);
+    g.addColorStop(0, 'rgba(167,139,250,0)');
+    g.addColorStop(1, 'rgba(91,33,182,' + (0.16 + 0.14 * rem).toFixed(3) + ')');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    if (!reduceMotion) {
+      ctx.strokeStyle = 'rgba(196,181,253,' + (0.35 + 0.25 * rem).toFixed(3) + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, 26 + Math.sin(performance.now() / 200) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(221,214,254,0.85)';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('SLOW', bird.x, bird.y - 34);
+    }
+    ctx.restore();
+  }
+
+  function drawTurboVFX() {
+    if (!bird || performance.now() >= turboUntil) return;
+    var rem = Math.max(0, Math.min(1, (turboUntil - performance.now()) / TURBO_MS));
+    var t = performance.now() / 80;
+    ctx.save();
+    if (!reduceMotion) {
+      for (var i = 0; i < 7; i++) {
+        var yy = bird.y + (i - 3) * 7 + Math.sin(t + i) * 2;
+        ctx.strokeStyle = 'rgba(251,191,36,' + (0.15 + 0.35 * rem * (1 - Math.abs(i - 3) / 4)).toFixed(3) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(bird.x - 18 - i * 6, yy);
+        ctx.lineTo(bird.x - 48 - i * 10, yy + (rng() - 0.5));
+        ctx.stroke();
+      }
+    }
+    // amber edge wash
+    var g2 = ctx.createLinearGradient(0, 0, W * 0.35, 0);
+    g2.addColorStop(0, 'rgba(245,158,11,' + (0.12 * rem).toFixed(3) + ')');
+    g2.addColorStop(1, 'rgba(245,158,11,0)');
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, W * 0.4, H);
+    ctx.fillStyle = 'rgba(253,230,138,0.9)';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('TURBO', bird.x, bird.y - 34);
     ctx.restore();
   }
 
@@ -3159,6 +3323,8 @@
     drawWeatherFX();
     drawPracticeGhost();
     if (bird) {
+      drawSlowMoVFX();
+      drawTurboVFX();
       drawShieldAura();
       drawGhostAura();
       drawMagnetAura();
@@ -3266,9 +3432,95 @@
     }
   }, { passive: false });
 
+  function closePanelByKey(key) {
+    key = key || '';
+    if (key === 'ad-stub') {
+      var ad = document.getElementById('ad-stub-modal');
+      if (ad) {
+        var no = ad.querySelector('[data-ad-no]');
+        if (no) no.click();
+        else ad.hidden = true;
+      }
+      return true;
+    }
+    if (key === 'share') {
+      var ov = document.getElementById('share-preview');
+      if (ov) ov.hidden = true;
+      return true;
+    }
+    if (key === 'spin-unlock') { dismissSpinUnlockPopup(); return true; }
+    if (key === 'mystery') {
+      if (mysteryOverlay) mysteryOverlay.hidden = true;
+      return true;
+    }
+    if (key === 'challenge-stages') {
+      if (challengeStagePanel) challengeStagePanel.hidden = true;
+      return true;
+    }
+    if (key === 'pause') { resumeGame(); return true; }
+    if (key === 'death') { showMenu(); return true; }
+    if (key === 'settings') {
+      if (screenSettings) screenSettings.hidden = true;
+      showMenu();
+      return true;
+    }
+    if (key === 'gifts') {
+      abortPendingSpinKeepCharge();
+      showMenu();
+      return true;
+    }
+    // Generic panel → menu
+    if (key === 'modes' || key === 'garage' || key === 'missions' || key === 'collection' ||
+        key === 'boards' || key === 'streak' || key === 'guide') {
+      showMenu();
+      return true;
+    }
+    return false;
+  }
+
+  function closeTopOverlayOrPanel() {
+    var share = document.getElementById('share-preview');
+    if (share && !share.hidden) { share.hidden = true; return true; }
+    if (spinUnlockOverlay && !spinUnlockOverlay.hidden) { dismissSpinUnlockPopup(); return true; }
+    if (mysteryOverlay && !mysteryOverlay.hidden) { mysteryOverlay.hidden = true; return true; }
+    var ad = document.getElementById('ad-stub-modal');
+    if (ad && !ad.hidden) {
+      var no = ad.querySelector('[data-ad-no]');
+      if (no) no.click();
+      else ad.hidden = true;
+      return true;
+    }
+    if (challengeStagePanel && !challengeStagePanel.hidden) {
+      challengeStagePanel.hidden = true;
+      return true;
+    }
+    if (state === 'paused') { resumeGame(); return true; }
+    if (state === 'dead' && screenDeath && !screenDeath.hidden) { showMenu(); return true; }
+    // Any visible panel screen (not start)
+    var panels = [screenSettings, screenGarage, screenModes, screenMissions, screenCollection,
+      screenGifts, screenGuide, screenBoards, screenStreak];
+    for (var i = 0; i < panels.length; i++) {
+      if (panels[i] && !panels[i].hidden) {
+        if (panels[i] === screenGifts) abortPendingSpinKeepCharge();
+        showMenu();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('[data-panel-close]') : null;
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closePanelByKey(btn.getAttribute('data-panel-close'));
+  }, true);
+
   window.addEventListener('keydown', function (e) {
     if (e.code === 'Escape' || e.key === 'Escape') {
       e.preventDefault();
+      if (closeTopOverlayOrPanel()) return;
       if (state === 'playing') pauseGame();
       else if (state === 'paused') resumeGame();
       return;
@@ -3581,9 +3833,47 @@
     b.addEventListener('click', function () { showMenu(); });
   });
 
+
+  function refreshChallengeStageSelect() {
+    if (!challengeStageList) return;
+    var unlocked = Math.max(1, FTStorage.getChallengeStage() || 1);
+    challengeStageList.innerHTML = '';
+    CHALLENGE_STAGES.forEach(function (st, idx) {
+      var open = st.id <= unlocked;
+      var cleared = st.id < unlocked;
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'challenge-stage-card' + (open ? '' : ' locked') + (cleared ? ' cleared' : '') +
+        (idx === challengeStageIdx && open ? ' current' : '');
+      card.disabled = !open;
+      card.innerHTML = '<span class="cs-num">' + (cleared ? '✓' : (open ? st.id : '🔒')) + '</span>' +
+        '<span class="cs-body"><strong>' + st.label + '</strong><em>Target ' + st.target + ' · ' + st.area + '</em></span>';
+      if (open) {
+        card.addEventListener('click', function () {
+          challengeStageIdx = idx;
+          FTStorage.setChallengeStage(Math.max(FTStorage.getChallengeStage() || 1, st.id));
+          if (challengeStagePanel) challengeStagePanel.hidden = true;
+          startRun(false, 'challenge');
+          showToast(st.label + ' · score ' + st.target, 1800, 'medal');
+        });
+      }
+      challengeStageList.appendChild(card);
+    });
+  }
+
+  function openChallengeStageSelect() {
+    hideAllScreens();
+    if (screenModes) screenModes.hidden = false;
+    if (challengeStagePanel) {
+      challengeStagePanel.hidden = false;
+      refreshChallengeStageSelect();
+    }
+  }
+
   if (btnModes) btnModes.addEventListener('click', function () {
     hideAllScreens();
     if (screenModes) screenModes.hidden = false;
+    if (challengeStagePanel) challengeStagePanel.hidden = true;
   });
   document.querySelectorAll('[data-close="modes"]').forEach(function (b) {
     b.addEventListener('click', function () { showMenu(); });
@@ -3592,6 +3882,10 @@
     b.addEventListener('click', function () {
       var m = b.getAttribute('data-mode');
       FTAudio.unlock();
+      if (m === 'challenge') {
+        openChallengeStageSelect();
+        return;
+      }
       startRun(false, m);
       var names = {
         classic: 'Classic', timeattack: 'Time Attack 60s', hard: 'Hard',
@@ -3601,7 +3895,12 @@
       showToast(names[m] || m);
       if (m === 'practice') showToast('Practice · follow the ghost path', 1800, 'lucky');
       if (m === 'timeattack') showToast('Time Attack · 60s — go!', 1600, 'medal');
+      if (m === 'onelife') { updateLivesHud(); showToast('One Life · heart on HUD', 1600); }
     });
+  });
+  var btnChallengeCancel = document.getElementById('btn-challenge-cancel');
+  if (btnChallengeCancel) btnChallengeCancel.addEventListener('click', function () {
+    if (challengeStagePanel) challengeStagePanel.hidden = true;
   });
 
   function refreshMissions() {

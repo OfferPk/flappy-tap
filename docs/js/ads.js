@@ -23,6 +23,7 @@
     el.hidden = true;
     el.innerHTML =
       '<div class="ad-stub-card" role="dialog" aria-modal="true">' +
+      '<button type="button" class="panel-close" data-panel-close="ad-stub" aria-label="Close">X</button>' +
       '<h3 class="ad-stub-title">Ad (stub)</h3>' +
       '<p class="ad-stub-body"></p>' +
       '<div class="ad-stub-actions">' +

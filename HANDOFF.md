@@ -1,11 +1,12 @@
 # HANDOFF — Urr Jaa!
 
-**Live version:** 3.14.0-urrjaa · SW `urrjaa-v23-20260928`  
-**Last ship:** Perfect Pass rails, Time Attack HUD, Practice ghost, voice lines, gift balance, pipe skins, splash, offline banner.
+**Live version:** 3.15.0-urrjaa · SW `urrjaa-v24-20260928`  
+**Last ship:** Power VFX clarity, Challenge stage select, One Life HUD, coin balance, unlock teaser, gift haptic, landscape safe-area, universal panel Close (X).
 
-**Do next (only if owner continues):** new pack ≠ 3.11–3.14 ideas. KEEP ALL. fetch/merge; check+smoke; publish GH_TOKEN unset GITHUB_TOKEN; tag+zip; STOP after ship.
+**Do next (only if owner continues):** new pack ≠ 3.11–3.15 ideas. KEEP ALL. fetch/merge; check+smoke; publish GH_TOKEN unset GITHUB_TOKEN; tag+zip; STOP after ship.
 
 ---
+
 
 # HANDOFF — Urr Jaa! 3.13.0-urrjaa
 

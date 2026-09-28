@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.14.0-urrjaa — expanded desi voice lines.
+ * Urr Jaa! v3.15.0-urrjaa — expanded desi voice lines.
  * Urr Jaa! v3.6.0-urrjaa — Web Audio SFX + Desi voice (speechSynthesis) + chirp fallback.
  * Mute (game SFX) and Desi voice are independent toggles.
  * Voice still works when game mute is ON (voiceOn only).

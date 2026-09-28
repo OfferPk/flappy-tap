@@ -1,23 +1,19 @@
 # Urr Jaa! STATUS
 
-## Current: **3.14.0-urrjaa** (2026-09-28 PKT)
+## Current: **3.15.0-urrjaa** (2026-09-28 PKT)
 
-### This pack (NEW vs 3.11–3.13)
-- **Perfect Pass rail juice** — cyan/gold center rail flash + sparkles on PERFECT; voice `perfect_pass` / `wah_ji`
-- **Time Attack HUD** — ring card with pace `/min`, low/critical pulse classes
-- **Practice ghost** — translucent bird leads toward next gap center
-- **Desi voice** — more lines (`perfect_pass`, `time_up`, `jaldi`, `lajawab`, `bilkul_center`, …)
-- **Gift spawn balance** — base 7.5% + late ramp; dampened in practice/TA/first-run
-- **Pipe skin variety** — mosaic / terracotta / neon_pipe / tiled kinds + richer area pools
-- **Loading splash polish** — branded boot splash with load bar, fades after init
-- **Offline banner** — cached-play notice when network drops
-- Bugfixes / KEEP ALL ≤3.13 systems
+### This pack (NEW vs 3.11–3.14)
+- **Slow-mo / Ghost / Turbo VFX clarity** — purple vignette, afterimages, speed lines + typed power chips
+- **Challenge stage select polish** — pick/replay stages with clear/locked cards
+- **One Life lives UI** — heart HUD (×1 / Gone)
+- **Coin economy balance** — softer early, better late; spawn curve tweak
+- **Bird unlock teaser** — menu line + garage progress bars
+- **Haptic on gift** — distinct vibrate pattern
+- **Landscape safe-area** — left/right insets for notch/landscape
+- **Universal Close (X)** — top-right on all panels/modals; Esc; mid-spin Mystery abort keeps charge
+- Bugfixes / KEEP ALL ≤3.14 systems
 
-SW cache: `urrjaa-v23-20260928`
-
-**Ship commit:** `179867e` · tag `v3.14.0-urrjaa`  
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.14.0-urrjaa  
-**Live:** https://offerpk.github.io/flappy-tap/
+SW cache: `urrjaa-v24-20260928`
 
 
 ---
