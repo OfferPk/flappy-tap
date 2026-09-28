@@ -956,3 +956,47 @@ html.reduce-motion .spin-wheel { transition: none !important; }
 html.reduce-motion .wheel-wrap.wheel-spinning .wheel-rim,
 html.reduce-motion .wheel-wrap.wheel-win .wheel-rim,
 html.reduce-motion .spin-result.win-flash { animation: none !important; }
+
+/* ——— Guide (EN / Roman Urdu / Urdu) ——— */
+.guide-tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 4px 0 12px;
+}
+.guide-tab {
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  color: var(--muted, #94a3b8);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.guide-tab.active {
+  background: linear-gradient(135deg, #4ecdc4, #45b7aa);
+  color: #0a1628;
+  border-color: transparent;
+}
+.guide-list {
+  margin: 0 4px 14px;
+  padding-inline-start: 1.15em;
+  text-align: start;
+  line-height: 1.45;
+  color: var(--muted, #cbd5e1);
+  font-size: 0.9rem;
+}
+.guide-list li { margin-bottom: 0.45em; }
+.guide-list strong { color: #fff; }
+.guide-panel[dir="rtl"] .guide-list { text-align: right; }
+.ru-line {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  color: #ffe082;
+}
+.spin-unlock-card { max-width: 280px; }
+.spin-unlock-card .btn-col { gap: 8px; }

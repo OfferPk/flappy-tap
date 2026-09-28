@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.4.1-urrjaa — Mystery Rewards visual spin wheel; gift inventory kept; no post-run rarity popup.
+ * Urr Jaa! v3.5.0-urrjaa — voice cooldown/variety, gift voice, spin-unlock popup, Guide (EN/RU/Urdu).
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -226,6 +226,13 @@
   const btnSpinOnce = document.getElementById('btn-spin-once');
   const btnSpinAll = document.getElementById('btn-spin-all');
   const runGiftsEl = document.getElementById('run-gifts');
+  const screenGuide = document.getElementById('screen-guide');
+  const btnGuide = document.getElementById('btn-guide');
+  const spinUnlockOverlay = document.getElementById('spin-unlock-overlay');
+  const btnSpinUnlockGo = document.getElementById('btn-spin-unlock-go');
+  const btnSpinUnlockDismiss = document.getElementById('btn-spin-unlock-dismiss');
+  let pendingSpinUnlockPopup = false;
+  let spinUnlockShownThisUnlock = false;
 
   function showToast(msg, ms) {
     if (!toastEl) return;
@@ -254,10 +261,69 @@
     if (!FTAudio || typeof FTAudio.isVoicePack !== 'function') return;
     if (!FTAudio.isVoicePack()) return;
     if (FTAudio.unlock) FTAudio.unlock();
-    var label = FTAudio.voice(id); // speechSynthesis or melodic chirp fallback
-    // Always toast when Desi voice ON
-    if (label) showToast(label, 1200);
-    else if (FTAudio.VOICE_LABELS && FTAudio.VOICE_LABELS[id]) showToast(FTAudio.VOICE_LABELS[id], 1200);
+    var label = FTAudio.voice(id); // cooldown + variety inside audio.js
+    // Toast only when a line actually played (empty = cooldown skip — no spam toast)
+    if (label) showToast(label, 1100);
+  }
+
+  function voiceGiftCue() {
+    if (!FTAudio || typeof FTAudio.isVoicePack !== 'function') return;
+    if (!FTAudio.isVoicePack()) return;
+    if (FTAudio.unlock) FTAudio.unlock();
+    var label = '';
+    if (typeof FTAudio.voiceGift === 'function') label = FTAudio.voiceGift();
+    else label = FTAudio.voice('gift', { priority: true });
+    if (label) showToast(label, 1000);
+  }
+
+  /** When gifts cross a multiple of 10, unlock a spin — one-time popup (not on menu reopen). */
+  function noteGiftAdd(n) {
+    n = n | 0;
+    if (n <= 0) return FTStorage.getGiftBoxes ? FTStorage.getGiftBoxes() : 0;
+    var beforeSpins = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
+    var total = FTStorage.addGiftBoxes(n);
+    var afterSpins = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
+    if (afterSpins > beforeSpins) {
+      pendingSpinUnlockPopup = true;
+      spinUnlockShownThisUnlock = false;
+      if (state === 'playing') {
+        showToast('🎰 Spin unlocked! · Mystery Box kholo', 1800);
+      } else {
+        maybeShowSpinUnlockPopup();
+      }
+    }
+    return total;
+  }
+
+  function maybeShowSpinUnlockPopup() {
+    if (!pendingSpinUnlockPopup || spinUnlockShownThisUnlock) return;
+    if (!spinUnlockOverlay) return;
+    // Don't interrupt active wheel spin overlay
+    if (mysteryOverlay && !mysteryOverlay.hidden) return;
+    spinUnlockShownThisUnlock = true;
+    pendingSpinUnlockPopup = false;
+    spinUnlockOverlay.hidden = false;
+    spinUnlockOverlay.classList.remove('mystery-pop');
+    void spinUnlockOverlay.offsetWidth;
+    spinUnlockOverlay.classList.add('mystery-pop');
+  }
+
+  function dismissSpinUnlockPopup() {
+    if (spinUnlockOverlay) spinUnlockOverlay.hidden = true;
+  }
+
+  /** For gifts already added in storage (missions/streak): infer unlock from delta. */
+  function detectSpinUnlockFromDelta(giftsAdded) {
+    giftsAdded = giftsAdded | 0;
+    if (giftsAdded <= 0 || !FTStorage.getGiftBoxes) return;
+    var g = FTStorage.getGiftBoxes();
+    var after = Math.floor(g / 10);
+    var before = Math.floor((g - giftsAdded) / 10);
+    if (after > before) {
+      pendingSpinUnlockPopup = true;
+      spinUnlockShownThisUnlock = false;
+      maybeShowSpinUnlockPopup();
+    }
   }
 
   function haptic(kind) {
@@ -807,7 +873,7 @@
 
   function allScreens() {
     return [screenStart, screenDeath, screenSettings, screenPause, screenGarage, screenModes,
-      screenMissions, screenCollection, screenGifts, screenBoards, screenStreak];
+      screenMissions, screenCollection, screenGifts, screenGuide, screenBoards, screenStreak];
   }
 
   function hideAllScreens() {
@@ -895,6 +961,10 @@
       btnMysteryAd.hidden = isPractice();
       btnMysteryAd.disabled = mysteryAdUsed;
       btnMysteryAd.textContent = mysteryAdUsed ? 'Gift claimed' : '🎁 +1 Gift (Ad)';
+    }
+    // One-time spin unlock popup at run end if threshold crossed mid-run
+    if (pendingSpinUnlockPopup) {
+      setTimeout(function () { maybeShowSpinUnlockPopup(); }, 700);
     }
     if (btnRetry) {
       btnRetry.textContent = isOneLife() ? 'HOME' : 'RETRY';
@@ -1278,11 +1348,12 @@
     }
   }
 
-  /** v3.4: mystery rewards add gifts to inventory — no rarity/duplicate popup. */
+  /** v3.4+: mystery rewards add gifts to inventory — no rarity/duplicate popup. */
   function grantMysteryReward(rngFn) {
     if (FTAudio.mystery) FTAudio.mystery();
     haptic('power');
-    FTStorage.addGiftBoxes(1);
+    noteGiftAdd(1);
+    voiceGiftCue();
     showToast('📦 → Mystery Rewards', 1200);
     updateCoinHud();
     return { gifts: 1, text: '+1 Gift' };
@@ -1294,7 +1365,8 @@
     FTAudio.powerup();
     if (FTAudio.mystery) FTAudio.mystery();
     haptic('coin');
-    FTStorage.addGiftBoxes(1);
+    noteGiftAdd(1);
+    voiceGiftCue();
     showToast('📦 → Mystery Rewards', 1000);
     popScore(1, box.x, box.y - 10);
   }
@@ -2388,6 +2460,9 @@
           if (r.mystery) {
             showToast('Mission: +' + (r.gifts || 1) + ' Gift 🎁');
             if (FTAudio.mystery) FTAudio.mystery();
+            voiceGiftCue();
+            // gifts already added in storage — detect spin unlock from delta
+            detectSpinUnlockFromDelta(r.gifts || 1);
           } else if (r.fragments) showToast('+' + r.fragments + ' fragments!');
           else showToast('+' + r.coins + ' coins!');
           refreshMissions(); updateCoinHud();
@@ -2554,7 +2629,8 @@
       voiceCue('shabaash');
     } else if (r.type === 'mystery') {
       showToast('Day ' + r.day + ': +' + r.coins + ' 🪙 + gift 🎁');
-      voiceCue('wah_ji');
+      voiceGiftCue();
+      detectSpinUnlockFromDelta(r.gifts || 1);
     } else {
       showToast('Day ' + r.day + ': +' + r.coins + ' coins');
     }
@@ -2594,6 +2670,38 @@
   });
   if (btnSpinOnce) btnSpinOnce.addEventListener('click', function () { doSpinOnce(); });
   if (btnSpinAll) btnSpinAll.addEventListener('click', function () { doSpinAll(); });
+
+  function setGuideLang(lang) {
+    lang = lang || 'en';
+    document.querySelectorAll('.guide-tab').forEach(function (t) {
+      var on = t.getAttribute('data-guide-lang') === lang;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-guide-panel]').forEach(function (p) {
+      p.hidden = p.getAttribute('data-guide-panel') !== lang;
+    });
+  }
+  if (btnGuide) btnGuide.addEventListener('click', function () {
+    hideAllScreens();
+    if (screenGuide) screenGuide.hidden = false;
+    setGuideLang('en');
+  });
+  document.querySelectorAll('.guide-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      setGuideLang(t.getAttribute('data-guide-lang') || 'en');
+    });
+  });
+  document.querySelectorAll('[data-close="guide"]').forEach(function (b) {
+    b.addEventListener('click', function () { showMenu(); });
+  });
+  if (btnSpinUnlockGo) btnSpinUnlockGo.addEventListener('click', function () {
+    dismissSpinUnlockPopup();
+    openGiftsScreen();
+  });
+  if (btnSpinUnlockDismiss) btnSpinUnlockDismiss.addEventListener('click', function () {
+    dismissSpinUnlockPopup();
+  });
 
   // Boot
   birdId = FTStorage.getBird();

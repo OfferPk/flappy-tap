@@ -1,7 +1,8 @@
 /**
- * Urr Jaa! v3.4.0 — Web Audio SFX + Desi voice (speechSynthesis) + chirp fallback.
+ * Urr Jaa! v3.5.0-urrjaa — Web Audio SFX + Desi voice (speechSynthesis) + chirp fallback.
  * Mute (game SFX) and Desi voice are independent toggles.
  * Voice still works when game mute is ON (voiceOn only).
+ * Cooldown + variety: same phrase ~12s, any voice ~6s, rotate pools.
  * No external assets; works offline.
  */
 (function (global) {
@@ -203,6 +204,15 @@
   }
 
   /* ——— Desi voice: speechSynthesis + audible melodic chirp fallback ——— */
+  /* Cooldown: ~6s between any voice; ~12s before exact same phrase repeats.
+     Variety: prefer different lines from the same pool when cues fire. */
+
+  const GLOBAL_VOICE_COOLDOWN_MS = 6000;
+  const SAME_PHRASE_COOLDOWN_MS = 12000;
+  let lastVoiceAt = 0;
+  let lastVoiceId = '';
+  const phraseLastAt = Object.create(null);
+  const recentVoiceIds = [];
 
   const VOICE_LABELS = {
     oye_hoye: 'Oye hoye!',
@@ -211,7 +221,17 @@
     kya_udaan: 'Kya udaan hai!',
     haye_oye: 'Haye oye!',
     shabaash: 'Shabaash!',
-    lucky: 'Lucky!'
+    lucky: 'Lucky!',
+    zabardast: 'Zabardast!',
+    kya_baat: 'Kya baat!',
+    mast: 'Mast!',
+    bohot_ache: 'Bohot ache!',
+    irshad: 'Irshad!',
+    wah: 'Wah!',
+    close_call: 'Close call!',
+    gift: 'Gift!',
+    mil_gaya: 'Mil gaya!',
+    gift_box: 'Box!'
   };
 
   /** Spoken phrase text (short) for Web Speech API. */
@@ -222,7 +242,36 @@
     kya_udaan: 'kya udaan hai',
     haye_oye: 'haye oye',
     shabaash: 'shabaash',
-    lucky: 'lucky'
+    lucky: 'lucky',
+    zabardast: 'zabardast',
+    kya_baat: 'kya baat hai',
+    mast: 'mast',
+    bohot_ache: 'bohot ache',
+    irshad: 'irshad',
+    wah: 'wah',
+    close_call: 'close call',
+    gift: 'gift',
+    mil_gaya: 'mil gaya',
+    gift_box: 'box'
+  };
+
+  /** Category pools for variety rotation (no "wah g wah" spam). */
+  const VOICE_POOLS = {
+    praise: ['shabaash', 'zabardast', 'kya_baat', 'mast', 'bohot_ache', 'wah', 'wah_ji', 'irshad', 'kya_udaan'],
+    warn: ['bach_ke', 'oye_hoye', 'close_call'],
+    fail: ['haye_oye', 'oye_hoye'],
+    lucky: ['lucky', 'shabaash', 'mast'],
+    gift: ['gift', 'mil_gaya', 'gift_box'],
+    start: ['oye_hoye', 'irshad', 'kya_udaan']
+  };
+
+  const ID_TO_POOL = {
+    oye_hoye: 'warn', bach_ke: 'warn', close_call: 'warn',
+    wah_ji: 'praise', kya_udaan: 'praise', shabaash: 'praise',
+    zabardast: 'praise', kya_baat: 'praise', mast: 'praise',
+    bohot_ache: 'praise', irshad: 'praise', wah: 'praise',
+    haye_oye: 'fail', lucky: 'lucky',
+    gift: 'gift', mil_gaya: 'gift', gift_box: 'gift'
   };
 
   function speechAvailable() {
@@ -400,33 +449,191 @@
         { f: 880, d: 0.1, t: 'triangle', g: 0.17, at: 70 },
         { f: 1100, d: 0.14, t: 'sine', g: 0.15, at: 150 }
       ]);
+    },
+    zabardast: function () {
+      playChirpNotes([
+        { f: 440, d: 0.08, t: 'square', g: 0.16, at: 0 },
+        { f: 554, d: 0.08, t: 'sine', g: 0.17, at: 70 },
+        { f: 659, d: 0.1, t: 'triangle', g: 0.16, at: 140 },
+        { f: 880, d: 0.12, t: 'sine', g: 0.15, at: 230 }
+      ]);
+    },
+    kya_baat: function () {
+      playChirpNotes([
+        { f: 392, d: 0.1, t: 'triangle', g: 0.18, at: 0 },
+        { f: 523, d: 0.1, t: 'sine', g: 0.17, at: 90 },
+        { f: 659, d: 0.12, t: 'triangle', g: 0.15, at: 180 }
+      ]);
+    },
+    mast: function () {
+      playChirpNotes([
+        { f: 587, d: 0.1, t: 'sine', g: 0.18, at: 0 },
+        { f: 740, d: 0.12, t: 'triangle', g: 0.16, at: 90 }
+      ]);
+    },
+    bohot_ache: function () {
+      playChirpNotes([
+        { f: 494, d: 0.08, t: 'sine', g: 0.17, at: 0 },
+        { f: 587, d: 0.08, t: 'sine', g: 0.16, at: 70 },
+        { f: 740, d: 0.1, t: 'triangle', g: 0.15, at: 140 },
+        { f: 880, d: 0.12, t: 'sine', g: 0.14, at: 220 }
+      ]);
+    },
+    irshad: function () {
+      playChirpNotes([
+        { f: 349, d: 0.1, t: 'triangle', g: 0.17, slide: 520, at: 0 },
+        { f: 523, d: 0.12, t: 'sine', g: 0.15, at: 110 }
+      ]);
+    },
+    wah: function () {
+      playChirpNotes([
+        { f: 523, d: 0.1, t: 'sine', g: 0.18, at: 0 },
+        { f: 784, d: 0.14, t: 'triangle', g: 0.16, at: 90 }
+      ]);
+    },
+    close_call: function () {
+      playChirpNotes([
+        { f: 880, d: 0.06, t: 'square', g: 0.14, at: 0 },
+        { f: 660, d: 0.08, t: 'triangle', g: 0.13, at: 55 },
+        { f: 440, d: 0.1, t: 'sine', g: 0.12, at: 120 }
+      ]);
+    },
+    gift: function () {
+      playChirpNotes([
+        { f: 660, d: 0.07, t: 'sine', g: 0.18, at: 0 },
+        { f: 880, d: 0.08, t: 'triangle', g: 0.17, at: 60 },
+        { f: 1175, d: 0.12, t: 'sine', g: 0.15, at: 130 }
+      ]);
+    },
+    mil_gaya: function () {
+      playChirpNotes([
+        { f: 523, d: 0.08, t: 'triangle', g: 0.18, at: 0 },
+        { f: 659, d: 0.08, t: 'sine', g: 0.16, at: 75 },
+        { f: 784, d: 0.1, t: 'sine', g: 0.15, at: 150 },
+        { f: 1047, d: 0.12, t: 'triangle', g: 0.14, at: 230 }
+      ]);
+    },
+    gift_box: function () {
+      playChirpNotes([
+        { f: 400, d: 0.07, t: 'square', g: 0.15, at: 0 },
+        { f: 600, d: 0.08, t: 'triangle', g: 0.16, at: 60 },
+        { f: 900, d: 0.12, t: 'sine', g: 0.15, at: 130 }
+      ]);
     }
   };
+
+  function nowMs() {
+    return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  }
+
+  function phraseReady(id, t) {
+    const last = phraseLastAt[id] || 0;
+    return (t - last) >= SAME_PHRASE_COOLDOWN_MS;
+  }
+
+  function pickVarietyId(requestedId, t) {
+    const poolName = ID_TO_POOL[requestedId];
+    const pool = poolName ? VOICE_POOLS[poolName] : null;
+    if (!pool || !pool.length) {
+      return phraseReady(requestedId, t) ? requestedId : '';
+    }
+    // Prefer: requested if ready and not last; else least-recent ready in pool; else skip
+    const candidates = [];
+    for (let i = 0; i < pool.length; i++) {
+      const id = pool[i];
+      if (!VOICE_LABELS[id]) continue;
+      if (!phraseReady(id, t)) continue;
+      if (id === lastVoiceId) continue;
+      if (recentVoiceIds.indexOf(id) >= 0) continue;
+      candidates.push(id);
+    }
+    if (!candidates.length) {
+      for (let i = 0; i < pool.length; i++) {
+        const id = pool[i];
+        if (VOICE_LABELS[id] && phraseReady(id, t) && id !== lastVoiceId) candidates.push(id);
+      }
+    }
+    if (!candidates.length) {
+      if (phraseReady(requestedId, t)) return requestedId;
+      return '';
+    }
+    // Prefer requested if still in candidates
+    if (candidates.indexOf(requestedId) >= 0 && requestedId !== lastVoiceId) return requestedId;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function markPlayed(id, t) {
+    lastVoiceAt = t;
+    lastVoiceId = id;
+    phraseLastAt[id] = t;
+    recentVoiceIds.push(id);
+    if (recentVoiceIds.length > 4) recentVoiceIds.shift();
+  }
 
   /**
    * Play Desi cue: prefer speechSynthesis; else multi-note chirp.
    * Mute does NOT block — only voiceOn does.
-   * Returns toast label.
+   * Cooldown + variety prevent same-line spam (e.g. "wah g wah").
+   * opts.force — bypass cooldown (settings preview).
+   * opts.priority — gift cues may play slightly sooner (still respect same-phrase).
+   * Returns toast label ('' if skipped).
    */
-  function voice(id) {
+  function voice(id, opts) {
     ensure();
     if (!voiceOn) return '';
-    const label = VOICE_LABELS[id] || '';
-    const phrase = SPEAK_TEXT[id] || '';
+    opts = opts || {};
+    const t = nowMs();
+    let playId = id;
+    if (!opts.force) {
+      const gap = t - lastVoiceAt;
+      const minGap = opts.priority ? Math.floor(GLOBAL_VOICE_COOLDOWN_MS * 0.55) : GLOBAL_VOICE_COOLDOWN_MS;
+      if (lastVoiceAt && gap < minGap) {
+        // Within global window: only allow if we can swap to a fresh different line
+        // and at least ~2.5s passed (avoid back-to-back chatter)
+        if (gap < 2500) return '';
+        playId = pickVarietyId(id, t);
+        if (!playId || playId === lastVoiceId) return '';
+      } else {
+        playId = pickVarietyId(id, t);
+        if (!playId) return '';
+      }
+    } else {
+      playId = id;
+    }
+    if (!VOICE_LABELS[playId]) playId = id;
+    if (!VOICE_LABELS[playId]) return '';
+
+    const label = VOICE_LABELS[playId] || '';
+    const phrase = SPEAK_TEXT[playId] || '';
     let spoke = false;
-    if (phrase) spoke = speakPhrase(phrase, id);
+    if (phrase) spoke = speakPhrase(phrase, playId);
     if (!spoke) {
-      if (VOICE_CHIRPS[id]) VOICE_CHIRPS[id]();
+      if (VOICE_CHIRPS[playId]) VOICE_CHIRPS[playId]();
+      else if (VOICE_CHIRPS[id]) VOICE_CHIRPS[id]();
       else VOICE_CHIRPS.oye_hoye();
     }
+    markPlayed(playId, t);
     return label;
   }
 
-  /** Settings preview — speaks sample "oye hoye" (gated by voiceOn). */
+  /** Gift / mystery-box collect voice — distinct, cooldown-aware. */
+  function voiceGift() {
+    const pool = VOICE_POOLS.gift;
+    const t = nowMs();
+    let id = pool[Math.floor(Math.random() * pool.length)];
+    // Prefer one that is ready
+    for (let i = 0; i < pool.length; i++) {
+      const cand = pool[(i + Math.floor(Math.random() * pool.length)) % pool.length];
+      if (phraseReady(cand, t) && cand !== lastVoiceId) { id = cand; break; }
+    }
+    return voice(id, { priority: true });
+  }
+
+  /** Settings preview — speaks sample; bypasses cooldown. */
   function preview() {
     unlock();
     if (!voiceOn) return '';
-    return voice('oye_hoye');
+    return voice('oye_hoye', { force: true });
   }
 
   function setMuted(on) { muted = !!on; if (muted) stopAreaMusic(); }
@@ -447,7 +654,7 @@
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
-    voice: voice, preview: preview, VOICE_LABELS: VOICE_LABELS, SPEAK_TEXT: SPEAK_TEXT,
+    voice: voice, voiceGift: voiceGift, preview: preview, VOICE_LABELS: VOICE_LABELS, SPEAK_TEXT: SPEAK_TEXT, VOICE_POOLS: VOICE_POOLS,
     setMuted: setMuted, isMuted: isMuted, setVoicePack: setVoicePack, isVoicePack: isVoicePack, unlock: unlock
   };
 })(window);

@@ -31,7 +31,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.4.1-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.5.0-urrjaa</p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary" type="button">▶ Play</button>
@@ -48,6 +48,7 @@
           <button id="btn-boards" class="btn ghost btn-sm" type="button">🏆 Boards</button>
           <button id="btn-streak" class="btn ghost btn-sm" type="button">🔥 Streak</button>
         </div>
+        <button id="btn-guide" class="btn ghost" type="button">📖 Guide</button>
         <button id="btn-settings" class="btn ghost" type="button">⚙ Settings</button>
       </div>
       <p class="hint">Tap / Space · Coins in gaps · Esc pause · 2s to learn</p>
@@ -233,6 +234,69 @@
       <div id="streak-body"></div>
       <button id="btn-claim-streak" class="btn primary" type="button">Claim</button>
       <button class="btn ghost" type="button" data-close="streak">Back</button>
+    </div>
+
+
+    <!-- Guide / How to Play (EN · Roman Urdu · اردو) -->
+    <div id="screen-guide" class="screen panel-screen scroll-screen" hidden>
+      <h2>Guide · How to Play</h2>
+      <div class="guide-tabs" role="tablist" aria-label="Guide language">
+        <button type="button" class="guide-tab active" data-guide-lang="en" role="tab" aria-selected="true">English</button>
+        <button type="button" class="guide-tab" data-guide-lang="ru" role="tab" aria-selected="false">Roman Urdu</button>
+        <button type="button" class="guide-tab" data-guide-lang="ur" role="tab" aria-selected="false">اردو</button>
+      </div>
+      <div id="guide-panel-en" class="guide-panel" data-guide-panel="en">
+        <ul class="guide-list">
+          <li><strong>Tap</strong> anywhere to flap and fly.</li>
+          <li>Dodge <strong>pipes</strong> and traffic — don’t hit!</li>
+          <li>Collect <strong>coins</strong> 🪙 in gaps for combos.</li>
+          <li>Grab <strong>gifts</strong> 📦 — they stack in Mystery Rewards.</li>
+          <li><strong>Power-ups:</strong> Shield, Turbo, Magnet, Slow-mo, Ghost (brief).</li>
+          <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice &amp; more.</li>
+          <li><strong>Mystery Rewards:</strong> every <strong>10 boxes = 1 spin</strong> (444–999 coins).</li>
+          <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
+        </ul>
+      </div>
+      <div id="guide-panel-ru" class="guide-panel" data-guide-panel="ru" hidden>
+        <ul class="guide-list">
+          <li><strong>Tap</strong> karo — bird urr jati hai.</li>
+          <li><strong>Pipes</strong> aur traffic se bacho.</li>
+          <li>Gaps mein <strong>coins</strong> 🪙 lo — combo banaye.</li>
+          <li><strong>Gifts</strong> 📦 collect karo — Mystery Rewards mein stack hote hain.</li>
+          <li><strong>Power-ups:</strong> Shield, Turbo, Magnet, Slow-mo, Ghost (thori der).</li>
+          <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice wagaira.</li>
+          <li><strong>Mystery:</strong> har <strong>10 boxes = 1 spin</strong> (444–999 coins).</li>
+          <li><strong>Settings:</strong> Sound mute se voice band nahi — Desi voice alag toggle.</li>
+        </ul>
+      </div>
+      <div id="guide-panel-ur" class="guide-panel" data-guide-panel="ur" hidden dir="rtl" lang="ur">
+        <ul class="guide-list">
+          <li><strong>ٹیپ</strong> کریں — پرندہ اڑتا ہے۔</li>
+          <li><strong>پائپس</strong> اور ٹریفک سے بچیں۔</li>
+          <li>فاصلوں میں <strong>سکہ</strong> 🪙 لیں — کومبو بنائیں۔</li>
+          <li><strong>تحفے</strong> 📦 جمع کریں — مسٹری ریوارڈز میں محفوظ ہوتے ہیں۔</li>
+          <li><strong>پاور اپس:</strong> شیلڈ، ٹربو، میگنیٹ، سلو، گھوسٹ (مختصر)۔</li>
+          <li><strong>موڈز:</strong> کلاسک، ہارڈ، ٹائم اٹیک، ڈیلی، پریکٹس وغیرہ۔</li>
+          <li><strong>مسٹری:</strong> ہر <strong>۱۰ باکس = ۱ اسپن</strong> (۴۴۴–۹۹۹ سکے)۔</li>
+          <li><strong>سیٹنگز:</strong> ساؤنڈ میوٹ سے آواز بند نہیں — دیسی وائس الگ۔</li>
+        </ul>
+      </div>
+      <button class="btn primary" type="button" data-close="guide">Back</button>
+    </div>
+
+    <!-- One-time spin unlock popup (new 10-gift threshold only) -->
+    <div id="spin-unlock-overlay" class="mystery-overlay" hidden>
+      <div class="mystery-card spin-unlock-card">
+        <div class="mystery-rarity rarity-legendary">🎰 Spin unlocked!</div>
+        <p class="mystery-reward" id="spin-unlock-msg">
+          Open your Mystery Box and spin the wheel<br />
+          <span class="ru-line">Mystery Box kholo aur wheel spin karo · باکس کھولو</span>
+        </p>
+        <div class="btn-col">
+          <button id="btn-spin-unlock-go" class="btn primary" type="button">Open Mystery Rewards</button>
+          <button id="btn-spin-unlock-dismiss" class="btn ghost" type="button">Later</button>
+        </div>
+      </div>
     </div>
 
     <div id="toast" class="toast" hidden></div>
