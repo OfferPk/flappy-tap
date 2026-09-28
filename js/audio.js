@@ -297,6 +297,24 @@
       }, 80);
     }
   }
+  /** 3.47: settings preview — denser cricket + guaranteed soft owl */
+  function previewNightAmbience() {
+    if (muted || nightAmbVolMul <= 0.001) return false;
+    var vol = quietMul * nightAmbVolMul;
+    function cricket() {
+      var f = 1650 + Math.random() * 520;
+      tone(f, 0.03, 'sine', 0.009 * vol);
+      setTimeout(function () { tone(f * 0.84, 0.024, 'triangle', 0.007 * vol); }, 40);
+    }
+    cricket();
+    setTimeout(cricket, 200);
+    setTimeout(cricket, 400);
+    setTimeout(function () {
+      tone(230, 0.1, 'sine', 0.014 * vol);
+      setTimeout(function () { tone(196, 0.08, 'triangle', 0.011 * vol); }, 75);
+    }, 520);
+    return true;
+  }
 
   let areaMusicTimer = null;
   let areaMusicId = null;
@@ -948,7 +966,7 @@
     combo: combo, turbo: turbo, ghost: ghost, record: record, risky: risky,
     perfect: perfect, boss: boss, mystery: mystery, legendary: legendary, lucky: lucky,
     tick: tick, startSpinWhoosh: startSpinWhoosh, stopSpinWhoosh: stopSpinWhoosh, spinLand: spinLand,
-    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, nightAmbienceTick: nightAmbienceTick, setNightAmbienceVolume: setNightAmbienceVolume, getNightAmbienceVolumeMul: getNightAmbienceVolumeMul,
+    thunder: thunder, fanfare: fanfare, fanfareLight: fanfareLight, nightAmbienceTick: nightAmbienceTick, setNightAmbienceVolume: setNightAmbienceVolume, getNightAmbienceVolumeMul: getNightAmbienceVolumeMul, previewNightAmbience: previewNightAmbience,
     playAreaMusic: playAreaMusic, stopAreaMusic: stopAreaMusic,
     playMenuMusic: playMenuMusic, stopMenuMusic: stopMenuMusic,
     setAreaMusicEnabled: setAreaMusicEnabled, isAreaMusicEnabled: isAreaMusicEnabled,

@@ -1,5 +1,21 @@
 # Urr Jaa! STATUS
 
+## Current: **3.47.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs ≤3.46)
+- **Undo stacks** — multi-step equip undo (up to 8) with stack count on toast
+- **Night vol preview** — Preview night ambience button + auto-sample on volume change
+- Polish / bugfixes — prune expired undos; Undo · N button label
+- KEEP ALL ≤3.46 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v56-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.47.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.47.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
 ## Current: **3.46.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs ≤3.45)

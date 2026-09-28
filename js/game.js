@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.46.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.47.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -249,6 +249,7 @@
   const quietNightChk = document.getElementById('quiet-night-toggle');
   const areaMusicChk = document.getElementById('area-music-toggle');
   const nightAmbVolSel = document.getElementById('night-amb-vol');
+  const btnNightAmbPreview = document.getElementById('btn-night-amb-preview');
   const swipeDismissChk = document.getElementById('swipe-dismiss-toggle');
   const confettiIntensitySel = document.getElementById('confetti-intensity');
   const largeButtonsChk = document.getElementById('large-buttons-toggle');
@@ -5940,11 +5941,36 @@ function updateComboMeter(visible) {
     if (on && state === 'menu' && FTAudio.playMenuMusic) FTAudio.playMenuMusic();
   });
 
+  function previewNightAmbienceVol() {
+    var lvl = (nightAmbVolSel && nightAmbVolSel.value) ||
+      (FTStorage.getNightAmbVol && FTStorage.getNightAmbVol()) || 'normal';
+    syncNightAmbVol();
+    if (lvl === 'off') {
+      showToast('Night ambience is Off', 1000);
+      return;
+    }
+    if (FTAudio && FTAudio.unlock) FTAudio.unlock();
+    if (FTAudio && FTAudio.previewNightAmbience) {
+      FTAudio.previewNightAmbience();
+    } else if (FTAudio && FTAudio.nightAmbienceTick) {
+      FTAudio.nightAmbienceTick();
+      setTimeout(function () { if (FTAudio.nightAmbienceTick) FTAudio.nightAmbienceTick(); }, 220);
+      setTimeout(function () { if (FTAudio.nightAmbienceTick) FTAudio.nightAmbienceTick(); }, 440);
+    }
+    showToast('Night ambience preview · ' + lvl, 1100);
+  }
+
   if (nightAmbVolSel) {
     nightAmbVolSel.addEventListener('change', function () {
       var lvl = FTStorage.setNightAmbVol ? FTStorage.setNightAmbVol(nightAmbVolSel.value) : nightAmbVolSel.value;
       syncNightAmbVol();
-      showToast('Night ambience: ' + lvl, 1000);
+      if (lvl === 'off') showToast('Night ambience: off', 900);
+      else previewNightAmbienceVol();
+    });
+  }
+  if (btnNightAmbPreview) {
+    btnNightAmbPreview.addEventListener('click', function () {
+      previewNightAmbienceVol();
     });
   }
   if (swipeDismissChk) swipeDismissChk.addEventListener('change', function () {
@@ -6101,38 +6127,94 @@ function updateComboMeter(visible) {
     return null;
   }
 
-  var lastEquipUndo = null; // { kind, prevId, newId, until }
+  // 3.46/3.47: equip undo stack (multi-step)
+  var EQUIP_UNDO_MAX = 8;
+  var EQUIP_UNDO_MS = 5000;
+  var equipUndoStack = [];
+
+  function pruneEquipUndoStack() {
+    var now = performance.now();
+    equipUndoStack = equipUndoStack.filter(function (u) { return u && u.until > now; });
+  }
+
+  function refreshUndoToastButton() {
+    var btn = document.getElementById('toast-undo-btn');
+    if (!btn) return;
+    pruneEquipUndoStack();
+    var n = equipUndoStack.length;
+    btn.textContent = n > 1 ? ('Undo · ' + n) : 'Undo';
+    btn.setAttribute('aria-label', n > 1 ? ('Undo equip, ' + n + ' in stack') : 'Undo equip');
+  }
+
+  function showEquipUndoToast(label) {
+    pruneEquipUndoStack();
+    var n = equipUndoStack.length;
+    var msg = 'Equipped · ' + (label || 'skin') + (n > 1 ? (' · stack ' + n) : '');
+    showToast(msg, EQUIP_UNDO_MS, 'undo');
+    refreshUndoToastButton();
+  }
 
   function armEquipUndo(kind, prevId, newId, label) {
     if (!kind || prevId == null || prevId === newId) return;
-    lastEquipUndo = {
+    pruneEquipUndoStack();
+    equipUndoStack.push({
       kind: kind,
       prevId: prevId,
       newId: newId,
       label: label || newId,
-      until: performance.now() + 4200
-    };
-    showToast('Equipped · ' + (label || newId), 4200, 'undo');
+      until: performance.now() + EQUIP_UNDO_MS
+    });
+    if (equipUndoStack.length > EQUIP_UNDO_MAX) {
+      equipUndoStack = equipUndoStack.slice(-EQUIP_UNDO_MAX);
+    }
+    showEquipUndoToast(label || newId);
   }
 
-  function undoLastEquip() {
-    if (!lastEquipUndo) return;
-    if (performance.now() > lastEquipUndo.until) { lastEquipUndo = null; return; }
-    var u = lastEquipUndo;
-    lastEquipUndo = null;
-    onPickCosmetic(u.prevId, u.kind, { skipUndo: true, skipPassToast: true });
+  function extendTopEquipUndo(kind, id, label) {
+    pruneEquipUndoStack();
+    var top = equipUndoStack.length ? equipUndoStack[equipUndoStack.length - 1] : null;
+    if (top && top.kind === kind && top.newId === id) {
+      top.until = performance.now() + EQUIP_UNDO_MS;
+      showEquipUndoToast(label || top.label || id);
+      return true;
+    }
+    return false;
+  }
+
+  function markGarageSelected(kind, id) {
     document.querySelectorAll('#screen-garage .skin-card').forEach(function (el) {
       var rowKind = el.closest('#garage-birds') ? 'bird' :
         el.closest('#garage-vehicles') ? 'vehicle' :
         el.closest('#garage-envs') ? 'env' :
         el.closest('#garage-hats') ? 'hat' :
         el.closest('#garage-trails') ? 'trail' : '';
-      if (rowKind !== u.kind) return;
-      el.classList.toggle('selected', el.dataset.id === u.prevId && !el.classList.contains('locked'));
+      if (rowKind !== kind) return;
+      el.classList.toggle('selected', el.dataset.id === id && !el.classList.contains('locked'));
     });
-    showToast('Undid equip · restored', 1400, 'sync');
+  }
+
+  function undoLastEquip() {
+    pruneEquipUndoStack();
+    if (!equipUndoStack.length) {
+      showToast('Nothing to undo', 900);
+      return;
+    }
+    var u = equipUndoStack.pop();
+    onPickCosmetic(u.prevId, u.kind, { skipUndo: true, skipPassToast: true });
+    markGarageSelected(u.kind, u.prevId);
     if (typeof haptic === 'function') haptic('power');
     drawFrame(true);
+    pruneEquipUndoStack();
+    if (equipUndoStack.length) {
+      var top = equipUndoStack[equipUndoStack.length - 1];
+      // refresh window on remaining stack
+      top.until = performance.now() + EQUIP_UNDO_MS;
+      var n = equipUndoStack.length;
+      showToast('Undid · ' + (u.label || u.newId) + ' · stack ' + n, EQUIP_UNDO_MS, 'undo');
+      refreshUndoToastButton();
+    } else {
+      showToast('Undid equip · restored', 1400, 'sync');
+    }
   }
 
   function onPickCosmetic(id, kind, opts) {
@@ -6450,15 +6532,7 @@ function updateComboMeter(visible) {
     }
     var label = (garageLpCard && (garageLpCard.dataset.label || garageLpId)) || garageLpId;
     onPickCosmetic(garageLpId, garageLpKind, { offerUndo: true, skipPassToast: true, label: label });
-    document.querySelectorAll('#screen-garage .skin-card').forEach(function (el) {
-      var rowKind = el.closest('#garage-birds') ? 'bird' :
-        el.closest('#garage-vehicles') ? 'vehicle' :
-        el.closest('#garage-envs') ? 'env' :
-        el.closest('#garage-hats') ? 'hat' :
-        el.closest('#garage-trails') ? 'trail' : '';
-      if (rowKind !== garageLpKind) return;
-      el.classList.toggle('selected', el.dataset.id === garageLpId && !el.classList.contains('locked'));
-    });
+    markGarageSelected(garageLpKind, garageLpId);
     playEquipFanfareLight();
     if (garageLpCard) {
       garageLpCard.classList.add('equip-flash');
@@ -6621,10 +6695,7 @@ function updateComboMeter(visible) {
   // 3.45: double-tap skin card → light fanfare + toast
   global.onGarageDoubleEquip = function (kind, id, label) {
     playEquipFanfareLight();
-    if (lastEquipUndo && lastEquipUndo.kind === kind && lastEquipUndo.newId === id) {
-      lastEquipUndo.until = performance.now() + 4200;
-      showToast('Equipped · ' + (label || id), 4200, 'undo');
-    } else {
+    if (!extendTopEquipUndo(kind, id, label || id)) {
       showToast('Equipped · ' + (label || id), 1200, 'medal');
     }
     if (typeof haptic === 'function') haptic('gift');

@@ -68,7 +68,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.46.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.47.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -350,7 +350,8 @@
           <option value="normal" selected>Normal</option>
           <option value="high">High</option>
         </select>
-        <p class="setting-hint">Cricket / owl ticks in night areas while flying · Quiet-at-night still ducks</p>
+        <button id="btn-night-amb-preview" class="btn ghost btn-sm" type="button">Preview night ambience</button>
+        <p class="setting-hint">Cricket / owl ticks in night areas while flying · Quiet-at-night still ducks · Preview samples volume</p>
         <label class="setting-row check-row" for="voice-toggle">
           <span>Desi voice ON/OFF</span>
           <input id="voice-toggle" type="checkbox" checked />
@@ -437,6 +438,7 @@
       <details class="settings-changelog" id="settings-changelog">
         <summary>Changelog · recent</summary>
         <ul class="changelog-list" aria-label="Recent changes">
+          <li><strong>3.47</strong> — undo stacks · night vol preview · polish</li>
           <li><strong>3.46</strong> — night amb volume · equip Undo toast · polish</li>
           <li><strong>3.45</strong> — equip fanfare · double-tap equip · night ambience · polish</li>
           <li><strong>3.44</strong> — preview Equip · star HUD ping · local favs · polish</li>
@@ -463,7 +465,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.46.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.47.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -536,6 +538,7 @@
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>3.30:</strong> flap whoosh juice · Settings changelog-lite · Guide refresh · performance pass.</li>
+          <li><strong>3.47:</strong> Multi-step equip Undo stack · night ambience Preview · polish.</li>
           <li><strong>3.46:</strong> Night ambience volume setting · Equip Undo toast · polish.</li>
           <li><strong>3.45:</strong> Light equip fanfare · double-tap card equip · night cricket/haze ambience · polish.</li>
           <li><strong>3.44:</strong> Long-press preview Equip · star-coin HUD ping · favorites stay local (no export).</li>
@@ -576,6 +579,7 @@
           <li><strong>Quiet at night / Confetti:</strong> Settings mein — night soft SFX · confetti Off→High.</li>
           <li><strong>Collection:</strong> naye birds (Mynah, Bulbul, Cheel, Mor…) aur areas (Hunza, Gwadar, Canal…) coins ya score se unlock.</li>
           <li><strong>Seasonals (offline):</strong> Azadi / Eid / Winter / Basant — local date window ya score milestone. Server seasons nahi.</li>
+          <li><strong>3.47:</strong> Undo stacks · night vol preview.</li>
           <li><strong>3.46:</strong> Night amb volume · Equip Undo toast.</li>
           <li><strong>3.45:</strong> Equip fanfare · double-tap equip · night ambience.</li>
           <li><strong>3.44:</strong> Preview Equip · star HUD ping · favorites local only.</li>
@@ -603,6 +607,7 @@
           <li><strong>کلیکشن:</strong> نئے پرندے اور علاقے سکے یا اسکور سے کھلیں۔</li>
           <li><strong>سیزنل (آف لائن):</strong> آزادی / عید / سردی / بسنت — مقامی تاریخ یا اسکور۔ کوئی سرور سیزن نہیں۔</li>
           <li><strong>نیا (۳.۲۸–۳.۳۰):</strong> یومیہ کاؤنٹ ڈاؤن · پاور ختم وارننگ · باس وارن · گفٹ→اسپن ٹوسٹ · ہیپٹک شدت · فلیپ وُش · چینج لاگ۔</li>
+                  <li><strong>3.47:</strong> Undo اسٹیک · رات والیوم پریویو۔</li>
                   <li><strong>3.46:</strong> رات امبینس والیوم · Equip Undo ٹوسٹ۔</li>
                   <li><strong>3.45:</strong> Equip فینفیئر · ڈبل ٹیپ · رات کی امبینس۔</li>
                   <li><strong>3.44:</strong> پریویو Equip · ستارہ HUD پنگ · فیورٹ صرف لوکل۔</li>

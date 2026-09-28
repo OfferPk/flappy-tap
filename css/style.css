@@ -3580,3 +3580,13 @@ html.reduce-motion .skin-card.equip-flash { animation: none; }
 }
 .toast-undo-btn:hover { background: rgba(255,217,61,.32); }
 .toast.toast-undo.toast-pop { animation: toast-impact .32s cubic-bezier(.2,.8,.2,1); }
+
+/* ——— v3.47: undo stack badge polish ——— */
+.toast-undo-btn[aria-label*="stack"],
+.toast.toast-undo .toast-undo-btn {
+  min-width: 4.2rem;
+}
+#btn-night-amb-preview {
+  margin: 4px auto 6px;
+  display: block;
+}
