@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.7.0-urrjaa — pseudo-3D wing/head anim + vehicle depth; keeps ≤3.6 features.
+ * Urr Jaa! v3.8.0-urrjaa — Jungle/Mountains/Sea theme skins + deeper pseudo-3D; keeps ≤3.7 features.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -693,6 +693,10 @@
       wheelRot = t * (4 + (currentSpeed || 148) / 40);
       vehBob = Math.sin(t * 7) * 0.9;
     }
+    var vehTheme = null;
+    if (birdId === 'jungle') vehTheme = 'jungle';
+    else if (birdId === 'alpine') vehTheme = 'alpine';
+    else if (birdId === 'seagull') vehTheme = 'sea';
     return {
       vehicle: vehicleId,
       hat: hatId,
@@ -704,7 +708,8 @@
       animT: t,
       wheelRot: wheelRot,
       vehBob: vehBob,
-      reduceMotion: reduceMotion
+      reduceMotion: reduceMotion,
+      vehicleTheme: vehTheme
     };
   }
 
@@ -1085,10 +1090,12 @@
     FTStorage.bumpMission('boxes', runBoxes);
     FTStorage.bumpMission('nearmiss3', runNearMisses);
     FTStorage.setMissionMax('score100', score);
+    FTStorage.setMissionMax('score70', score);
     if (!hitThisRun && cleanScorePeak >= 50) FTStorage.setMissionMax('clean50', cleanScorePeak);
     var unlocked = FTStorage.checkEnvMilestones(FTStorage.getBest());
+    var themeNew = FTStorage.checkThemeSkinMilestones ? FTStorage.checkThemeSkinMilestones(FTStorage.getBest()) : [];
     var seasonalNew = FTStorage.checkSeasonalUnlocks ? FTStorage.checkSeasonalUnlocks(FTStorage.getBest()) : [];
-    var allNew = unlocked.concat(seasonalNew || []);
+    var allNew = unlocked.concat(themeNew || []).concat(seasonalNew || []);
     if (allNew.length) showToast('Unlocked: ' + allNew.join(', '), 2500);
   }
 
@@ -1594,7 +1601,16 @@
     if (btnSpinAll) btnSpinAll.disabled = lock || s < 1;
   }
 
-  /** Animate wheel so `coins` segment lands under the top pointer. */
+  /** Full dramatic spin duration for Spin once (~7s). Reduce-motion stays near-instant. */
+  var SPIN_ONCE_MS = 7000;
+  /** Spin-all sequential: short when many, full 7s when only one charge. */
+  function spinAllDurationMs(remaining, planned) {
+    if (planned <= 1) return SPIN_ONCE_MS;
+    if (planned <= 3) return 3200;
+    return 1800;
+  }
+
+  /** Animate wheel so `coins` segment lands under the top pointer (smooth decelerate). */
   function animateWheelTo(coins, done, durationMs) {
     if (!spinWheelEl) { if (done) done(); return; }
     var rewards = (FTStorage.WHEEL_REWARDS || [444, 555, 666, 777, 888, 999]);
@@ -1604,8 +1620,9 @@
     // Segment centers: idx 0 at 0° (top). Clockwise rotation brings idx under pointer.
     var desiredMod = (360 - idx * seg) % 360;
     var reduce = document.documentElement.classList.contains('reduce-motion');
-    var dur = reduce ? 80 : (durationMs || 2800);
-    var turns = reduce ? 1 : (durationMs && durationMs < 1500 ? 3 : 6);
+    var dur = reduce ? 80 : (durationMs != null ? durationMs : SPIN_ONCE_MS);
+    // More full rotations for longer spins → clearer “wheel of fortune” feel
+    var turns = reduce ? 1 : (dur >= 6000 ? 10 : (dur >= 3000 ? 7 : (dur >= 1500 ? 4 : 3)));
     var currentMod = ((wheelAngle % 360) + 360) % 360;
     var delta = (desiredMod - currentMod + 360) % 360;
     var target = wheelAngle + turns * 360 + delta;
@@ -1615,10 +1632,17 @@
       wheelWrapEl.classList.remove('wheel-win');
       wheelWrapEl.classList.add('wheel-spinning');
     }
+    if (spinResultEl && !reduce && dur >= 5000) {
+      flashSpinResult('Spinning… 🎰');
+    }
     spinWheelEl.style.transition = 'none';
     spinWheelEl.style.transform = 'rotate(' + wheelAngle + 'deg)';
     void spinWheelEl.offsetWidth;
-    spinWheelEl.style.transition = 'transform ' + (dur / 1000) + 's cubic-bezier(0.08, 0.82, 0.08, 1)';
+    // Long ease-out: fast start, smooth decelerate into the winning segment
+    var easing = dur >= 5000
+      ? 'cubic-bezier(0.12, 0.75, 0.08, 1)'
+      : 'cubic-bezier(0.08, 0.82, 0.08, 1)';
+    spinWheelEl.style.transition = 'transform ' + (dur / 1000) + 's ' + easing;
     spinWheelEl.style.transform = 'rotate(' + target + 'deg)';
     wheelAngle = target;
     setTimeout(function () {
@@ -1628,7 +1652,7 @@
         wheelWrapEl.classList.add('wheel-win');
       }
       if (done) done();
-    }, dur + 40);
+    }, dur + 60);
   }
 
   function flashSpinResult(text) {
@@ -1640,23 +1664,28 @@
   }
 
   function doSpinOnce() {
-    if (wheelSpinning) return;
-    var r = FTStorage.spinWheelOnce ? FTStorage.spinWheelOnce(Math.random) : null;
+    if (wheelSpinning || spinQueueActive) return;
+    var begin = FTStorage.beginWheelSpin || null;
+    var r = begin ? begin(Math.random) : (FTStorage.spinWheelOnce ? FTStorage.spinWheelOnce(Math.random) : null);
     if (!r) { showToast('Need 10 gifts for a spin'); refreshGiftsUI(); return; }
+    var alreadyGranted = !begin; // legacy path granted immediately
+    refreshGiftsUI(); // gifts already spent — show updated spin count while wheel turns
     if (FTAudio.mystery) FTAudio.mystery();
+    flashSpinResult('Wheel spinning… hold tight! 🎰');
     animateWheelTo(r.coins, function () {
+      if (!alreadyGranted && FTStorage.grantSpinCoins) FTStorage.grantSpinCoins(r.coins);
       showMysteryResult('SPIN!', '+' + r.coins + ' coins');
-      flashSpinResult('You won +' + r.coins + ' 🪙 · ' + r.giftsLeft + ' gifts left');
+      flashSpinResult('You won +' + r.coins + ' 🪙 · ' + (FTStorage.getGiftBoxes ? FTStorage.getGiftBoxes() : r.giftsLeft) + ' gifts left');
       refreshGiftsUI();
       updateCoinHud();
       setSpinButtonsBusy(false);
       voiceCue('wah_ji');
-    }, 2800);
+    }, SPIN_ONCE_MS);
   }
 
-  /** Queue rapid sequential spins with brief animation each (keeps visual wheel honest). */
+  /** Sequential spins: full ~7s when 1 charge; shorter sequential when many. Grant after each land. */
   function doSpinAll() {
-    if (wheelSpinning) return;
+    if (wheelSpinning || spinQueueActive) return;
     var charges = FTStorage.getSpinCharges ? FTStorage.getSpinCharges() : 0;
     if (charges < 1) { showToast('Need 10 gifts for a spin'); return; }
     var results = [];
@@ -1689,21 +1718,25 @@
         finishAll();
         return;
       }
-      var r = FTStorage.spinWheelOnce ? FTStorage.spinWheelOnce(Math.random) : null;
+      var begin = FTStorage.beginWheelSpin || null;
+      var r = begin ? begin(Math.random) : (FTStorage.spinWheelOnce ? FTStorage.spinWheelOnce(Math.random) : null);
       if (!r) { finishAll(); return; }
-      results.push(r.coins);
-      total += r.coins;
-      var brief = results.length < planned ? 900 : 1400;
+      var alreadyGranted = !begin;
+      refreshGiftsUI();
+      var dur = spinAllDurationMs(planned - results.length, planned);
       animateWheelTo(r.coins, function () {
+        if (!alreadyGranted && FTStorage.grantSpinCoins) FTStorage.grantSpinCoins(r.coins);
+        results.push(r.coins);
+        total += r.coins;
         flashSpinResult('+' + r.coins + ' 🪙  (' + results.length + '/' + planned + ')');
         refreshGiftsUI();
         updateCoinHud();
         if (results.length >= planned) {
-          setTimeout(finishAll, 220);
+          setTimeout(finishAll, 280);
         } else {
-          setTimeout(nextSpin, 180);
+          setTimeout(nextSpin, 220);
         }
-      }, brief);
+      }, dur);
     }
     nextSpin();
   }
@@ -2615,15 +2648,37 @@
       showToast('Seasonal — play in window or reach score ' + need);
       return;
     }
-    if (cost <= 0) return;
-    if (FTStorage.getCoins() < cost) { showToast('Need ' + cost + ' coins'); return; }
-    if (kind === 'env' && item.unlockScore && FTStorage.getBest() >= item.unlockScore) {
-      FTStorage.unlockEnv(item.id);
-      showToast(item.label + ' unlocked (score)!');
+    if (item.unlockScore && FTStorage.getBest() >= item.unlockScore) {
+      if (kind === 'bird') FTStorage.unlockBird(item.id);
+      else if (kind === 'vehicle') FTStorage.unlockVehicle(item.id);
+      else if (kind === 'env') FTStorage.unlockEnv(item.id);
+      else if (kind === 'hat') FTStorage.unlockHat(item.id);
+      else if (kind === 'trail') FTStorage.unlockTrail(item.id);
+      else return;
+      FTStorage.addToCollection(kind === 'hat' ? 'accessory' : kind, item.id);
+      showToast(item.label + ' unlocked (best ' + item.unlockScore + '+)!');
+      voiceCue('wah_ji');
+      updateCoinHud();
       refreshGarage();
+      refreshCollection();
       return;
     }
-    if (!FTStorage.spendCoins(cost)) { showToast('Need ' + cost + ' coins'); return; }
+    if (cost <= 0) {
+      if (item.unlockScore) showToast('Reach best ' + item.unlockScore + ' or earn coins');
+      return;
+    }
+    if (FTStorage.getCoins() < cost) {
+      var needMsg = 'Need ' + cost + ' coins';
+      if (item.unlockScore) needMsg += ' (or best ' + item.unlockScore + '+)';
+      showToast(needMsg);
+      return;
+    }
+    if (!FTStorage.spendCoins(cost)) {
+      var needMsg2 = 'Need ' + cost + ' coins';
+      if (item.unlockScore) needMsg2 += ' (or best ' + item.unlockScore + '+)';
+      showToast(needMsg2);
+      return;
+    }
     if (kind === 'bird') FTStorage.unlockBird(item.id);
     else if (kind === 'vehicle') FTStorage.unlockVehicle(item.id);
     else if (kind === 'env') FTStorage.unlockEnv(item.id);
@@ -2634,6 +2689,7 @@
     voiceCue('wah_ji');
     updateCoinHud();
     refreshGarage();
+    refreshCollection();
   }
 
   function onPickCosmetic(id, kind) {

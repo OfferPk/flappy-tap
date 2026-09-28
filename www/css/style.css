@@ -953,6 +953,14 @@ html.reduce-motion .new-record-banner { animation: none; }
 }
 #btn-collection-gifts { margin-bottom: 10px; width: 100%; }
 html.reduce-motion .spin-wheel { transition: none !important; }
+/* Long ~7s spin: softer continuous glow while decelerating */
+.wheel-wrap.wheel-spinning .spin-wheel {
+  filter: saturate(1.08) brightness(1.04);
+}
+.wheel-wrap.wheel-win .spin-result,
+#spin-result.win-flash {
+  font-weight: 800;
+}
 html.reduce-motion .wheel-wrap.wheel-spinning .wheel-rim,
 html.reduce-motion .wheel-wrap.wheel-win .wheel-rim,
 html.reduce-motion .spin-result.win-flash { animation: none !important; }

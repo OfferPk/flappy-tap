@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.7.0-urrjaa — pseudo-3D birds (flap wings + head tilt) & vehicles; hitboxes unchanged.
+ * Urr Jaa! v3.8.0-urrjaa — theme skins (Jungle/Mountains/Sea) + deeper pseudo-3D; hitboxes unchanged.
  * Canvas-drawn; forgiving hitboxes unchanged.
  */
 (function (global) {
@@ -19,7 +19,10 @@
     { id: 'kawwa', label: 'Kawwa', cost: 42 },
     { id: 'kabootar', label: 'Kabootar', cost: 38 },
     { id: 'hoopoe', label: 'Hoopoe', cost: 55 },
-    { id: 'falcon', label: 'Baaz', cost: 85 }
+    { id: 'falcon', label: 'Baaz', cost: 85 },
+    { id: 'jungle', label: 'Jungle wali', cost: 55, unlockScore: 50 },
+    { id: 'alpine', label: 'Mountains wali', cost: 65, unlockScore: 70 },
+    { id: 'seagull', label: 'Sea wali', cost: 60, unlockScore: 60 }
   ];
 
   const VEHICLES = [
@@ -34,7 +37,10 @@
     { id: 'bus', label: 'Bus', cost: 70 },
     { id: 'mehran', label: 'Mehran', cost: 65 },
     { id: 'tractor', label: 'Tractor', cost: 75 },
-    { id: 'truck', label: 'Truck', cost: 80 }
+    { id: 'truck', label: 'Truck', cost: 80 },
+    { id: 'jungle_rickshaw', label: 'Leafy Rickshaw', cost: 48, unlockScore: 50 },
+    { id: 'snow_bike', label: 'Snow Bike', cost: 52, unlockScore: 70 },
+    { id: 'sea_boat', label: 'Sea Boat', cost: 50, unlockScore: 60 }
   ];
 
   const ENVS = [
@@ -81,7 +87,10 @@
     kawwa: { id: 'control', label: 'Street smart', gravityMul: 0.97, flapMul: 1.03, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
     kabootar: { id: 'control', label: 'City glide', gravityMul: 0.95, flapMul: 1.02, coinMul: 1, nearMissBonus: 0, nightBonus: 0 },
     hoopoe: { id: 'night', label: 'Dusk bonus', gravityMul: 1, flapMul: 1, coinMul: 1, nearMissBonus: 0, nightBonus: 0.06 },
-    falcon: { id: 'nearmiss', label: 'Dive bonus', gravityMul: 1.01, flapMul: 1.06, coinMul: 1, nearMissBonus: 1, nightBonus: 0 }
+    falcon: { id: 'nearmiss', label: 'Dive bonus', gravityMul: 1.01, flapMul: 1.06, coinMul: 1, nearMissBonus: 1, nightBonus: 0 },
+    jungle: { id: 'coin', label: 'Jungle coins +5%', gravityMul: 0.98, flapMul: 1.03, coinMul: 1.05, nearMissBonus: 0, nightBonus: 0 },
+    alpine: { id: 'control', label: 'Alpine glide', gravityMul: 0.94, flapMul: 1.02, coinMul: 1, nearMissBonus: 0, nightBonus: 0.04 },
+    seagull: { id: 'flap', label: 'Sea breeze flaps', gravityMul: 0.97, flapMul: 1.06, coinMul: 1.03, nearMissBonus: 0, nightBonus: 0 }
   };
 
   function birdPassive(id) {
@@ -216,7 +225,10 @@
     kawwa: { body: '#2c3e50', wing: '#1a252f', beak: '#7f8c8d', eye: '#111' },
     kabootar: { body: '#95a5a6', wing: '#7f8c8d', beak: '#e74c3c', eye: '#111', neck: '#9b59b6' },
     hoopoe: { body: '#c0392b', wing: '#f5b041', beak: '#2c3e50', eye: '#111', crest: '#f1c40f' },
-    falcon: { body: '#7f8c8d', wing: '#566573', beak: '#f39c12', eye: '#111' }
+    falcon: { body: '#7f8c8d', wing: '#566573', beak: '#f39c12', eye: '#111' },
+    jungle: { body: '#27ae60', wing: '#1e8449', beak: '#f39c12', eye: '#111', crest: '#e74c3c', leaf: true },
+    alpine: { body: '#ecf0f1', wing: '#85929e', beak: '#e67e22', eye: '#111', snow: true },
+    seagull: { body: '#f5f6fa', wing: '#5dade2', beak: '#f1c40f', eye: '#111', sea: true }
   };
 
   function shadeColor(hex, amt) {
@@ -322,6 +334,27 @@
       ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1.6; for (let hi=0; hi<3; hi++) { ctx.beginPath(); ctx.moveTo(-8+hi*4,-8); ctx.lineTo(-13+hi*6,-17-hi); ctx.stroke(); }
     } else if (id === 'kawwa') {
       ctx.fillStyle = 'rgba(93,173,226,.35)'; ctx.beginPath(); ctx.ellipse(-3,-3,8,3,-.25,0,Math.PI*2); ctx.fill();
+    } else if (id === 'jungle') {
+      ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.ellipse(6, 3, 7, 5, -.2, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#145a32';
+      for (var ji = 0; ji < 3; ji++) {
+        ctx.beginPath();
+        ctx.ellipse(-6 - ji * 3, -8 + ji * 2, 5, 2.2, -0.5 + ji * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(-2, 6, 2.2, 0, Math.PI*2); ctx.fill();
+    } else if (id === 'alpine') {
+      ctx.fillStyle = '#d5d8dc'; ctx.beginPath(); ctx.ellipse(4, 3, 9, 6, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      for (var ai = 0; ai < 4; ai++) {
+        ctx.beginPath(); ctx.arc(-8 + ai * 5, -6 + (ai % 2), 1.8, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.fillStyle = '#5d6d7e'; ctx.beginPath(); ctx.moveTo(-10,2); ctx.lineTo(-4,8); ctx.lineTo(2,1); ctx.closePath(); ctx.fill();
+    } else if (id === 'seagull') {
+      ctx.fillStyle = '#d6eaf8'; ctx.beginPath(); ctx.ellipse(5, 4, 8, 5, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.moveTo(2,-6); ctx.lineTo(12,-2); ctx.lineTo(4,0); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(52,152,219,.55)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-10,2); ctx.quadraticCurveTo(-2,8,8,4); ctx.stroke();
     }
 
     // NEAR wing (in front) — primary flap, independent
@@ -343,12 +376,36 @@
     ctx.strokeStyle = 'rgba(15,23,42,.3)';
     ctx.lineWidth = 1;
     ctx.stroke();
+    // Neck join shadow + top specular for rounder 3D head
+    ctx.fillStyle = 'rgba(15,23,42,.16)';
+    ctx.beginPath(); ctx.ellipse(0, 5, 5, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(2, -3, 5.5, 3.5, -0.4, Math.PI * 0.9, Math.PI * 1.55); ctx.stroke();
 
     if (c.crest) {
       ctx.fillStyle = c.crest; ctx.beginPath();
       if (id === 'bulbul') { ctx.moveTo(-3,-7); ctx.lineTo(0,-18); ctx.lineTo(5,-8); }
+      else if (id === 'jungle') { ctx.moveTo(-2,-7); ctx.lineTo(1,-17); ctx.lineTo(6,-8); }
       else { ctx.moveTo(-3,-7); ctx.lineTo(2,-16); ctx.lineTo(7,-7); }
       ctx.closePath(); ctx.fill();
+      if (id === 'jungle') {
+        ctx.fillStyle = '#1e8449';
+        ctx.beginPath(); ctx.ellipse(-1, -14, 4, 2, -0.6, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(4, -15, 3.5, 1.8, 0.4, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    if (c.snow) {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(2, -8, 7, 2.5, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(174,214,241,.7)';
+      ctx.beginPath(); ctx.arc(8, -4, 1.6, 0, Math.PI*2); ctx.fill();
+    }
+    if (c.sea) {
+      ctx.fillStyle = '#2c3e50';
+      ctx.fillRect(1, -5, 10, 1.6);
+      ctx.fillStyle = '#5dade2';
+      ctx.beginPath(); ctx.ellipse(3, 5, 4, 1.5, 0, 0, Math.PI*2); ctx.fill();
     }
     if (c.cheek) { ctx.fillStyle = c.cheek; ctx.beginPath(); ctx.arc(3, 3, 3.2, 0, Math.PI*2); ctx.fill(); }
 
@@ -406,16 +463,23 @@
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    // Feather bars
-    ctx.strokeStyle = 'rgba(255,255,255,.4)';
+    // Feather bars (layered for pseudo-3D depth)
+    ctx.strokeStyle = 'rgba(255,255,255,.42)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(-3, -1); ctx.quadraticCurveTo(-10, 1, -15, 0);
     ctx.moveTo(-2, 2); ctx.quadraticCurveTo(-9, 4, -13, 5);
+    ctx.moveTo(-1, 4); ctx.quadraticCurveTo(-7, 6, -11, 7);
     ctx.stroke();
-    // Tip highlight
-    ctx.fillStyle = 'rgba(255,255,255,.22)';
-    ctx.beginPath(); ctx.ellipse(-14, -2, 3, 1.6, -0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(15,23,42,.22)';
+    ctx.beginPath();
+    ctx.moveTo(-4, 0); ctx.quadraticCurveTo(-11, 3, -16, 2);
+    ctx.stroke();
+    // Tip highlight + secondary vane
+    ctx.fillStyle = 'rgba(255,255,255,.26)';
+    ctx.beginPath(); ctx.ellipse(-14, -2, 3.2, 1.7, -0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.12)';
+    ctx.beginPath(); ctx.ellipse(-8, 3, 4, 1.4, 0.2, 0, Math.PI * 2); ctx.fill();
 
     ctx.restore();
   }
@@ -667,6 +731,83 @@
       ctx.fillStyle = '#f1c40f'; ctx.fillRect(-22, 4, 26, 2);
       ctx.fillStyle = 'rgba(15,23,42,.18)'; ctx.fillRect(-22, 6, 42, 2);
       wheel(-14, 10, 5); wheel(2, 10, 5); wheel(14, 10, 5);
+    } else if (vid === 'jungle_rickshaw') {
+      const canopyBob = Math.sin(animT * 5) * 1.2;
+      ctx.fillStyle = bodyShade('#1e8449', -20, -12, 22, 10);
+      ctx.strokeStyle = 'rgba(15,23,42,.45)'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(-20,-10); ctx.lineTo(14,-10); ctx.quadraticCurveTo(22,-8,22,0); ctx.lineTo(22,8); ctx.lineTo(-20,8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(15,23,42,.16)'; ctx.fillRect(-20, 2, 42, 6);
+      ctx.fillStyle = 'rgba(173,216,230,.7)'; ctx.fillRect(-8,-8,16,7);
+      ctx.fillStyle = '#f1c40f'; ctx.fillRect(-18,-12,30,3); ctx.fillRect(-18,5,30,2);
+      // Leaf accents
+      ctx.fillStyle = '#27ae60';
+      for (let li = 0; li < 4; li++) {
+        ctx.beginPath();
+        ctx.ellipse(-14 + li * 9, -14 + (li % 2), 5, 2.4, -0.4 + li * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#145a32'; ctx.fillRect(-20,-8,5,12);
+      ctx.strokeStyle = '#a9dfbf'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-4,-10); ctx.lineTo(-4,-18 + canopyBob); ctx.lineTo(8,-18 + canopyBob); ctx.stroke();
+      ctx.fillStyle = '#58d68d'; ctx.beginPath(); ctx.ellipse(2,-18 + canopyBob,12,3.4,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#196f3d';
+      ctx.beginPath(); ctx.ellipse(-4, -19 + canopyBob, 4, 2, -0.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(6, -20 + canopyBob, 3.5, 1.8, 0.3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.25)';
+      ctx.beginPath(); ctx.ellipse(0, -19.5 + canopyBob, 6, 1.2, 0, 0, Math.PI * 2); ctx.fill();
+      wheel(-8, 10, 6); wheel(14, 10, 6);
+    } else if (vid === 'snow_bike') {
+      ctx.fillStyle = bodyShade('#d6eaf8', -16, -8, 14, 8);
+      ctx.strokeStyle = 'rgba(15,23,42,.35)'; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(-16,-1); ctx.lineTo(-16,-4); ctx.lineTo(12,-4); ctx.lineTo(14,6); ctx.lineTo(-16,6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.fillRect(-14, -3, 20, 2);
+      ctx.fillStyle = '#5dade2'; ctx.fillRect(-4,-8,10,5);
+      ctx.fillStyle = '#85929e'; ctx.fillRect(-14, 3, 22, 2);
+      // Snow dust on nose
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.beginPath(); ctx.arc(10, -5, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-12, -2, 1.5, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#aab7b8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(8,-2); ctx.lineTo(14,-11); ctx.lineTo(18,-9); ctx.stroke();
+      wheel(-10, 8, 6); wheel(12, 8, 6);
+    } else if (vid === 'sea_boat') {
+      const wave = Math.sin(animT * 4) * 1.5;
+      ctx.translate(0, wave * 0.3);
+      ctx.fillStyle = bodyShade('#1a5276', -22, -6, 22, 10);
+      ctx.beginPath();
+      ctx.moveTo(-22, 4); ctx.quadraticCurveTo(-18, -6, 0, -8); ctx.quadraticCurveTo(18, -6, 24, 4);
+      ctx.lineTo(18, 10); ctx.lineTo(-18, 10); ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#5dade2'; ctx.fillRect(-10, -6, 16, 5);
+      ctx.fillStyle = '#f9e79f'; ctx.fillRect(-8, -4, 6, 3);
+      // Mast + sail
+      ctx.strokeStyle = '#f5f5f5'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(2, -6); ctx.lineTo(2, -20); ctx.stroke();
+      ctx.fillStyle = 'rgba(236,240,241,.9)';
+      ctx.beginPath(); ctx.moveTo(2, -18); ctx.lineTo(14, -10); ctx.lineTo(2, -8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#148f77'; ctx.fillRect(-20, 6, 40, 2);
+      // Foam floats instead of wheels
+      ctx.fillStyle = '#ecf0f1';
+      ctx.beginPath(); ctx.ellipse(-10, 11, 7, 3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(12, 11, 7, 3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(93,173,226,.45)';
+      ctx.beginPath(); ctx.ellipse(0, 13 + wave * 0.2, 16, 2.5, 0, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Optional theme accents overlay on any vehicle (matching bird theme)
+    const theme = opts.vehicleTheme;
+    if (theme && vid !== 'none') {
+      if (theme === 'jungle') {
+        ctx.fillStyle = 'rgba(39,174,96,.35)';
+        ctx.fillRect(-18, -12, 8, 3);
+        ctx.beginPath(); ctx.ellipse(10, -10, 4, 2, 0.3, 0, Math.PI*2); ctx.fill();
+      } else if (theme === 'alpine') {
+        ctx.fillStyle = 'rgba(255,255,255,.55)';
+        ctx.fillRect(-16, -10, 14, 2);
+        ctx.beginPath(); ctx.arc(8, -8, 2, 0, Math.PI*2); ctx.fill();
+      } else if (theme === 'sea') {
+        ctx.fillStyle = 'rgba(52,152,219,.4)';
+        ctx.fillRect(-18, 6, 36, 2);
+        ctx.beginPath(); ctx.ellipse(0, 10, 10, 2, 0, 0, Math.PI*2); ctx.fill();
+      }
     }
     ctx.restore();
   }
@@ -1031,15 +1172,25 @@
       label.textContent = unlocked ? item.label : item.label;
       btn.appendChild(c);
       btn.appendChild(label);
-      if (!unlocked && cost > 0) {
-        const hint = document.createElement('span');
-        hint.className = 'skin-unlock-hint';
-        hint.textContent = cost + ' 🪙';
-        btn.appendChild(hint);
-      } else if (!unlocked && item.seasonal) {
+      if (!unlocked && item.seasonal) {
         const hint = document.createElement('span');
         hint.className = 'skin-unlock-hint';
         hint.textContent = '📅 Seasonal';
+        btn.appendChild(hint);
+      } else if (!unlocked && item.unlockScore && cost > 0) {
+        const hint = document.createElement('span');
+        hint.className = 'skin-unlock-hint';
+        hint.textContent = 'Best ' + item.unlockScore + '+ or ' + cost + ' 🪙';
+        btn.appendChild(hint);
+      } else if (!unlocked && item.unlockScore) {
+        const hint = document.createElement('span');
+        hint.className = 'skin-unlock-hint';
+        hint.textContent = 'Best ' + item.unlockScore + '+';
+        btn.appendChild(hint);
+      } else if (!unlocked && cost > 0) {
+        const hint = document.createElement('span');
+        hint.className = 'skin-unlock-hint';
+        hint.textContent = cost + ' 🪙';
         btn.appendChild(hint);
       }
       btn.addEventListener('click', () => {

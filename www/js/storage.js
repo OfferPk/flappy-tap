@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.6.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards.
+ * Urr Jaa! v3.8.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -67,11 +67,13 @@
 
   const BIRDS = {
     sparrow: 1, parrot: 1, eagle: 1, chick: 1, owl: 1, funny: 1,
-    mynah: 1, bulbul: 1, cheel: 1, mor: 1, kawwa: 1, kabootar: 1, hoopoe: 1, falcon: 1
+    mynah: 1, bulbul: 1, cheel: 1, mor: 1, kawwa: 1, kabootar: 1, hoopoe: 1, falcon: 1,
+    jungle: 1, alpine: 1, seagull: 1
   };
   const VEHICLES = {
     none: 1, rickshaw: 1, cycle: 1, bike: 1, scooty: 1, bicycle: 1,
-    chingchi: 1, taxi: 1, bus: 1, mehran: 1, tractor: 1, truck: 1
+    chingchi: 1, taxi: 1, bus: 1, mehran: 1, tractor: 1, truck: 1,
+    jungle_rickshaw: 1, snow_bike: 1, sea_boat: 1
   };
   const ENVS = {
     city: 1, lahore: 1, islamabad: 1, karachi: 1, murree: 1,
@@ -623,7 +625,8 @@
     { id: 'coins', label: 'Collect 20 coins', target: 20, unit: 'coins', rewardType: 'coins', reward: 20 },
     { id: 'pipes', label: 'Pass 30 obstacles', target: 30, unit: 'pipes', rewardType: 'coins', reward: 25 },
     { id: 'boxes', label: 'Open 2 mystery boxes', target: 2, unit: 'boxes', rewardType: 'coins', reward: 30 },
-    { id: 'clean50', label: 'Score 50 clean (no hit)', target: 50, unit: 'score', rewardType: 'coins', reward: 40 }
+    { id: 'clean50', label: 'Score 50 clean (no hit)', target: 50, unit: 'score', rewardType: 'coins', reward: 40 },
+    { id: 'score70', label: 'Score 70 (theme skins)', target: 70, unit: 'score', rewardType: 'coins', reward: 45 }
   ];
   const MISSION_DEFS = MISSION_POOL; // alias
   const DAILY_MISSION_IDS = ['coins50', 'dodge20', 'nearmiss3', 'score100'];
@@ -661,7 +664,7 @@
       const progress = {};
       active.forEach((id) => { progress[id] = 0; });
       // also zero legacy keys for bump compatibility
-      ['fly_m', 'coins', 'pipes', 'boxes', 'clean50', 'coins50', 'dodge20', 'nearmiss3', 'score100'].forEach((id) => {
+      ['fly_m', 'coins', 'pipes', 'boxes', 'clean50', 'score70', 'coins50', 'dodge20', 'nearmiss3', 'score100'].forEach((id) => {
         if (progress[id] == null) progress[id] = 0;
       });
       set(KEYS.missionsProgress, JSON.stringify(progress));
@@ -739,8 +742,9 @@
     try { progress = JSON.parse(get(KEYS.missionsProgress, '{}')) || {}; } catch (_) { progress = {}; }
     progress[id] = Math.max(progress[id] || 0, value | 0);
     // map score peaks
-    if (id === 'clean50' || id === 'score' || id === 'score100') {
+    if (id === 'clean50' || id === 'score' || id === 'score100' || id === 'score70') {
       progress.score100 = Math.max(progress.score100 || 0, value | 0);
+      progress.score70 = Math.max(progress.score70 || 0, value | 0);
     }
     set(KEYS.missionsProgress, JSON.stringify(progress));
   }
@@ -879,13 +883,28 @@
     const i = Math.floor(rnd() * WHEEL_REWARDS.length);
     return WHEEL_REWARDS[Math.max(0, Math.min(WHEEL_REWARDS.length - 1, i))];
   }
-  /** Spend 10 gifts for one spin. Returns { coins, giftsLeft, spinsLeft } or null. */
-  function spinWheelOnce(rngFn) {
+  /**
+   * Begin a spin: spend 10 gifts + roll the segment, but do NOT grant coins yet.
+   * Call grantSpinCoins(coins) after the wheel animation lands.
+   */
+  function beginWheelSpin(rngFn) {
     if (getGiftBoxes() < GIFTS_PER_SPIN) return null;
     if (!spendGiftBoxes(GIFTS_PER_SPIN)) return null;
     const coins = rollWheelCoins(rngFn);
-    addCoins(coins);
-    return { coins: coins, giftsLeft: getGiftBoxes(), spinsLeft: getSpinCharges(), count: 1 };
+    return { coins: coins, giftsLeft: getGiftBoxes(), spinsLeft: getSpinCharges(), count: 1, granted: false };
+  }
+  function grantSpinCoins(coins) {
+    coins = coins | 0;
+    if (coins <= 0) return getCoins();
+    return addCoins(coins);
+  }
+  /** Spend 10 gifts, roll, and grant immediately (compat / non-animated callers). */
+  function spinWheelOnce(rngFn) {
+    const r = beginWheelSpin(rngFn);
+    if (!r) return null;
+    grantSpinCoins(r.coins);
+    r.granted = true;
+    return r;
   }
   /** Spend all complete sets of 10. Returns { totalCoins, results[], giftsLeft, spinsLeft } or null. */
   function spinWheelAll(rngFn) {
@@ -962,6 +981,36 @@
     return unlocked;
   }
 
+  /** Theme skins (Jungle / Mountains / Sea) — score gates OR garage coin buy. */
+  function checkThemeSkinMilestones(bestScore) {
+    const birdGates = [
+      [50, 'jungle', 'Jungle wali'],
+      [70, 'alpine', 'Mountains wali'],
+      [60, 'seagull', 'Sea wali']
+    ];
+    const vehGates = [
+      [50, 'jungle_rickshaw', 'Leafy Rickshaw'],
+      [70, 'snow_bike', 'Snow Bike'],
+      [60, 'sea_boat', 'Sea Boat']
+    ];
+    const unlocked = [];
+    birdGates.forEach(([need, id, label]) => {
+      if (bestScore >= need && !isBirdUnlocked(id)) {
+        unlockBird(id);
+        addToCollection('bird', id);
+        unlocked.push(label);
+      }
+    });
+    vehGates.forEach(([need, id, label]) => {
+      if (bestScore >= need && !isVehicleUnlocked(id)) {
+        unlockVehicle(id);
+        addToCollection('vehicle', id);
+        unlocked.push(label);
+      }
+    });
+    return unlocked;
+  }
+
   global.FTStorage = {
     getBest, setBest, getDailyBest, setDailyBest, getDailyDate,
     getTodayBest, setTodayBest, getAllTimeBest, setAllTimeBest,
@@ -981,7 +1030,7 @@
     getUnlockedSeasonals, isSeasonalUnlocked, unlockSeasonal, checkSeasonalUnlocks,
     getCollection, addToCollection, collectionCounts,
     getMissions, bumpMission, setMissionMax, claimMission, MISSION_DEFS, MISSION_POOL,
-    getActiveMissionIds, getMetersBest, setMetersBest, checkEnvMilestones,
+    getActiveMissionIds, getMetersBest, setMetersBest, checkEnvMilestones, checkThemeSkinMilestones,
     getStreak, claimStreak, STREAK_REWARDS,
     getOneLifeBest, setOneLifeBest, oneLifeMedalFor, getOneLifeMedal,
     getTimeAttackBest, setTimeAttackBest,
@@ -992,7 +1041,7 @@
     getBestPerfect, setBestPerfect, bumpNearMissTotal, bumpPerfectTotal,
     rollBoxRarity, BOX_RARITIES,
     getGiftBoxes, setGiftBoxes, addGiftBoxes, spendGiftBoxes, getSpinCharges,
-    spinWheelOnce, spinWheelAll, rollWheelCoins, WHEEL_REWARDS, GIFTS_PER_SPIN,
+    beginWheelSpin, grantSpinCoins, spinWheelOnce, spinWheelAll, rollWheelCoins, WHEEL_REWARDS, GIFTS_PER_SPIN,
     BIRDS, VEHICLES, ENVS, HATS, TRAILS, SEASONALS
   };
 })(window);

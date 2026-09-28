@@ -13,7 +13,7 @@ const game = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');
 const need = [
   'timeattack', 'nocoin', 'onelife', 'RISKY', 'CLOSE!', 'Ghost',
   'Turbo', 'magnet', 'claimStreak', 'getLeaderboards', 'pickTrafficKind',
-  '3.7.0', 'squashTarget', 'voiceCue',
+  '3.8.0', 'squashTarget', 'voiceCue',
   'PERFECT!', 'DANGER', 'coinComboMult', 'grantMysteryReward', 'birdPass',
   'runPerfects', 'bossActive', 'effectiveWeather',
   'LUCKY!', 'isForgivingMode', 'firstRunProtect', 'calibMods', 'applyLuckySave', 'resolveCollision',
@@ -23,13 +23,15 @@ const need = [
   'voiceGiftCue', 'noteGiftAdd', 'maybeShowSpinUnlockPopup', 'setGuideLang', 'spin-unlock-overlay',
   'checkSeasonalUnlocks', 'Seasonals', 'hunza', 'monsoon',
   'spawnGiftPop', 'MAX_PARTICLES', "showToast('CLOSE!', 850, 'close')", 'gift-progress',
-  'wingFlap', 'headTilt', 'spawnFlapFeathers', 'wheelRot'
+  'wingFlap', 'headTilt', 'spawnFlapFeathers', 'wheelRot',
+  'SPIN_ONCE_MS', 'beginWheelSpin', 'grantSpinCoins', 'checkThemeSkinMilestones',
+  'vehicleTheme', 'spinAllDurationMs'
 ];
 for (const n of need) {
   if (!game.includes(n)) { console.error('MISSING in game.js:', n); ok = false; }
 }
 const storage = fs.readFileSync(path.join(root, 'js/storage.js'), 'utf8');
-for (const n of ['coins50', 'dodge20', 'nearmiss3', 'score100', 'addFragments', 'rollBoxRarity', 'albumCompletionPct', 'pushRunDuration', 'getAvgRunDuration', 'getGiftBoxes', 'spinWheelAll', 'WHEEL_REWARDS', 'GIFTS_PER_SPIN', 'checkSeasonalUnlocks', 'SEASONALS', 'unlockSeasonal', 'kabootar', 'oldcity']) {
+for (const n of ['coins50', 'dodge20', 'nearmiss3', 'score100', 'score70', 'addFragments', 'rollBoxRarity', 'albumCompletionPct', 'pushRunDuration', 'getAvgRunDuration', 'getGiftBoxes', 'spinWheelAll', 'beginWheelSpin', 'grantSpinCoins', 'WHEEL_REWARDS', 'GIFTS_PER_SPIN', 'checkSeasonalUnlocks', 'SEASONALS', 'unlockSeasonal', 'kabootar', 'oldcity', 'jungle', 'alpine', 'seagull', 'checkThemeSkinMilestones']) {
   if (!storage.includes(n)) { console.error('MISSING in storage.js:', n); ok = false; }
 }
 const audio = fs.readFileSync(path.join(root, 'js/audio.js'), 'utf8');
@@ -41,15 +43,15 @@ if (!audio.includes('independent') && !audio.includes('Independent') && !audio.i
   ok = false;
 }
 const skins = fs.readFileSync(path.join(root, 'js/skins.js'), 'utf8');
-for (const n of ['BIRD_PASSIVES', 'weatherMods', 'sunset', 'pickBossKind', 'SEASONAL_PACKS', 'seasonalEligible', 'mynah', 'hunza', 'ind_topi', 'basant_trail', 'drawBirdBody', 'drawVehicleUnder', 'rickshaw', 'mehran', 'drawWing', 'shadeColor', 'wingFlap', 'headTilt', 'wheelRot']) {
+for (const n of ['BIRD_PASSIVES', 'weatherMods', 'sunset', 'pickBossKind', 'SEASONAL_PACKS', 'seasonalEligible', 'mynah', 'hunza', 'ind_topi', 'basant_trail', 'drawBirdBody', 'drawVehicleUnder', 'rickshaw', 'mehran', 'drawWing', 'shadeColor', 'wingFlap', 'headTilt', 'wheelRot', 'jungle', 'alpine', 'seagull', 'jungle_rickshaw', 'snow_bike', 'sea_boat', 'vehicleTheme', 'Best ']) {
   if (!skins.includes(n)) { console.error('MISSING in skins.js:', n); ok = false; }
 }
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-if (!sw.includes('urrjaa-v16-20260928')) { console.error('SW cache not bumped'); ok = false; }
+if (!sw.includes('urrjaa-v17-20260928')) { console.error('SW cache not bumped'); ok = false; }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (pkg.version !== '3.7.0-urrjaa') { console.error('package version', pkg.version); ok = false; }
+if (pkg.version !== '3.8.0-urrjaa') { console.error('package version', pkg.version); ok = false; }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-if (!html.includes('v3.7.0-urrjaa')) { console.error('index version tag missing'); ok = false; }
+if (!html.includes('v3.8.0-urrjaa')) { console.error('index version tag missing'); ok = false; }
 if (!html.includes('data-mode="timeattack"')) { console.error('modes missing'); ok = false; }
 if (!html.includes('run-summary')) { console.error('run summary missing'); ok = false; }
 if (!html.includes('btn-voice-preview')) { console.error('voice preview btn missing'); ok = false; }
@@ -77,5 +79,5 @@ if (!css.includes('menu-tools') || !css.includes('gift-progress') || !css.includ
 if (!html.includes('gift-progress') || !html.includes('menu-tools')) { console.error('3.6 polish HTML missing'); ok = false; }
 // Ensure post-death rarity auto-open path is gone (no Duplicate → Fragments in openMysteryBox flow)
 if (game.includes("text = 'Duplicate → +'")) { console.error('legacy duplicate fragment popup text still present'); ok = false; }
-if (ok) console.log('SMOKE OK · Urr Jaa! 3.7.0-urrjaa');
+if (ok) console.log('SMOKE OK · Urr Jaa! 3.8.0-urrjaa');
 else { console.error('SMOKE FAIL'); process.exit(1); }
