@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.27.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.28.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -82,6 +82,9 @@
   let camKickY = 0;
   let camKickZoom = 0;
   let nearMissCamUntil = 0;
+  let nearMissEdgeFlash = 0; // 3.28 edge flash intensity
+  let nearMissEdgeSide = 'top'; // top|bottom|left|right
+  var dailyCountdownTimer = 0;
   let bossPulse = 0;
   let perfectRailFlash = 0; // 0–1 visual after PERFECT
   let practiceGhost = null; // {x,y,rot} for Practice mode guide
@@ -247,6 +250,12 @@
   const replayVizCanvas = document.getElementById('replay-viz-canvas');
   const deathFreezeWrap = document.getElementById('death-freeze-wrap');
   const deathFreezeBadge = document.getElementById('death-freeze-badge');
+  const dailyCountdownEl = document.getElementById('daily-reset-countdown');
+  const dailyCountdownModesEl = document.getElementById('daily-reset-countdown-modes');
+  const btnResetPrefs = document.getElementById('btn-reset-prefs');
+  const resetPrefsConfirmEl = document.getElementById('reset-prefs-confirm');
+  const btnResetPrefsYes = document.getElementById('btn-reset-prefs-yes');
+  const btnResetPrefsNo = document.getElementById('btn-reset-prefs-no');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -726,29 +735,58 @@
   function powerRemainSec(until) {
     return Math.max(0, Math.ceil((until - performance.now()) / 1000));
   }
+  function powerExpiring(until, warnMs) {
+    warnMs = warnMs == null ? 1200 : warnMs;
+    var left = until - performance.now();
+    return left > 0 && left <= warnMs;
+  }
   function updatePowerHud() {
     if (!powerHudEl) return;
     var now = performance.now();
     var bits = [];
-    if (shieldActive) bits.push({ t: '🛡 Shield', k: 'shield' });
-    if (now < slowMoUntil) bits.push({ t: '⏱ ' + powerRemainSec(slowMoUntil) + 's', k: 'slowmo' });
-    if (now < magnetUntil) bits.push({ t: '🧲 ' + powerRemainSec(magnetUntil) + 's', k: 'magnet' });
-    if (now < turboUntil) bits.push({ t: '⚡ ' + powerRemainSec(turboUntil) + 's', k: 'turbo' });
-    if (now < ghostUntil) bits.push({ t: '👻 ' + powerRemainSec(ghostUntil) + 's', k: 'ghost' });
-    if (riskyActive()) bits.push({ t: '🎯x3', k: 'risky' });
-    if (isHard()) bits.push({ t: '🔥', k: 'hard' });
-    if (isNoCoin()) bits.push({ t: '🚫🪙', k: 'nocoin' });
-    if (isOneLife()) bits.push({ t: '1️⃣', k: 'onelife' });
+    if (shieldActive) bits.push({ t: '🛡 Shield', k: 'shield', exp: false });
+    if (now < slowMoUntil) bits.push({ t: '⏱ ' + powerRemainSec(slowMoUntil) + 's', k: 'slowmo', exp: powerExpiring(slowMoUntil) });
+    if (now < magnetUntil) bits.push({ t: '🧲 ' + powerRemainSec(magnetUntil) + 's', k: 'magnet', exp: powerExpiring(magnetUntil) });
+    if (now < turboUntil) bits.push({ t: '⚡ ' + powerRemainSec(turboUntil) + 's', k: 'turbo', exp: powerExpiring(turboUntil) });
+    if (now < ghostUntil) bits.push({ t: '👻 ' + powerRemainSec(ghostUntil) + 's', k: 'ghost', exp: powerExpiring(ghostUntil) });
+    if (riskyActive()) bits.push({ t: '🎯x3', k: 'risky', exp: powerExpiring(riskyUntil, 1500) });
+    if (isHard()) bits.push({ t: '🔥', k: 'hard', exp: false });
+    if (isNoCoin()) bits.push({ t: '🚫🪙', k: 'nocoin', exp: false });
+    if (isOneLife()) bits.push({ t: '1️⃣', k: 'onelife', exp: false });
     if (bits.length) {
       powerHudEl.hidden = false;
       powerHudEl.innerHTML = '';
       bits.forEach(function (b) {
         var chip = document.createElement('span');
-        chip.className = 'power-chip power-' + (b.k || 'generic');
+        chip.className = 'power-chip power-' + (b.k || 'generic') + (b.exp ? ' power-expiring' : '');
+        if (b.exp) chip.setAttribute('aria-label', b.t + ' expiring soon');
         chip.textContent = b.t;
         powerHudEl.appendChild(chip);
       });
     } else powerHudEl.hidden = true;
+  }
+
+  function refreshDailyCountdown() {
+    if (!FTStorage.msUntilDailyReset || !FTStorage.formatDailyCountdown) return;
+    var ms = FTStorage.msUntilDailyReset();
+    var txt = 'Daily resets in ' + FTStorage.formatDailyCountdown(ms);
+    if (dailyCountdownEl) {
+      dailyCountdownEl.textContent = txt;
+      dailyCountdownEl.hidden = false;
+    }
+    if (dailyCountdownModesEl) {
+      dailyCountdownModesEl.textContent = '⏱ ' + txt;
+      dailyCountdownModesEl.hidden = false;
+    }
+    // enrich daily mode badge while playing
+    if (playMode === 'daily' && modeBadgeEl && !modeBadgeEl.hidden) {
+      modeBadgeEl.textContent = 'Daily · resets ' + FTStorage.formatDailyCountdown(ms);
+    }
+  }
+  function startDailyCountdownTicker() {
+    refreshDailyCountdown();
+    if (dailyCountdownTimer) clearInterval(dailyCountdownTimer);
+    dailyCountdownTimer = setInterval(refreshDailyCountdown, 1000);
   }
 
   function updateModeBadge() {
@@ -1838,6 +1876,7 @@
       combo = 0;
       coinCombo = 0;
       nearMissStreak = 0;
+      nearMissEdgeFlash = 0;
       riskyUntil = 0;
       shieldActive = false;
       slowMoUntil = 0;
@@ -3251,6 +3290,9 @@
         camKickY = (topClear < botClear ? -1 : 1) * 7;
         camKickZoom = 0.028;
         triggerShake();
+        // 3.28: screen-edge flash toward graze
+        nearMissEdgeFlash = 1;
+        nearMissEdgeSide = topClear < botClear ? 'top' : 'bottom';
       }
       showToast('CLOSE!', 850, 'close');
       showBanner('CLOSE!', 500);
@@ -3383,6 +3425,7 @@
     }
 
     if (hitFlash > 0) hitFlash = Math.max(0, hitFlash - dt * (1000 / HIT_FLASH_MS));
+    if (nearMissEdgeFlash > 0) nearMissEdgeFlash = Math.max(0, nearMissEdgeFlash - dt * 3.2);
     // Near-miss camera kick decay (3.13)
     if (performance.now() >= nearMissCamUntil) {
       camKickX *= Math.max(0, 1 - dt * 10);
@@ -4124,6 +4167,37 @@
     ctx.fillRect(0, gy, W, 3);
   }
 
+  function drawNearMissEdgeFlash() {
+    if (nearMissEdgeFlash <= 0 || reduceMotion) return;
+    var a = 0.55 * nearMissEdgeFlash;
+    var thick = 14 + nearMissEdgeFlash * 10;
+    ctx.save();
+    var grad;
+    if (nearMissEdgeSide === 'top') {
+      grad = ctx.createLinearGradient(0, 0, 0, thick * 2);
+      grad.addColorStop(0, 'rgba(255,217,61,' + a.toFixed(3) + ')');
+      grad.addColorStop(1, 'rgba(255,217,61,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, thick * 2);
+    } else if (nearMissEdgeSide === 'bottom') {
+      grad = ctx.createLinearGradient(0, H, 0, H - thick * 2);
+      grad.addColorStop(0, 'rgba(255,107,107,' + a.toFixed(3) + ')');
+      grad.addColorStop(1, 'rgba(255,107,107,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, H - thick * 2, W, thick * 2);
+    } else {
+      // side fallback amber wash
+      ctx.fillStyle = 'rgba(251,191,36,' + (a * 0.35).toFixed(3) + ')';
+      ctx.fillRect(0, 0, thick, H);
+      ctx.fillRect(W - thick, 0, thick, H);
+    }
+    // soft vertical rails
+    ctx.fillStyle = 'rgba(255,255,255,' + (a * 0.25).toFixed(3) + ')';
+    ctx.fillRect(0, 0, 3, H);
+    ctx.fillRect(W - 3, 0, 3, H);
+    ctx.restore();
+  }
+
   function drawHitFlash() {
     if (hitFlash <= 0) return;
     var r = 255, g = state === 'dying' ? 80 : 255, b = state === 'dying' ? 80 : 255;
@@ -4779,6 +4853,49 @@
     } catch (err2) { /* ignore */ }
   }
 
+
+  function syncSettingsFormFromStorage() {
+    sensitivity = FTStorage.getSensitivity();
+    reduceMotion = FTStorage.getReduceMotion();
+    hapticsOn = FTStorage.getHaptics();
+    practiceGhostOpacity = (FTStorage.getPracticeGhostOpacity && FTStorage.getPracticeGhostOpacity()) || 0.38;
+    garageSortMode = (FTStorage.getGarageSort && FTStorage.getGarageSort()) || 'owned';
+    if (sensSlider) sensSlider.value = String(sensitivity);
+    if (sensValueEl) sensValueEl.textContent = sensitivity.toFixed(2);
+    if (reduceMotionChk) reduceMotionChk.checked = reduceMotion;
+    applyReduceMotionClass();
+    if (hapticsToggleChk) hapticsToggleChk.checked = hapticsOn;
+    if (quietNightChk) quietNightChk.checked = !!(FTStorage.isQuietNight && FTStorage.isQuietNight());
+    if (voiceToggleChk) voiceToggleChk.checked = FTStorage.getVoicePack();
+    if (soundToggleChk) soundToggleChk.checked = !FTStorage.isMuted();
+    if (confettiIntensitySel && FTStorage.getConfettiIntensity) confettiIntensitySel.value = FTStorage.getConfettiIntensity();
+    if (largeButtonsChk) {
+      largeButtonsChk.checked = !!(FTStorage.isLargeButtons && FTStorage.isLargeButtons());
+      applyLargeButtons(!!largeButtonsChk.checked);
+    }
+    if (ghostOpacitySlider) {
+      ghostOpacitySlider.value = String(practiceGhostOpacity);
+      if (ghostOpacityValueEl) ghostOpacityValueEl.textContent = practiceGhostOpacity.toFixed(2);
+    }
+    syncMuteBtn();
+    _particleBudgetCached = -1;
+  }
+  function applyResetPreferences() {
+    if (FTStorage.resetPreferences) FTStorage.resetPreferences();
+    syncSettingsFormFromStorage();
+    if (resetPrefsConfirmEl) resetPrefsConfirmEl.hidden = true;
+    showToast('Settings reset (coins & unlocks kept)', 1600);
+  }
+  if (btnResetPrefs) btnResetPrefs.addEventListener('click', function () {
+    if (resetPrefsConfirmEl) resetPrefsConfirmEl.hidden = false;
+  });
+  if (btnResetPrefsYes) btnResetPrefsYes.addEventListener('click', function () {
+    applyResetPreferences();
+  });
+  if (btnResetPrefsNo) btnResetPrefsNo.addEventListener('click', function () {
+    if (resetPrefsConfirmEl) resetPrefsConfirmEl.hidden = true;
+  });
+
   if (btnSettings) btnSettings.addEventListener('click', function () {
     if (!screenSettings) return;
     screenSettings.hidden = false;
@@ -5155,6 +5272,7 @@
     hideAllScreens();
     if (screenModes) screenModes.hidden = false;
     if (challengeStagePanel) challengeStagePanel.hidden = true;
+    refreshDailyCountdown();
   });
   document.querySelectorAll('[data-close="modes"]').forEach(function (b) {
     b.addEventListener('click', function () { showMenu(); });
@@ -5631,6 +5749,7 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   FTStorage.checkEnvMilestones(best);
   if (FTStorage.checkSeasonalUnlocks) FTStorage.checkSeasonalUnlocks(best);
   syncMuteBtn();
+  startDailyCountdownTicker();
   initClouds();
   initRain();
   resetBird();

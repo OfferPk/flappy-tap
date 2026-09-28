@@ -2573,3 +2573,33 @@ html.large-buttons .chip {
   background: #0f172a;
 }
 .replay-viz-canvas[hidden] { display: none !important; }
+
+
+/* ——— v3.28: power expiry, daily countdown, reset confirm ——— */
+.power-chip.power-expiring {
+  animation: power-expiry-pulse 0.55s ease-in-out infinite;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.65);
+  border-color: #fca5a5 !important;
+}
+@keyframes power-expiry-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.08); filter: brightness(1.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .power-chip.power-expiring { animation: none; outline: 2px solid #f87171; }
+}
+.daily-reset-countdown {
+  margin: 4px 0 8px;
+  font-size: 0.78rem;
+  color: #7dd3fc;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.reset-prefs-confirm {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.35);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+.reset-prefs-confirm[hidden] { display: none !important; }

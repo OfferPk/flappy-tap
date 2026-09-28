@@ -1,8 +1,8 @@
 # HANDOFF — Urr Jaa!
 
-**Live version:** 3.27.0-urrjaa · SW `urrjaa-v36-20260928`  
-**Last ship:** Death freeze UX polish · path replay viz · env fade · coin +N popup. KEEP 15s Spin once + Close + ALL ≤3.26.
+**Live version:** 3.28.0-urrjaa · SW `urrjaa-v37-20260928`  
+**Last ship:** Power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm. KEEP 15s Spin once + Close + ALL ≤3.27.
 
-**Do next (only if owner continues):** new pack ≠ 3.11–3.27 ideas. KEEP ALL. fetch/merge; check+smoke; publish GH_TOKEN unset GITHUB_TOKEN; tag+zip; STOP after ship.
+**Do next (only if owner continues):** new pack ≠ 3.11–3.28 ideas. KEEP ALL. fetch/merge; check+smoke; publish GH_TOKEN unset GITHUB_TOKEN; tag+zip; STOP after ship.
 
 ---

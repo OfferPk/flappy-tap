@@ -63,10 +63,11 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.27.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.28.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
+      <p id="daily-reset-countdown" class="daily-reset-countdown hint" role="status" hidden>Daily resets in --:--:--</p>
       <div class="btn-col">
         <button id="btn-play" class="btn primary btn-play-pulse" type="button">▶ Play</button>
         <button id="btn-modes" class="btn secondary" type="button">🎮 Modes</button>
@@ -98,6 +99,7 @@
     <div id="screen-modes" class="screen panel-screen" hidden>
       <button type="button" class="panel-close" data-panel-close="modes" aria-label="Close">X</button>
       <h2>Modes</h2>
+      <p id="daily-reset-countdown-modes" class="daily-reset-countdown hint" role="status" hidden>⏱ Daily resets in --:--:--</p>
       <div class="btn-col">
         <button class="btn primary" type="button" data-mode="classic">Classic Endless</button>
         <button class="btn secondary" type="button" data-mode="timeattack">⏱ Time Attack 60s</button>
@@ -350,9 +352,20 @@
         </label>
         <input id="ghost-opacity-slider" type="range" min="0.15" max="0.85" step="0.05" value="0.38" aria-label="Practice ghost opacity" />
         <p class="setting-hint">How visible the Practice mode ghost guide is</p>
+
+        <h3 class="settings-group">Data</h3>
+        <button id="btn-reset-prefs" class="btn ghost btn-sm" type="button">Reset settings…</button>
+        <p class="setting-hint">Restores Feel/Audio prefs · keeps coins, unlocks, scores &amp; gifts</p>
+        <div id="reset-prefs-confirm" class="reset-prefs-confirm" hidden role="alertdialog" aria-label="Confirm reset">
+          <p class="setting-hint"><strong>Reset settings?</strong> Coins &amp; unlocks stay.</p>
+          <div class="btn-row">
+            <button id="btn-reset-prefs-no" class="btn ghost btn-sm" type="button">Cancel</button>
+            <button id="btn-reset-prefs-yes" class="btn secondary btn-sm" type="button">Yes, reset</button>
+          </div>
+        </div>
       </div>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.27.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.28.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -422,6 +435,7 @@
           <li><strong>3.25:</strong> turbo afterimage trails · ghost silhouette trail · slow-mo vignette · garage sort · bugfixes.</li>
           <li><strong>3.26:</strong> death freeze + 5s replay stub · better mute icons · pipe parallax · gift sparkle.</li>
           <li><strong>3.27:</strong> death freeze UX · path replay viz · env transition fade · coin +N popup.</li>
+          <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>

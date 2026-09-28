@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.27.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.28.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -126,6 +126,19 @@
   function todayKey() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  /** 3.28: ms until local midnight (daily challenge / missions reset). */
+  function msUntilDailyReset() {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+    return Math.max(0, next.getTime() - now.getTime());
+  }
+  function formatDailyCountdown(ms) {
+    ms = Math.max(0, ms | 0);
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
   }
 
   function parseSet(raw, valid, always) {
@@ -1203,6 +1216,22 @@
     return unlocked;
   }
 
+
+  /** 3.28: reset Feel/Audio prefs only — keeps coins, unlocks, scores, gifts. */
+  function resetPreferences() {
+    set(KEYS.sensitivity, '1.00');
+    set(KEYS.reduceMotion, '0');
+    set(KEYS.largeButtons, '0');
+    set(KEYS.confettiIntensity, 'normal');
+    set(KEYS.practiceGhostOpacity, '0.38');
+    set(KEYS.quietNight, '1');
+    set(KEYS.haptics, '1');
+    set(KEYS.garageSort, 'owned');
+    set(KEYS.mute, '0');
+    // keep voice Pack default on
+    set(KEYS.voicePack, '1');
+    return true;
+  }
   global.FTStorage = {
     getBest, setBest, getDailyBest, setDailyBest, getDailyDate,
     getTodayBest, setTodayBest, getAllTimeBest, setAllTimeBest,
@@ -1211,6 +1240,7 @@
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
     isMuted, setMuted, isQuietNight, setQuietNight, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
+    msUntilDailyReset, formatDailyCountdown, resetPreferences,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,
     getGarageSort, setGarageSort,
     getHaptics, setHaptics, getVoicePack, setVoicePack,
