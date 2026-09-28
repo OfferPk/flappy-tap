@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.24.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.25.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -89,6 +89,9 @@
   let coachStep = 0;
   let coachActive = false;
   let magnetPullAcc = 0; // 3.24 VFX throttle
+  var turboTrail = []; // 3.25 afterimages {x,y,rot}
+  var ghostSilTrail = []; // 3.25 ghost silhouettes
+  var garageSortMode = 'owned';
 
 
 
@@ -227,6 +230,7 @@
   const coachDotsEl = document.getElementById('coach-dots');
   const btnCoachNext = document.getElementById('btn-coach-next');
   const btnCoachSkip = document.getElementById('btn-coach-skip');
+  const garageSortSel = document.getElementById('garage-sort');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -1820,6 +1824,8 @@
       magnetUntil = 0;
       turboUntil = 0;
       ghostUntil = 0;
+      turboTrail.length = 0;
+      ghostSilTrail.length = 0;
       score2xUntil = 0;
       metersFlown = 0;
       runCoins = 0;
@@ -3145,6 +3151,19 @@
     if (slowActive) updatePowerHud();
     else if (slowMoUntil && now >= slowMoUntil) { slowMoUntil = 0; updatePowerHud(); }
     if (turboUntil && now >= turboUntil) { turboUntil = 0; difficultyFor(score); updatePowerHud(); }
+
+    // 3.25: sample turbo / ghost trails
+    if (bird && state === 'playing' && !reduceMotion) {
+      if (now < turboUntil) {
+        turboTrail.push({ x: bird.x, y: bird.y, rot: bird.rot });
+        if (turboTrail.length > 14) turboTrail.shift();
+      } else if (turboTrail.length) turboTrail.length = 0;
+      if (now < ghostUntil) {
+        ghostSilTrail.push({ x: bird.x, y: bird.y, rot: bird.rot });
+        if (ghostSilTrail.length > 12) ghostSilTrail.shift();
+      } else if (ghostSilTrail.length) ghostSilTrail.length = 0;
+    }
+
     if (ghostUntil && now >= ghostUntil) { ghostUntil = 0; updatePowerHud(); }
     if (magnetUntil && now >= magnetUntil) { magnetUntil = 0; updatePowerHud(); }
     if (riskyUntil && now >= riskyUntil) { riskyUntil = 0; updateComboUI(); updatePowerHud(); }
@@ -3835,8 +3854,22 @@
     var t = performance.now() / 1000;
     var rem = Math.max(0, (ghostUntil - performance.now()) / GHOST_MS);
     ctx.save();
-    // Afterimage copies
-    if (!reduceMotion) {
+    // 3.25: ghost silhouette trail (soft slate ovals along path)
+    if (!reduceMotion && ghostSilTrail.length) {
+      for (var gi = 0; gi < ghostSilTrail.length; gi++) {
+        var gp = ghostSilTrail[gi];
+        var ga = (gi + 1) / ghostSilTrail.length * 0.22 * rem;
+        ctx.globalAlpha = ga;
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.ellipse(gp.x, gp.y, 13, 9, gp.rot || 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = ga * 0.7;
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    } else if (!reduceMotion) {
       for (var i = 1; i <= 3; i++) {
         ctx.globalAlpha = 0.12 * rem;
         FTSkins.draw(ctx, birdId, bird.x - i * 10, bird.y + Math.sin(t * 6 + i) * 2, bird.rot * 0.6, 0.9, {
@@ -3862,11 +3895,15 @@
   function drawSlowMoVFX() {
     if (!bird || performance.now() >= slowMoUntil) return;
     var rem = Math.max(0, Math.min(1, (slowMoUntil - performance.now()) / SLOWMO_MS));
+    var pulse = reduceMotion ? 1 : (0.92 + 0.08 * Math.sin(performance.now() / 280));
     ctx.save();
-    var g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.15, W / 2, H / 2, Math.max(W, H) * 0.72);
-    g.addColorStop(0, 'rgba(167,139,250,0)');
-    g.addColorStop(1, 'rgba(91,33,182,' + (0.16 + 0.14 * rem).toFixed(3) + ')');
-    ctx.fillStyle = g;
+    // 3.25: deeper purple vignette (clear center, dark corners)
+    var gV = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.18 * pulse, W / 2, H / 2, Math.max(W, H) * 0.78);
+    gV.addColorStop(0, 'rgba(167,139,250,0)');
+    gV.addColorStop(0.45, 'rgba(91,33,182,' + (0.06 * rem).toFixed(3) + ')');
+    gV.addColorStop(0.75, 'rgba(76,29,149,' + (0.22 + 0.18 * rem).toFixed(3) + ')');
+    gV.addColorStop(1, 'rgba(15,5,35,' + (0.42 + 0.22 * rem).toFixed(3) + ')');
+    ctx.fillStyle = gV;
     ctx.fillRect(0, 0, W, H);
     if (!reduceMotion) {
       ctx.strokeStyle = 'rgba(196,181,253,' + (0.35 + 0.25 * rem).toFixed(3) + ')';
@@ -3887,6 +3924,25 @@
     var rem = Math.max(0, Math.min(1, (turboUntil - performance.now()) / TURBO_MS));
     var t = performance.now() / 80;
     ctx.save();
+    // 3.25: amber afterimage trail along recent path
+    if (!reduceMotion && turboTrail.length) {
+      for (var ti = 0; ti < turboTrail.length; ti++) {
+        var tp = turboTrail[ti];
+        var ta = ((ti + 1) / turboTrail.length) * 0.35 * rem;
+        ctx.globalAlpha = ta;
+        ctx.fillStyle = ti % 2 ? '#fbbf24' : '#f59e0b';
+        ctx.beginPath();
+        ctx.ellipse(tp.x, tp.y, 11, 7.5, tp.rot || 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (ti > turboTrail.length - 4) {
+          ctx.globalAlpha = ta * 0.55;
+          FTSkins.draw(ctx, birdId, tp.x, tp.y, tp.rot || 0, 0.85, {
+            vehicle: 'none', hat: 'none', reduceMotion: true
+          });
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
     if (!reduceMotion) {
       for (var i = 0; i < 7; i++) {
         var yy = bird.y + (i - 3) * 7 + Math.sin(t + i) * 2;
@@ -4656,6 +4712,10 @@
 
   function refreshGarage() {
     updateCoinHud();
+    if (garageSortSel && FTStorage.getGarageSort) {
+      garageSortMode = FTStorage.getGarageSort();
+      garageSortSel.value = garageSortMode;
+    }
     if (garageBirds) FTSkins.renderPicker(garageBirds, birdId, onPickCosmetic, tryUnlock, 'bird');
     if (garageVehicles) FTSkins.renderPicker(garageVehicles, vehicleId, onPickCosmetic, tryUnlock, 'vehicle');
     if (garageEnvs) FTSkins.renderPicker(garageEnvs, envId, onPickCosmetic, tryUnlock, 'env');
@@ -4692,6 +4752,16 @@
     refreshGarage();
     startGaragePreview();
   });
+  if (garageSortSel) {
+    garageSortMode = (FTStorage.getGarageSort && FTStorage.getGarageSort()) || 'owned';
+    garageSortSel.value = garageSortMode;
+    garageSortSel.addEventListener('change', function () {
+      garageSortMode = FTStorage.setGarageSort ? FTStorage.setGarageSort(garageSortSel.value) : garageSortSel.value;
+      refreshGarage();
+      startGaragePreview();
+      showToast('Sort: ' + garageSortMode, 800);
+    });
+  }
   document.querySelectorAll('.garage-filter').forEach(function (b) {
     b.addEventListener('click', function () {
       garageFilter = b.getAttribute('data-garage-filter') || 'all';
@@ -5212,6 +5282,10 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   sensitivity = FTStorage.getSensitivity();
   reduceMotion = FTStorage.getReduceMotion();
   hapticsOn = FTStorage.getHaptics();
+  // 3.25 leftover bugfix: load ghost opacity + garage sort + coach at boot
+  practiceGhostOpacity = (FTStorage.getPracticeGhostOpacity && FTStorage.getPracticeGhostOpacity()) || 0.38;
+  garageSortMode = (FTStorage.getGarageSort && FTStorage.getGarageSort()) || 'owned';
+  coachStep = (FTStorage.getCoachStep && FTStorage.getCoachStep()) || 0;
   applyLargeButtons(FTStorage.isLargeButtons && FTStorage.isLargeButtons());
   syncPrefersReducedMotion();
   FTAudio.setVoicePack(FTStorage.getVoicePack());

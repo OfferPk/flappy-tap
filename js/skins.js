@@ -1289,14 +1289,30 @@
     kind = kind || 'bird';
     const list = kind === 'vehicle' ? VEHICLES : kind === 'env' ? ENVS : kind === 'hat' ? HATS : kind === 'trail' ? TRAILS : BIRDS;
     container.innerHTML = '';
-    list.forEach((item) => {
-      let unlocked = true;
+    function itemUnlocked(item) {
+      if (!FTStorage) return true;
+      if (kind === 'bird') return FTStorage.isBirdUnlocked(item.id);
+      if (kind === 'vehicle') return FTStorage.isVehicleUnlocked(item.id);
+      if (kind === 'env') return FTStorage.isEnvUnlocked(item.id);
+      if (kind === 'hat') return FTStorage.isHatUnlocked(item.id);
+      if (kind === 'trail') return FTStorage.isTrailUnlocked(item.id);
+      return true;
+    }
+    // 3.25 garage sort
+    let items = list.slice();
+    const sortMode = (typeof FTStorage !== 'undefined' && FTStorage.getGarageSort) ? FTStorage.getGarageSort() : 'owned';
+    items.sort(function (a, b) {
+      if (sortMode === 'name') return String(a.label || a.id).localeCompare(String(b.label || b.id));
+      if (sortMode === 'cost') return (a.cost || 0) - (b.cost || 0) || String(a.label || '').localeCompare(String(b.label || ''));
+      // owned first (default)
+      const ua = itemUnlocked(a) ? 0 : 1;
+      const ub = itemUnlocked(b) ? 0 : 1;
+      if (ua !== ub) return ua - ub;
+      return String(a.label || a.id).localeCompare(String(b.label || b.id));
+    });
+    items.forEach((item) => {
+      let unlocked = itemUnlocked(item);
       let cost = item.cost || 0;
-      if (kind === 'bird') unlocked = !FTStorage || FTStorage.isBirdUnlocked(item.id);
-      else if (kind === 'vehicle') unlocked = !FTStorage || FTStorage.isVehicleUnlocked(item.id);
-      else if (kind === 'env') unlocked = !FTStorage || FTStorage.isEnvUnlocked(item.id);
-      else if (kind === 'hat') unlocked = !FTStorage || FTStorage.isHatUnlocked(item.id);
-      else if (kind === 'trail') unlocked = !FTStorage || FTStorage.isTrailUnlocked(item.id);
 
       const themeIds = { jungle: 1, alpine: 1, seagull: 1, jungle_rickshaw: 1, snow_bike: 1, sea_boat: 1 };
       const isTheme = !!(item.theme || themeIds[item.id]);

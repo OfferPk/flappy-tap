@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.24.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.25.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -32,6 +32,7 @@
     practiceGhostOpacity: PREFIX + 'practice-ghost-opacity',
     coachDone: PREFIX + 'coach-done',
     coachStep: PREFIX + 'coach-step',
+    garageSort: PREFIX + 'garage-sort',
     haptics: PREFIX + 'haptics',
     unlockedSkins: PREFIX + 'unlocked-skins',
     coins: PREFIX + 'coins',
@@ -955,6 +956,16 @@
   function setCoachDone(on) { set(KEYS.coachDone, on ? '1' : '0'); }
   function getCoachStep() { return Math.max(0, parseInt(get(KEYS.coachStep, '0'), 10) || 0); }
   function setCoachStep(n) { set(KEYS.coachStep, String(Math.max(0, n | 0))); return getCoachStep(); }
+  /** 3.25: garage sort — owned | name | cost */
+  function getGarageSort() {
+    const v = get(KEYS.garageSort, 'owned');
+    return (v === 'name' || v === 'cost' || v === 'owned') ? v : 'owned';
+  }
+  function setGarageSort(v) {
+    if (v !== 'name' && v !== 'cost' && v !== 'owned') v = 'owned';
+    set(KEYS.garageSort, v);
+    return v;
+  }
   function getHaptics() { return get(KEYS.haptics, '1') === '1'; }
   function setHaptics(on) { set(KEYS.haptics, on ? '1' : '0'); }
   function getVoicePack() { return get(KEYS.voicePack, '1') === '1'; }
@@ -1201,6 +1212,7 @@
     isMuted, setMuted, isQuietNight, setQuietNight, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,
+    getGarageSort, setGarageSort,
     getHaptics, setHaptics, getVoicePack, setVoicePack,
     getUnlockedSkins, isSkinUnlocked, unlockSkin,
     getCoins, setCoins, addCoins, spendCoins,

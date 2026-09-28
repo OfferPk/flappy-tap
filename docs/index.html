@@ -63,7 +63,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.24.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.25.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -128,6 +128,14 @@
         <button type="button" class="garage-filter" data-garage-filter="theme" role="tab" aria-selected="false">🌿 Themes</button>
         <button type="button" class="garage-filter" data-garage-filter="seasonal" role="tab" aria-selected="false">📅 Seasonals</button>
       </div>
+      <label class="setting-row garage-sort-row" for="garage-sort">
+        <span>Sort</span>
+        <select id="garage-sort" class="setting-select" aria-label="Garage sort">
+          <option value="owned" selected>Owned first</option>
+          <option value="name">Name A–Z</option>
+          <option value="cost">Cost ↑</option>
+        </select>
+      </label>
       <p id="garage-filter-hint" class="hint garage-filter-hint">Theme skins: Jungle · Mountains · Sea (score or coins)</p>
       <h3 class="section-title">Birds</h3>
       <div class="skin-row" id="garage-birds"></div>
@@ -337,7 +345,7 @@
         <p class="setting-hint">How visible the Practice mode ghost guide is</p>
       </div>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.24.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.25.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -404,6 +412,7 @@
           <li><strong>3.22:</strong> no double-tap zoom · boot progress % · seasonal window hint · Larger buttons (a11y).</li>
           <li><strong>3.23:</strong> reduced-motion respect · score-card screenshot share · bird shadow · landing dust · credits in Settings.</li>
           <li><strong>3.24:</strong> first-run coach marks · magnet pull VFX · shield shimmer · practice ghost opacity · micro-perf.</li>
+          <li><strong>3.25:</strong> turbo afterimage trails · ghost silhouette trail · slow-mo vignette · garage sort · bugfixes.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>

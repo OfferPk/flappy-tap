@@ -2478,3 +2478,17 @@ html.large-buttons .chip {
 .coach-marks.coach-hud .coach-card {
   border-color: rgba(251,191,36,0.55);
 }
+
+
+/* ——— v3.25: garage sort ——— */
+.garage-sort-row {
+  margin: 8px 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.garage-sort-row .setting-select {
+  min-width: 140px;
+  flex: 0 0 auto;
+}

@@ -1,5 +1,24 @@
 # Urr Jaa! STATUS
 
+## Current: **3.25.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.24)
+- **Turbo afterimage trails** — amber path ellipses + late bird ghosts while turbo ON
+- **Ghost silhouette trail** — soft slate ovals along recent path
+- **Slow-mo vignette** — deeper purple corner vignette with pulse
+- **Garage sort** — Owned first / Name A–Z / Cost ↑ (persisted)
+- **Bugfix** — load practice ghost opacity, garage sort, coach step at boot
+- KEEP ALL ≤3.24 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v34-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.25.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.25.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.24.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.23)
