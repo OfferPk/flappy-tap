@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.15.0-urrjaa — bird unlock teaser bars + prior skins; keeps ≤3.14.
+ * Urr Jaa! v3.23.0-urrjaa — bird shadow polish + prior skins; keeps ≤3.22.
  * Canvas-drawn; wings/hats/mouth are visual-only (hitbox ignores them).
  */
 (function (global) {
@@ -260,10 +260,17 @@
     const animT = opts.animT || 0;
     ctx.scale(s, s);
 
-    // Soft ground shadow (depth cue)
-    ctx.fillStyle = 'rgba(15,23,42,.18)';
+    // 3.23: soft contact shadow — larger/darker near ground (shadowProx 0..1)
+    var sp = Math.max(0.12, Math.min(1, opts.shadowProx != null ? opts.shadowProx : 0.55));
+    var shY = 12 + (1 - sp) * 2;
+    ctx.fillStyle = 'rgba(15,23,42,' + (0.10 + 0.22 * sp).toFixed(3) + ')';
     ctx.beginPath();
-    ctx.ellipse(1, 13, 14, 3.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(1, shY, 10 + 8 * sp, 2.2 + 2.2 * sp, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Soft outer penumbra
+    ctx.fillStyle = 'rgba(15,23,42,' + (0.04 + 0.08 * sp).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.ellipse(1, shY + 0.5, 14 + 6 * sp, 3.2 + 1.4 * sp, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Tail silhouette first (behind body) — wag with velocity / idle (3.11)

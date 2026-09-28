@@ -1,5 +1,24 @@
 # Urr Jaa! STATUS
 
+## Current: **3.23.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.22)
+- **Reduced-motion respect** — auto-adopt OS preference when unset; pause blur skipped
+- **Screenshot share** — score card PNG via Share score card (files API / download)
+- **Bird shadow polish** — contact shadow scales with height above ground
+- **Soft landing dust** — dust puffs when skimming ground + lucky saves
+- **Credits/version** — Settings footer with v3.23.0-urrjaa
+- KEEP ALL ≤3.22 incl. **15s Mystery Spin once**, Close (X), large buttons, …
+
+SW cache: `urrjaa-v32-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.23.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.23.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.22.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.21)

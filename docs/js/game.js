@@ -1,7 +1,7 @@
 /**
- * Urr Jaa! v3.22.0-urrjaa — Double-tap zoom prevent, better boot progress, seasonal theme hint,
- * accessibility larger buttons, bugfixes.
- * KEEP ALL ≤3.21 incl. 15s Mystery Spin once + Close (X) + pause blur + coin rain + history clear.
+ * Urr Jaa! v3.23.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * soft landing dust, credits/version in settings, bugfixes.
+ * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  */
 (function () {
@@ -100,6 +100,7 @@
   let continuedThisRun = false;
   let animId = 0;
   let groundX = 0;
+  var lastLandingDustAt = 0;
   let clouds = [];
   let lastTs = 0;
   let flapCooldown = 0;
@@ -947,6 +948,13 @@
     if (birdId === 'jungle') vehTheme = 'jungle';
     else if (birdId === 'alpine') vehTheme = 'alpine';
     else if (birdId === 'seagull') vehTheme = 'sea';
+    // 3.23: shadow strength from height above ground (closer = larger/darker)
+    var shadowProx = 0.55;
+    if (bird) {
+      var gnd = H - GROUND_H;
+      var air = Math.max(0, gnd - (bird.y + bird.h / 2));
+      shadowProx = Math.max(0.15, Math.min(1, 1 - air / 220));
+    }
     return {
       vehicle: vehicleId,
       hat: hatId,
@@ -966,7 +974,8 @@
       vehBob: vehBob,
       vehLean: vehLean,
       reduceMotion: reduceMotion,
-      vehicleTheme: vehTheme
+      vehicleTheme: vehTheme,
+      shadowProx: shadowProx
     };
   }
 
@@ -1213,6 +1222,115 @@
     return line;
   }
 
+
+  /** 3.23: rasterize share card to PNG for image share / download. */
+  function buildShareCardCanvas() {
+    var c = document.createElement('canvas');
+    c.width = 720;
+    c.height = 920;
+    var x = c.getContext('2d');
+    // background
+    var gbg = x.createLinearGradient(0, 0, 0, 920);
+    gbg.addColorStop(0, '#1a2744');
+    gbg.addColorStop(1, '#0b1026');
+    x.fillStyle = gbg;
+    x.fillRect(0, 0, 720, 920);
+    // accent bar
+    x.fillStyle = '#4ecdc4';
+    x.fillRect(0, 0, 720, 10);
+    x.fillStyle = '#ffd93d';
+    x.fillRect(0, 910, 720, 10);
+    x.fillStyle = '#fff';
+    x.font = 'bold 42px system-ui, sans-serif';
+    x.textAlign = 'center';
+    x.fillText('Urr Jaa!', 360, 90);
+    x.font = '28px system-ui, sans-serif';
+    x.fillStyle = '#ffe082';
+    x.fillText('اڑ جا!', 360, 135);
+    var modeLabel = MODE_SHARE_LABELS[playMode] || playMode;
+    x.fillStyle = '#94a3b8';
+    x.font = '22px system-ui, sans-serif';
+    x.fillText(modeLabel, 360, 190);
+    // score
+    x.fillStyle = '#ffd93d';
+    x.font = 'bold 140px system-ui, sans-serif';
+    x.fillText(String(score), 360, 360);
+    x.fillStyle = '#cbd5e1';
+    x.font = '24px system-ui, sans-serif';
+    x.fillText('SCORE', 360, 400);
+    var m = medalFor(score);
+    var lines = [
+      Math.floor(metersFlown) + ' m flown',
+      'Best ' + FTStorage.getBest(),
+      (runPerfects ? ('✨ ' + runPerfects + ' PERFECT') : 'Keep chaining PERFECT'),
+      (m ? ('Medal: ' + m.toUpperCase()) : 'Medal: —')
+    ];
+    x.fillStyle = '#e2e8f0';
+    x.font = '26px system-ui, sans-serif';
+    for (var i = 0; i < lines.length; i++) {
+      x.fillText(lines[i], 360, 480 + i * 42);
+    }
+    x.fillStyle = '#4ecdc4';
+    x.font = 'bold 22px system-ui, sans-serif';
+    x.fillText('offerpk.github.io/flappy-tap', 360, 740);
+    x.fillStyle = '#64748b';
+    x.font = '18px system-ui, sans-serif';
+    x.fillText('Offline one-tap fly · v3.23.0-urrjaa', 360, 780);
+    return c;
+  }
+
+  function shareScoreCardImage() {
+    try {
+      var c = buildShareCardCanvas();
+      var preview = document.getElementById('share-card-image');
+      if (preview) {
+        preview.src = c.toDataURL('image/png');
+        preview.hidden = false;
+      }
+      c.toBlob(function (blob) {
+        if (!blob) {
+          showToast('Could not build image', 1200);
+          return;
+        }
+        var file = new File([blob], 'urr-jaa-score.png', { type: 'image/png' });
+        var text = buildShareText();
+        if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+          navigator.share({
+            files: [file],
+            title: 'Urr Jaa!',
+            text: text
+          }).catch(function () {
+            downloadShareImage(c);
+          });
+        } else if (navigator.share) {
+          // fallback: text share + offer download
+          downloadShareImage(c);
+          shareRunSummary();
+        } else {
+          downloadShareImage(c);
+          copyShareText(text);
+        }
+      }, 'image/png');
+    } catch (err) {
+      showToast('Share image unavailable', 1200);
+      shareRunSummary();
+    }
+  }
+
+  function downloadShareImage(c) {
+    try {
+      var a = document.createElement('a');
+      a.href = c.toDataURL('image/png');
+      a.download = 'urr-jaa-score.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Score card saved 📷', 1400, 'medal');
+    } catch (e) {
+      showToast('Copy text instead', 1200);
+    }
+  }
+
   function openSharePreview() {
     var overlay = document.getElementById('share-preview');
     var body = document.getElementById('share-preview-body');
@@ -1238,6 +1356,18 @@
     body.appendChild(title);
     body.appendChild(sc);
     body.appendChild(meta);
+    try {
+      var img = document.getElementById('share-card-image');
+      if (!img) {
+        img = document.createElement('img');
+        img.id = 'share-card-image';
+        img.className = 'share-card-image';
+        img.alt = 'Score card preview';
+      }
+      img.src = buildShareCardCanvas().toDataURL('image/png');
+      img.hidden = false;
+      body.appendChild(img);
+    } catch (errImg) { /* ignore */ }
     if (textEl) textEl.textContent = buildShareText();
     overlay.hidden = false;
     overlay.classList.remove('share-pop');
@@ -1523,9 +1653,13 @@
   }
 
   function setPauseBlur(on) {
-    if (appEl) appEl.classList.toggle('paused-blur', !!on);
-    if (canvas) canvas.classList.toggle('paused-blur-canvas', !!on);
-    if (screenPause) screenPause.classList.toggle('pause-blur-ready', !!on);
+    var useBlur = !!on && !reduceMotion;
+    if (appEl) appEl.classList.toggle('paused-blur', useBlur);
+    if (canvas) canvas.classList.toggle('paused-blur-canvas', useBlur);
+    if (screenPause) {
+      screenPause.classList.toggle('pause-blur-ready', !!on);
+      screenPause.classList.toggle('pause-reduced', !!on && !!reduceMotion);
+    }
   }
   function pauseGame() {
     if (state !== 'playing') return;
@@ -1816,6 +1950,7 @@
     else FTAudio.nearmiss();
     showBanner('LUCKY!', 750);
     showToast('LUCKY!', 1000, 'lucky');
+    if (bird) spawnLandingDust(bird.x, H - GROUND_H - 2, 10);
     triggerChirpMouth('close');
     voiceCue('lucky');
     haptic('nearmiss');
@@ -1860,6 +1995,27 @@
   function trimParticles() {
     var cap = particleBudget();
     if (particles.length > cap) particles.splice(0, particles.length - cap);
+  }
+
+
+  /** 3.23: soft dust puff when bird skims / lands near ground. */
+  function spawnLandingDust(x, y, n) {
+    if (reduceMotion) return;
+    n = n || 8;
+    for (var i = 0; i < n; i++) {
+      particles.push({
+        x: x + (rng() - 0.5) * 18,
+        y: y,
+        vx: (rng() - 0.5) * 70,
+        vy: -20 - rng() * 50,
+        life: 0.35 + rng() * 0.25,
+        max: 0.6,
+        color: i % 2 ? 'rgba(194,160,92,0.7)' : 'rgba(212,180,120,0.55)',
+        r: 2 + rng() * 2.5,
+        kind: 'dust'
+      });
+    }
+    trimParticles();
   }
 
   function spawnNearMissSparks(x, y) {
@@ -2827,6 +2983,10 @@
           pt.vy += 90 * dt;
           pt.rot = (pt.rot || 0) + (pt.spin || 6) * dt;
           pt.vx *= 0.99;
+        } else if (pt.kind === 'dust') {
+          pt.vy += 60 * dt;
+          pt.vx *= 0.96;
+          pt.r *= 0.992;
         } else if (pt.kind === 'coin_rain') {
           pt.vy += 40 * dt;
           pt.rot = (pt.rot || 0) + (pt.spin || 4) * dt;
@@ -2932,6 +3092,18 @@
     bird.vy += g * sdt;
     if (bird.vy > term) bird.vy = term;
     bird.y += bird.vy * sdt;
+    // 3.23 soft landing dust when skimming ground
+    if (bird && bird.alive && state === 'playing' && !reduceMotion) {
+      var gY = H - GROUND_H;
+      var distG = gY - (bird.y + bird.h / 2);
+      if (distG < 14 && bird.vy > 40) {
+        var nowD = performance.now();
+        if (nowD - lastLandingDustAt > 180) {
+          lastLandingDustAt = nowD;
+          spawnLandingDust(bird.x, gY - 2, bird.vy > 180 ? 12 : 7);
+        }
+      }
+    }
 
     var targetRot = Math.max(-0.65, Math.min(1.25, bird.vy / 500));
     bird.rot += (targetRot - bird.rot) * Math.min(1, sdt * 12);
@@ -3423,6 +3595,15 @@
         ctx.rotate(pt.rot || 0);
         ctx.fillRect(-pt.r, -pt.r * 0.4, pt.r * 2, pt.r * 0.8);
         ctx.restore();
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (pt.kind === 'dust') {
+        ctx.globalAlpha = a * 0.7;
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.ellipse(pt.x, pt.y, pt.r * 1.4, pt.r * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.globalAlpha = 1;
         continue;
       }
@@ -3959,6 +4140,10 @@
     if (ov) ov.hidden = true;
     shareRunSummary();
   });
+  var btnShareImage = document.getElementById('btn-share-image');
+  if (btnShareImage) btnShareImage.addEventListener('click', function () {
+    shareScoreCardImage();
+  });
   if (btnShareCopy) btnShareCopy.addEventListener('click', function () {
     copyShareText(buildShareText());
   });
@@ -4011,6 +4196,38 @@
 
   function applyReduceMotionClass() {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
+  }
+  /** 3.23: honor OS prefers-reduced-motion when unset; keep listening for changes. */
+  function syncPrefersReducedMotion() {
+    try {
+      var mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (!mq) return;
+      var raw = null;
+      try { raw = localStorage.getItem('flappy-tap:reduce-motion'); } catch (e) { raw = null; }
+      if (raw == null && mq.matches) {
+        reduceMotion = true;
+        if (FTStorage.setReduceMotion) FTStorage.setReduceMotion(true);
+        if (reduceMotionChk) reduceMotionChk.checked = true;
+        applyReduceMotionClass();
+        _particleBudgetCached = -1;
+      }
+      if (!syncPrefersReducedMotion._bound) {
+        syncPrefersReducedMotion._bound = true;
+        var onChange = function (ev) {
+          try {
+            var has = localStorage.getItem('flappy-tap:reduce-motion');
+            if (has != null) return; // user preference wins
+            reduceMotion = !!ev.matches;
+            if (FTStorage.setReduceMotion) FTStorage.setReduceMotion(reduceMotion);
+            if (reduceMotionChk) reduceMotionChk.checked = reduceMotion;
+            applyReduceMotionClass();
+            _particleBudgetCached = -1;
+          } catch (err) { /* ignore */ }
+        };
+        if (mq.addEventListener) mq.addEventListener('change', onChange);
+        else if (mq.addListener) mq.addListener(onChange);
+      }
+    } catch (err2) { /* ignore */ }
   }
 
   if (btnSettings) btnSettings.addEventListener('click', function () {
@@ -4821,6 +5038,7 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
   reduceMotion = FTStorage.getReduceMotion();
   hapticsOn = FTStorage.getHaptics();
   applyLargeButtons(FTStorage.isLargeButtons && FTStorage.isLargeButtons());
+  syncPrefersReducedMotion();
   FTAudio.setVoicePack(FTStorage.getVoicePack());
   applyReduceMotionClass();
   best = FTStorage.getBest();

@@ -51,7 +51,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.22.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.23.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -318,6 +318,12 @@
         </select>
         <p class="setting-hint">Scales celebration confetti (milestones, claims, records)</p>
       </div>
+      <div class="settings-credits" aria-label="Credits">
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.23.0-urrjaa</p>
+        <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
+        <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
+        <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
+      </div>
       <button id="btn-settings-close" class="btn primary" type="button">Done</button>
     </div>
 
@@ -378,6 +384,7 @@
           <li><strong>3.20:</strong> mission calendar · unlock fanfare · storm thunder rumble · smoother perf.</li>
           <li><strong>3.21:</strong> pause blur · coin rain on records · one-life heart break · clear spin history · iOS PWA status bar.</li>
           <li><strong>3.22:</strong> no double-tap zoom · boot progress % · seasonal window hint · Larger buttons (a11y).</li>
+          <li><strong>3.23:</strong> reduced-motion respect · score-card screenshot share · bird shadow · landing dust · credits in Settings.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>
@@ -448,8 +455,9 @@
         <div id="share-preview-body" class="share-card-body"></div>
         <p id="share-preview-text" class="share-preview-text hint"></p>
         <div class="btn-col">
-          <button id="btn-share-confirm" class="btn primary" type="button">📤 Share</button>
-          <button id="btn-share-copy" class="btn secondary" type="button">Copy text</button>
+          <button id="btn-share-image" class="btn primary" type="button">📷 Share score card</button>
+          <button id="btn-share-confirm" class="btn secondary" type="button">📤 Share text</button>
+          <button id="btn-share-copy" class="btn ghost" type="button">Copy text</button>
           <button id="btn-share-close" class="btn ghost" type="button">Close</button>
         </div>
       </div>
