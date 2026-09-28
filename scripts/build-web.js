@@ -57,5 +57,7 @@ function buildTo(dest, { preserveGlobs } = {}) {
 }
 
 buildTo(path.join(root, 'www'));
-buildTo(path.join(root, 'docs'), { preserveGlobs: ['-web-windows.zip'] });
+buildTo(path.join(root, 'docs'), { preserveGlobs: ['-web-windows.zip', '.nojekyll'] });
+// GitHub Pages must stay in static mode even when docs/ is rebuilt from scratch.
+fs.writeFileSync(path.join(root, 'docs', '.nojekyll'), '');
 console.log('Built web assets → www/ and docs/');

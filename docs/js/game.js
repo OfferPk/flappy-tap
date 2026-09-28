@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.5.2-urrjaa — collection depth: more birds/areas, offline seasonal packs, Guide update.
+ * Urr Jaa! v3.5.3-urrjaa — collection depth: more birds/areas, offline seasonal packs, Guide update.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */

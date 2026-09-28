@@ -13,7 +13,7 @@ const game = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');
 const need = [
   'timeattack', 'nocoin', 'onelife', 'RISKY', 'CLOSE!', 'Ghost',
   'Turbo', 'magnet', 'claimStreak', 'getLeaderboards', 'pickTrafficKind',
-  '3.5.2', 'squashTarget', 'voiceCue',
+  '3.5.3', 'squashTarget', 'voiceCue',
   'PERFECT!', 'DANGER', 'coinComboMult', 'grantMysteryReward', 'birdPass',
   'runPerfects', 'bossActive', 'effectiveWeather',
   'LUCKY!', 'isForgivingMode', 'firstRunProtect', 'calibMods', 'applyLuckySave', 'resolveCollision',
@@ -43,11 +43,11 @@ for (const n of ['BIRD_PASSIVES', 'weatherMods', 'sunset', 'pickBossKind', 'SEAS
   if (!skins.includes(n)) { console.error('MISSING in skins.js:', n); ok = false; }
 }
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-if (!sw.includes('urrjaa-v14-20260928')) { console.error('SW cache not bumped'); ok = false; }
+if (!sw.includes('urrjaa-v15-20260928')) { console.error('SW cache not bumped'); ok = false; }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (pkg.version !== '3.5.2-urrjaa') { console.error('package version', pkg.version); ok = false; }
+if (pkg.version !== '3.5.3-urrjaa') { console.error('package version', pkg.version); ok = false; }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-if (!html.includes('v3.5.2-urrjaa')) { console.error('index version tag missing'); ok = false; }
+if (!html.includes('v3.5.3-urrjaa')) { console.error('index version tag missing'); ok = false; }
 if (!html.includes('data-mode="timeattack"')) { console.error('modes missing'); ok = false; }
 if (!html.includes('run-summary')) { console.error('run summary missing'); ok = false; }
 if (!html.includes('btn-voice-preview')) { console.error('voice preview btn missing'); ok = false; }
@@ -73,5 +73,5 @@ if (!css.includes('rim-pulse') || !css.includes('wheel-hub')) { console.error('w
 if (!css.includes('.a2hs')) { console.error('a2hs CSS missing'); ok = false; }
 // Ensure post-death rarity auto-open path is gone (no Duplicate → Fragments in openMysteryBox flow)
 if (game.includes("text = 'Duplicate → +'")) { console.error('legacy duplicate fragment popup text still present'); ok = false; }
-if (ok) console.log('SMOKE OK · Urr Jaa! 3.5.2-urrjaa');
+if (ok) console.log('SMOKE OK · Urr Jaa! 3.5.3-urrjaa');
 else { console.error('SMOKE FAIL'); process.exit(1); }

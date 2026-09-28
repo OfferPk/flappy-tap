@@ -1,46 +1,41 @@
-# HANDOFF — Urr Jaa! 3.5.2-urrjaa (IMPROVE post–3.5.1)
+# HANDOFF — Urr Jaa! 3.5.3-urrjaa (IMPROVE ship hygiene)
 
-**Status:** READY_FOR_QA (improve delta)  
-**Version:** 3.5.2-urrjaa  
-**SW:** urrjaa-v14-20260928  
-**Prior:** v3.5.1 QA PASS + Security PASS_WITH_NOTES (F1 now closed)  
-**Live (after Pages deploy):** https://offerpk.github.io/flappy-tap/  
-**Local:** `/workspace/factory/projects/flappy-tap`  
-**Push:** not done (handoff for re-QA)
+**Status:** READY_FOR_QA (build-web fix delta)
+**Version:** 3.5.3-urrjaa
+**SW:** urrjaa-v15-20260928
+**Prior gate:** v3.5.2 QA PASS + Security PASS_WITH_NOTES — CLEAR for 3.5.2
+**Live (after Pages deploy):** https://offerpk.github.io/flappy-tap/
+**Local:** `/workspace/factory/projects/flappy-tap`
+**Push:** not done (Master must re-QA this delta before publish)
 
-## What landed (3.5.2 improve)
+## What landed (3.5.3 improve)
 
-1. **Missions XSS (Security F1 closed)**  
-   - `js/storage.js` `getActiveMissionIds` — allowlist vs `MISSION_POOL` + `DAILY_MISSION_IDS`; rewrite storage when junk dropped  
-   - Unknown id fallback label: static **Mission** (never raw id into DOM)  
-   - `js/game.js` `refreshMissions` — `createElement` + `textContent`; progress bar `style.width` numeric only  
+1. **GitHub Pages static-hosting hygiene**
+   - `scripts/build-web.js` preserves an existing `docs/.nojekyll` during the rmrf/rebuild
+   - The build always writes an empty `docs/.nojekyll`, so the marker survives even if absent before the build
+   - `www/` behavior is unchanged
+2. **No gameplay/collection change**
+   - This patch only hardens the web build/publish path
 
-2. **Run Summary Share**  
-   - Death screen `#btn-share`  
-   - Text: `Urr Jaa! — score N · best B` or with `(Mode)` when not Classic  
-   - `navigator.share` → else clipboard + toast “Copied share text” · offline OK  
+## Gate and ship prerequisite
 
-3. **Home A2HS tip**  
-   - Inside `#screen-start` only (hidden with other panels)  
-   - EN Add to Home Screen + Roman Urdu one-liner  
-   - Dismiss: `sessionStorage` key `urrjaa:a2hs`  
-
-4. **Docs** — STATUS / README path / this HANDOFF; patch bump + SW cache bump  
-
-## Out of scope (unchanged)
-New birds/areas/seasonals, real AdMob, accounts, live seasons, `todayKey` PKT force.
+- Prior **v3.5.2 QA PASS** and **Security PASS_WITH_NOTES — CLEAR for 3.5.2** remain recorded.
+- This 3.5.3 build-web delta is **READY_FOR_QA**.
+- `docs/.nojekyll` must remain present after `npm run build:web` before Pages publish.
+- No release tags amended and no GitHub push performed.
 
 ## Verify
+
 ```bash
+npm run build:web
+ test -f docs/.nojekyll
 npm run check
 npm run smoke
-npm run build:web
 ```
 
 ## Key paths
-- `js/storage.js` — mission allowlist  
-- `js/game.js` — refreshMissions DOM hygiene · shareRunSummary · updateA2hsTip  
-- `index.html` — `#btn-share` · `#a2hs`  
-- `css/style.css` — `.a2hs`  
-- `sw.js` — `urrjaa-v14-20260928`  
+
+- `scripts/build-web.js` — `.nojekyll` preservation and write-after-build
+- `sw.js` — `urrjaa-v15-20260928`
+- `package.json` — `3.5.3-urrjaa`
 - `STATUS.md` · this `HANDOFF.md`
