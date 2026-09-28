@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.22.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
+ * Urr Jaa! v3.24.0-urrjaa — localStorage: scores, coins, unlocks, seasonals, streak, missions, fragments, album, gift boxes, Mystery Rewards + spin history.
  * Offline only. Prefix kept flappy-tap: for save continuity.
  */
 (function (global) {
@@ -29,6 +29,9 @@
     sensitivity: PREFIX + 'sensitivity',
     reduceMotion: PREFIX + 'reduce-motion',
     largeButtons: PREFIX + 'large-buttons',
+    practiceGhostOpacity: PREFIX + 'practice-ghost-opacity',
+    coachDone: PREFIX + 'coach-done',
+    coachStep: PREFIX + 'coach-step',
     haptics: PREFIX + 'haptics',
     unlockedSkins: PREFIX + 'unlocked-skins',
     coins: PREFIX + 'coins',
@@ -936,6 +939,22 @@
   /** 3.22 a11y: larger tap targets. */
   function isLargeButtons() { return get(KEYS.largeButtons, '0') === '1'; }
   function setLargeButtons(on) { set(KEYS.largeButtons, on ? '1' : '0'); }
+  /** 3.24: Practice ghost opacity 0.15–0.85 (default 0.38). */
+  function getPracticeGhostOpacity() {
+    const n = parseFloat(get(KEYS.practiceGhostOpacity, '0.38'));
+    if (isNaN(n)) return 0.38;
+    return Math.max(0.15, Math.min(0.85, n));
+  }
+  function setPracticeGhostOpacity(n) {
+    const v = Math.max(0.15, Math.min(0.85, parseFloat(n) || 0.38));
+    set(KEYS.practiceGhostOpacity, v.toFixed(2));
+    return v;
+  }
+  /** 3.24: first-run coach marks completion. */
+  function isCoachDone() { return get(KEYS.coachDone, '0') === '1'; }
+  function setCoachDone(on) { set(KEYS.coachDone, on ? '1' : '0'); }
+  function getCoachStep() { return Math.max(0, parseInt(get(KEYS.coachStep, '0'), 10) || 0); }
+  function setCoachStep(n) { set(KEYS.coachStep, String(Math.max(0, n | 0))); return getCoachStep(); }
   function getHaptics() { return get(KEYS.haptics, '1') === '1'; }
   function setHaptics(on) { set(KEYS.haptics, on ? '1' : '0'); }
   function getVoicePack() { return get(KEYS.voicePack, '1') === '1'; }
@@ -1181,6 +1200,7 @@
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
     isMuted, setMuted, isQuietNight, setQuietNight, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
+    getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,
     getHaptics, setHaptics, getVoicePack, setVoicePack,
     getUnlockedSkins, isSkinUnlocked, unlockSkin,
     getCoins, setCoins, addCoins, spendCoins,

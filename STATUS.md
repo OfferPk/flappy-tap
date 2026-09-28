@@ -1,5 +1,24 @@
 # Urr Jaa! STATUS
 
+## Current: **3.24.0-urrjaa** (2026-09-28 PKT)
+
+### This pack (NEW vs 3.11–3.23)
+- **First-run coach marks** — 4-step tips (flap → pipes → coins → HUD) with Skip/Got it
+- **Magnet pull VFX** — dual rings, pull beams to coins, swirl motes (throttled)
+- **Shield bubble shimmer** — soft fill + rotating specular arcs
+- **Practice ghost opacity** — Settings slider 0.15–0.85
+- **Micro-perf** — empty entity skip, single particleBudget read, magnet trail throttle
+- KEEP ALL ≤3.23 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v33-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.24.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.24.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.23.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.22)

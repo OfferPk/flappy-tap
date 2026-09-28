@@ -48,10 +48,22 @@
       <button id="btn-mute" class="icon-btn" type="button" aria-label="Toggle sound" title="Sound">🔊</button>
     </div>
 
+    <!-- 3.24 first-run coach marks -->
+    <div id="coach-marks" class="coach-marks" hidden role="dialog" aria-label="Quick tips">
+      <div class="coach-card">
+        <p id="coach-text" class="coach-text">Tap to flap!</p>
+        <div id="coach-dots" class="coach-dots" aria-hidden="true"></div>
+        <div class="coach-actions">
+          <button id="btn-coach-skip" class="btn ghost btn-sm" type="button">Skip</button>
+          <button id="btn-coach-next" class="btn primary btn-sm" type="button">Got it</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.23.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.24.0-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -317,9 +329,15 @@
           <option value="high">High</option>
         </select>
         <p class="setting-hint">Scales celebration confetti (milestones, claims, records)</p>
+        <label class="setting-row" for="ghost-opacity-slider">
+          <span>Practice ghost opacity</span>
+          <span id="ghost-opacity-value">0.38</span>
+        </label>
+        <input id="ghost-opacity-slider" type="range" min="0.15" max="0.85" step="0.05" value="0.38" aria-label="Practice ghost opacity" />
+        <p class="setting-hint">How visible the Practice mode ghost guide is</p>
       </div>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.23.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.24.0-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -385,6 +403,7 @@
           <li><strong>3.21:</strong> pause blur · coin rain on records · one-life heart break · clear spin history · iOS PWA status bar.</li>
           <li><strong>3.22:</strong> no double-tap zoom · boot progress % · seasonal window hint · Larger buttons (a11y).</li>
           <li><strong>3.23:</strong> reduced-motion respect · score-card screenshot share · bird shadow · landing dust · credits in Settings.</li>
+          <li><strong>3.24:</strong> first-run coach marks · magnet pull VFX · shield shimmer · practice ghost opacity · micro-perf.</li>
           <li><strong>Close (X):</strong> top-right on every panel · Esc closes too.</li>
           <li><strong>Settings:</strong> Sound mute ≠ Desi voice — toggle voice separately.</li>
           <li><strong>Collection:</strong> unlock birds (Mynah, Bulbul, Cheel, Mor…), areas (Hunza, Gwadar, Canal…) with coins or high scores.</li>

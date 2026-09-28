@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.23.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.24.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -85,6 +85,10 @@
   let bossPulse = 0;
   let perfectRailFlash = 0; // 0–1 visual after PERFECT
   let practiceGhost = null; // {x,y,rot} for Practice mode guide
+  let practiceGhostOpacity = 0.38; // 3.24 Settings
+  let coachStep = 0;
+  let coachActive = false;
+  let magnetPullAcc = 0; // 3.24 VFX throttle
 
 
 
@@ -216,6 +220,13 @@
   const quietNightChk = document.getElementById('quiet-night-toggle');
   const confettiIntensitySel = document.getElementById('confetti-intensity');
   const largeButtonsChk = document.getElementById('large-buttons-toggle');
+  const ghostOpacitySlider = document.getElementById('ghost-opacity-slider');
+  const ghostOpacityValueEl = document.getElementById('ghost-opacity-value');
+  const coachMarksEl = document.getElementById('coach-marks');
+  const coachTextEl = document.getElementById('coach-text');
+  const coachDotsEl = document.getElementById('coach-dots');
+  const btnCoachNext = document.getElementById('btn-coach-next');
+  const btnCoachSkip = document.getElementById('btn-coach-skip');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -1275,7 +1286,7 @@
     x.fillText('offerpk.github.io/flappy-tap', 360, 740);
     x.fillStyle = '#64748b';
     x.font = '18px system-ui, sans-serif';
-    x.fillText('Offline one-tap fly · v3.23.0-urrjaa', 360, 780);
+    x.fillText('Offline one-tap fly · v3.24.0-urrjaa', 360, 780);
     return c;
   }
 
@@ -1440,6 +1451,7 @@
     stopGaragePreview();
     setPauseBlur(false);
     state = 'menu';
+    hideCoach();
     hideAllScreens();
     screenStart.hidden = false;
     hud.hidden = true;
@@ -1699,6 +1711,73 @@
       FTStorage.bumpRunCount();
       updateBestUI();
     }
+  }
+
+
+  /* ——— 3.24 first-run coach marks ——— */
+  var COACH_STEPS = [
+    { id: 'flap', text: '👆 Tap or press Space to flap — keep flapping!' },
+    { id: 'pipes', text: '🕊 Fly through the gaps between pipes' },
+    { id: 'coins', text: '🪙 Grab coins & power-ups in the gaps' },
+    { id: 'hud', text: '⏸ Pause & 🔊 Mute live in the top corners' }
+  ];
+
+  function shouldShowCoach() {
+    if (!isForgivingMode()) return false;
+    if (FTStorage.isCoachDone && FTStorage.isCoachDone()) return false;
+    var rc = FTStorage.getRunCount ? FTStorage.getRunCount() : 99;
+    return rc <= 5;
+  }
+
+  function renderCoachDots() {
+    if (!coachDotsEl) return;
+    var html = '';
+    for (var i = 0; i < COACH_STEPS.length; i++) {
+      html += '<span class="coach-dot' + (i === coachStep ? ' active' : (i < coachStep ? ' done' : '')) + '"></span>';
+    }
+    coachDotsEl.innerHTML = html;
+  }
+
+  function showCoachStep() {
+    if (!coachMarksEl || !coachTextEl) return;
+    if (coachStep >= COACH_STEPS.length) {
+      finishCoach();
+      return;
+    }
+    coachActive = true;
+    coachMarksEl.hidden = false;
+    coachMarksEl.classList.toggle('coach-hud', COACH_STEPS[coachStep].id === 'hud');
+    coachTextEl.textContent = COACH_STEPS[coachStep].text;
+    renderCoachDots();
+    if (btnCoachNext) btnCoachNext.textContent = coachStep >= COACH_STEPS.length - 1 ? 'Finish' : 'Got it';
+  }
+
+  function hideCoach() {
+    coachActive = false;
+    if (coachMarksEl) coachMarksEl.hidden = true;
+  }
+
+  function finishCoach() {
+    hideCoach();
+    if (FTStorage.setCoachDone) FTStorage.setCoachDone(true);
+    if (FTStorage.setCoachStep) FTStorage.setCoachStep(COACH_STEPS.length);
+    showToast("You're ready — Urr Jaa!", 1400);
+  }
+
+  function advanceCoach(fromFlap) {
+    if (!coachActive) return;
+    if (fromFlap && COACH_STEPS[coachStep] && COACH_STEPS[coachStep].id !== 'flap') return;
+    coachStep += 1;
+    if (FTStorage.setCoachStep) FTStorage.setCoachStep(coachStep);
+    if (coachStep >= COACH_STEPS.length) finishCoach();
+    else showCoachStep();
+  }
+
+  function maybeStartCoach(fromContinue) {
+    if (fromContinue || !shouldShowCoach()) { hideCoach(); return; }
+    coachStep = (FTStorage.getCoachStep && FTStorage.getCoachStep()) || 0;
+    if (coachStep >= COACH_STEPS.length) { finishCoach(); return; }
+    showCoachStep();
   }
 
   function startRun(fromContinue, mode) {
@@ -2761,6 +2840,7 @@
     }
     bird.alive = false;
     state = 'dying';
+    hideCoach();
     hitThisRun = true;
     coinCombo = 0;
     nearMissStreak = 0;
@@ -3012,7 +3092,8 @@
       }
       if (pt.life <= 0) particles.splice(i, 1);
     }
-    if (particles.length > particleBudget()) particles.splice(0, particles.length - particleBudget());
+    var _pCap = particleBudget(); // 3.24 micro-perf: one budget read
+    if (particles.length > _pCap) particles.splice(0, particles.length - _pCap);
 
     for (var si = scorePops.length - 1; si >= 0; si--) {
       var sp = scorePops[si];
@@ -3218,15 +3299,26 @@
         if (dist < 140) {
           c.x += (cdx / dist) * 240 * sdt;
           c.y += (cdy / dist) * 240 * sdt;
-          // 3.13 magnet suction trail
-          if (!reduceMotion && rng() < 0.35) {
+          // 3.13/3.24 magnet suction trail (throttled micro-perf)
+          magnetPullAcc += sdt;
+          if (!reduceMotion && magnetPullAcc > 0.045) {
+            magnetPullAcc = 0;
             particles.push({
               x: c.x, y: c.y,
-              vx: (cdx / dist) * 40, vy: (cdy / dist) * 40,
-              life: 0.25, max: 0.35,
+              vx: (cdx / dist) * 55, vy: (cdy / dist) * 55,
+              life: 0.28, max: 0.4,
               color: rng() < 0.5 ? '#f9a8d4' : '#ffd93d',
-              r: 1.6 + rng() * 1.2,
+              r: 1.8 + rng() * 1.4,
               kind: 'trail'
+            });
+            // pull swirl mote toward bird
+            particles.push({
+              x: c.x + (rng() - 0.5) * 6, y: c.y + (rng() - 0.5) * 6,
+              vx: (cdx / dist) * 90, vy: (cdy / dist) * 90,
+              life: 0.2, max: 0.3,
+              color: '#ec4899',
+              r: 1.2 + rng(),
+              kind: 'spark'
             });
           }
         } else {
@@ -3702,11 +3794,38 @@
 
   function drawShieldAura() {
     if (!bird || !shieldActive) return;
+    var t = performance.now() / 1000;
+    var R = Math.max(bird.w, bird.h) * 0.75 + 8;
     ctx.save();
-    ctx.strokeStyle = 'rgba(120,210,255,0.75)';
-    ctx.lineWidth = 2.5;
+    // 3.24: soft bubble fill + shimmer arcs
+    var g = ctx.createRadialGradient(bird.x - 5, bird.y - 7, 2, bird.x, bird.y, R);
+    g.addColorStop(0, 'rgba(186,230,253,0.28)');
+    g.addColorStop(0.55, 'rgba(56,189,248,0.14)');
+    g.addColorStop(1, 'rgba(14,165,233,0.04)');
+    ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(bird.x, bird.y, Math.max(bird.w, bird.h) * 0.75 + 6, 0, Math.PI * 2);
+    ctx.arc(bird.x, bird.y, R, 0, Math.PI * 2);
+    ctx.fill();
+    if (!reduceMotion) {
+      for (var si = 0; si < 3; si++) {
+        var a0 = t * 2.4 + si * 2.094;
+        ctx.strokeStyle = 'rgba(224,242,254,' + (0.4 + 0.4 * Math.sin(t * 5 + si)).toFixed(3) + ')';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(bird.x, bird.y, R - 2, a0, a0 + 0.85);
+        ctx.stroke();
+      }
+      // specular glint
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.35 + 0.25 * Math.sin(t * 7)).toFixed(3) + ')';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(bird.x - R * 0.25, bird.y - R * 0.35, R * 0.45, -0.8, 0.4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(120,210,255,0.88)';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.arc(bird.x, bird.y, R, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
@@ -3830,11 +3949,12 @@
   function drawPracticeGhost() {
     if (!isPractice() || state !== 'playing' || !practiceGhost || reduceMotion) return;
     ctx.save();
-    ctx.globalAlpha = 0.38;
+    var opa = Math.max(0.15, Math.min(0.85, practiceGhostOpacity || 0.38));
+    ctx.globalAlpha = opa;
     FTSkins.draw(ctx, birdId, practiceGhost.x, practiceGhost.y, practiceGhost.rot, 0.92, {
       vehicle: 'none', hat: 'none', reduceMotion: true, wingFlap: Math.sin(performance.now() / 120) * 0.4
     });
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = Math.min(0.85, opa + 0.17);
     ctx.strokeStyle = 'rgba(125,211,252,0.7)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 3]);
@@ -3852,14 +3972,48 @@
   function drawMagnetAura() {
     if (!bird || performance.now() >= magnetUntil) return;
     var t = performance.now() / 1000;
+    var rem = Math.max(0, Math.min(1, (magnetUntil - performance.now()) / 4000));
+    var pulse = 38 + Math.sin(t * 6) * 4;
     ctx.save();
-    ctx.strokeStyle = 'rgba(249,168,212,' + (0.35 + 0.25 * Math.sin(t * 8)).toFixed(3) + ')';
-    ctx.lineWidth = 2;
+    // 3.24: dual pulse rings
+    ctx.strokeStyle = 'rgba(249,168,212,' + (0.3 + 0.28 * Math.sin(t * 8) * rem).toFixed(3) + ')';
+    ctx.lineWidth = 2.2;
     ctx.setLineDash([5, 4]);
     ctx.beginPath();
-    ctx.arc(bird.x, bird.y, 38 + Math.sin(t * 6) * 3, 0, Math.PI * 2);
+    ctx.arc(bird.x, bird.y, pulse, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(236,72,153,' + (0.18 * rem).toFixed(3) + ')';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(bird.x, bird.y, pulse + 10 + Math.sin(t * 5) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // pull beams to nearby coins
+    if (!reduceMotion && coins.length) {
+      for (var mi = 0; mi < coins.length; mi++) {
+        var c = coins[mi];
+        if (c.taken) continue;
+        var dx = c.x - bird.x, dy = c.y - bird.y;
+        var d = Math.sqrt(dx * dx + dy * dy) || 1;
+        if (d >= 140 || d < 10) continue;
+        var a = (0.2 + 0.45 * (1 - d / 140) * rem);
+        ctx.strokeStyle = 'rgba(249,168,212,' + a.toFixed(3) + ')';
+        ctx.lineWidth = 1.4 + (1 - d / 140);
+        ctx.beginPath();
+        ctx.moveTo(bird.x, bird.y);
+        ctx.quadraticCurveTo(bird.x + dx * 0.45, bird.y + dy * 0.45 - 10, c.x, c.y);
+        ctx.stroke();
+        // tip spark
+        ctx.fillStyle = 'rgba(255,217,61,' + (a * 0.9).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.fillStyle = 'rgba(251,207,232,0.9)';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('🧲', bird.x, bird.y - pulse - 6);
     ctx.restore();
   }
 
@@ -3874,10 +4028,11 @@
     drawSky();
     pipes.forEach(drawPipe);
     drawPerfectRails();
-    traffic.forEach(function (t) { FTSkins.drawTraffic(ctx, t); });
-    powerups.forEach(drawPowerup);
-    coins.forEach(drawCoin);
-    boxes.forEach(drawBox);
+    // 3.24 micro-perf: skip empty entity passes
+    if (traffic.length) traffic.forEach(function (t) { FTSkins.drawTraffic(ctx, t); });
+    if (powerups.length) powerups.forEach(drawPowerup);
+    if (coins.length) coins.forEach(drawCoin);
+    if (boxes.length) boxes.forEach(drawBox);
     drawGround();
     drawParticles();
     drawWeatherFX();
@@ -3954,7 +4109,7 @@
   /** 3.18: shared flap path — touchstart first (lower latency), pointer as fallback. */
   function tryFlapFromInput(e) {
     if (e.target && e.target.closest && e.target.closest(
-      'button, .skin-card, #ad-stub-modal, .screen, label, input, .tab-btn, .mission-card, .chip, .garage-filter, .power-chip, .icon-btn'
+      'button, .skin-card, #ad-stub-modal, .screen, label, input, .tab-btn, .mission-card, .chip, .garage-filter, .power-chip, .icon-btn, #coach-marks'
     )) return false;
     var now = performance.now();
     // 18ms debounce: blocks touch+pointer double-fire without delaying first tap
@@ -3962,6 +4117,7 @@
     lastFlapTouchTs = now;
     if (e.cancelable) e.preventDefault();
     flap();
+    if (coachActive) advanceCoach(true);
     return true;
   }
   function onPointer(e) {
@@ -4244,6 +4400,11 @@
       confettiIntensitySel.value = FTStorage.getConfettiIntensity();
     }
     if (largeButtonsChk) largeButtonsChk.checked = !!(FTStorage.isLargeButtons && FTStorage.isLargeButtons());
+    if (ghostOpacitySlider) {
+      practiceGhostOpacity = (FTStorage.getPracticeGhostOpacity && FTStorage.getPracticeGhostOpacity()) || 0.38;
+      ghostOpacitySlider.value = String(practiceGhostOpacity);
+      if (ghostOpacityValueEl) ghostOpacityValueEl.textContent = practiceGhostOpacity.toFixed(2);
+    }
   });
   if (btnSettingsClose) btnSettingsClose.addEventListener('click', function () { screenSettings.hidden = true; });
   var btnHapticPreview = document.getElementById('btn-haptic-preview');
@@ -4286,6 +4447,20 @@
     if (FTStorage.setLargeButtons) FTStorage.setLargeButtons(on);
     applyLargeButtons(on);
     showToast(on ? 'Larger buttons ON' : 'Larger buttons OFF', 1000);
+  });
+  if (ghostOpacitySlider) ghostOpacitySlider.addEventListener('input', function () {
+    practiceGhostOpacity = FTStorage.setPracticeGhostOpacity
+      ? FTStorage.setPracticeGhostOpacity(ghostOpacitySlider.value)
+      : parseFloat(ghostOpacitySlider.value) || 0.38;
+    if (ghostOpacityValueEl) ghostOpacityValueEl.textContent = practiceGhostOpacity.toFixed(2);
+  });
+  if (btnCoachNext) btnCoachNext.addEventListener('click', function (e) {
+    e.stopPropagation();
+    advanceCoach(false);
+  });
+  if (btnCoachSkip) btnCoachSkip.addEventListener('click', function (e) {
+    e.stopPropagation();
+    finishCoach();
   });
   if (voiceToggleChk) voiceToggleChk.addEventListener('change', function () {
     var on = !!voiceToggleChk.checked;
