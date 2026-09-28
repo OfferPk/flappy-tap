@@ -9,7 +9,7 @@
 
 ## Sync
 - Fetched/merged `origin/main` before work (already up to date @ 3.10.0).
-- Shipped: tag `v3.11.0-urrjaa` · Pages `docs/` · release zip
+- Shipped: commit `a12cdd2` · tag `v3.11.0-urrjaa` · Pages `docs/` · release zip
 
 ## ADD — v3.11.0 polish pack
 - [x] Classic feel smoother (gaps / gravity / LUCKY / early ramp) — Hard untouched path
