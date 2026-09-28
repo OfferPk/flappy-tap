@@ -1,5 +1,24 @@
 # Urr Jaa! STATUS
 
+## Current: **3.30.0-urrjaa** (2026-09-28 PKT) · milestone
+
+### This pack (NEW vs 3.11–3.29)
+- **Changelog-lite** in Settings (collapsible recent versions)
+- **Flap whoosh juice** — soft expanding ring on every flap (gold when combo ≥5)
+- **Guide refresh** — Quick tips 3.23–3.30 (EN / Roman Urdu / Urdu)
+- **Performance pass** — adaptive trails, parallax/weather skips, power-HUD DOM fingerprint, empty score-pop skip
+- **Bugfix** — gift→spin toast throttle
+- KEEP ALL ≤3.29 incl. **15s Mystery Spin once**, Close (X), …
+
+SW cache: `urrjaa-v39-20260928`
+
+**Ship commit:** _(pending)_ · tag `v3.30.0-urrjaa`  
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.30.0-urrjaa  
+**Live:** https://offerpk.github.io/flappy-tap/
+
+
+
+---
 ## Current: **3.29.0-urrjaa** (2026-09-28 PKT)
 
 ### This pack (NEW vs 3.11–3.28)

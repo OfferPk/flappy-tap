@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.29.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.30.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -372,9 +372,15 @@
         maybeShowSpinUnlockPopup();
       }
     } else if (state === 'playing') {
-      // 3.29: mid-run gift→spin progress toast
+      // 3.29/3.30: mid-run gift→spin progress (throttle spam)
       var shown = toward === 0 ? per : toward;
-      showToast('🎁 ' + shown + ' / ' + per + ' to next spin', 1100, 'gift');
+      var msg = '🎁 ' + shown + ' / ' + per + ' to next spin';
+      var tnow = performance.now();
+      if (!noteGiftAdd._lastToastAt || tnow - noteGiftAdd._lastToastAt > 450 || noteGiftAdd._lastMsg !== msg) {
+        noteGiftAdd._lastToastAt = tnow;
+        noteGiftAdd._lastMsg = msg;
+        showToast(msg, 1100, 'gift');
+      }
     }
     return total;
   }
@@ -777,6 +783,9 @@
     if (isNoCoin()) bits.push({ t: '🚫🪙', k: 'nocoin', exp: false });
     if (isOneLife()) bits.push({ t: '1️⃣', k: 'onelife', exp: false });
     if (bits.length) {
+      var fp = bits.map(function (b) { return b.t + (b.exp ? '!' : ''); }).join('|');
+      if (updatePowerHud._fp === fp && !powerHudEl.hidden) return; // 3.30 perf: skip DOM rebuild
+      updatePowerHud._fp = fp;
       powerHudEl.hidden = false;
       powerHudEl.innerHTML = '';
       bits.forEach(function (b) {
@@ -786,7 +795,10 @@
         chip.textContent = b.t;
         powerHudEl.appendChild(chip);
       });
-    } else powerHudEl.hidden = true;
+    } else {
+      updatePowerHud._fp = '';
+      powerHudEl.hidden = true;
+    }
   }
 
   function refreshDailyCountdown() {
@@ -1981,6 +1993,21 @@
     if (!animId) loop(performance.now());
   }
 
+  /** 3.30 feel juice: soft expanding whoosh ring on flap. */
+  function spawnFlapWhoosh() {
+    if (!bird || reduceMotion) return;
+    particles.push({
+      x: bird.x, y: bird.y + 4,
+      vx: 0, vy: 0,
+      life: 0.28, max: 0.28,
+      color: combo >= 5 ? 'rgba(251,191,36,0.55)' : 'rgba(125,211,252,0.5)',
+      r: 10,
+      kind: 'ring',
+      grow: 48 + Math.min(24, combo * 2)
+    });
+    trimParticles();
+  }
+
   function spawnFlapFeathers() {
     if (!bird || reduceMotion) return;
     var n = 3;
@@ -2012,6 +2039,7 @@
       FTAudio.flap();
       triggerChirpMouth('tap');
       spawnFlapFeathers();
+      spawnFlapWhoosh();
       return;
     }
     if (state !== 'playing' || !bird || !bird.alive) return;
@@ -2022,6 +2050,7 @@
     FTAudio.flap();
     triggerChirpMouth('tap');
     spawnFlapFeathers();
+    spawnFlapWhoosh();
   }
 
   function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
@@ -3647,8 +3676,12 @@
     }
     if (envFade > 0) envFade = Math.max(0, envFade - sdt * 1.35);
 
+    // 3.30 perf: adaptive trail interval when particle pressure high
     trailAcc += sdt;
-    if (trailAcc >= TRAIL_INTERVAL) { trailAcc = 0; spawnTrailParticle(); }
+    var trailGap = TRAIL_INTERVAL;
+    if (particles.length > particleBudget() * 0.7) trailGap = TRAIL_INTERVAL * 2.2;
+    else if (reduceMotion) trailGap = TRAIL_INTERVAL * 3;
+    if (trailAcc >= trailGap) { trailAcc = 0; spawnTrailParticle(); }
 
     maybeSpawnTraffic();
     for (var ti = traffic.length - 1; ti >= 0; ti--) {
@@ -4166,6 +4199,7 @@
   }
 
   function drawScorePops() {
+    if (!scorePops.length) return; // 3.30 perf
     scorePops.forEach(function (sp) {
       var a = Math.max(0, sp.life / sp.max);
       var sc = sp.scale || 1;
@@ -4523,7 +4557,8 @@
       ctx.translate(-cx, -cy);
     }
     drawSky();
-    drawPipeParallaxMicro();
+    // 3.30 perf: skip parallax under particle pressure / reduce-motion
+    if (!reduceMotion && particles.length < particleBudget() * 0.85) drawPipeParallaxMicro();
     pipes.forEach(drawPipe);
     drawPerfectRails();
     // 3.24 micro-perf: skip empty entity passes
@@ -4533,7 +4568,8 @@
     if (boxes.length) boxes.forEach(drawBox);
     drawGround();
     drawParticles();
-    drawWeatherFX();
+    // 3.30 perf: weather FX only while actively flying / dying
+    if (state === 'playing' || state === 'dying' || state === 'paused') drawWeatherFX();
     drawPracticeGhost();
     if (bird) {
       drawSlowMoVFX();

@@ -2627,3 +2627,34 @@ html.reduce-motion .screen.pause-screen:not([hidden]) {
     animation: none !important;
   }
 }
+
+
+/* ——— v3.30: changelog-lite ——— */
+.settings-changelog {
+  margin: 12px 0 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+  font-size: 0.82rem;
+}
+.settings-changelog summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #4ecdc4;
+  list-style: none;
+}
+.settings-changelog summary::-webkit-details-marker { display: none; }
+.settings-changelog summary::before {
+  content: '▸ ';
+  color: #94a3b8;
+}
+.settings-changelog[open] summary::before { content: '▾ '; }
+.changelog-list {
+  margin: 8px 0 4px;
+  padding-left: 1.1rem;
+  line-height: 1.45;
+}
+.changelog-list li { margin: 4px 0; }
+.changelog-list .muted { color: var(--muted); list-style: none; margin-left: -0.6rem; font-size: 0.75rem; }
