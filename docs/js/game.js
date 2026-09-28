@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.6.0-urrjaa — character art polish, juice/toast/Mystery/Guide feel; keeps ≤3.5.2 features.
+ * Urr Jaa! v3.7.0-urrjaa — pseudo-3D wing/head anim + vehicle depth; keeps ≤3.6 features.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
  * KEEP all v3.2 features — polish difficulty/collision/voice only.
  */
@@ -667,12 +667,44 @@
   function cosmeticsOpts() {
     var sx = squash < 1 ? 1.12 : (squash > 1 ? 0.92 : 1);
     var sy = squash;
+    var t = performance.now() / 1000;
+    var wingFlap = 0;
+    var headTilt = 0;
+    var wheelRot = 0;
+    var vehBob = 0;
+    if (!reduceMotion) {
+      var vy = (bird && typeof bird.vy === 'number') ? bird.vy : 0;
+      var rising = Math.max(0, -vy / 380);
+      var falling = Math.max(0, vy / 520);
+      // Burst flap after tap (squash compress) + continuous flight flap
+      var burst = (squash < 0.95) ? 1 : 0;
+      var flapHz = 7 + rising * 12 + burst * 16;
+      var flapAmp = 0.28 + rising * 0.55 + burst * 0.45;
+      if (state === 'playing' || state === 'dying') {
+        wingFlap = Math.sin(t * flapHz) * flapAmp;
+        // Independent near/far already handled in skins; add glide tuck when diving
+        if (falling > 0.35 && burst === 0) wingFlap *= 0.45;
+        headTilt = Math.max(-0.5, Math.min(0.55, vy / 480));
+      } else {
+        // Menu idle: gentle wing + head bob
+        wingFlap = Math.sin(t * 5.5) * 0.22;
+        headTilt = Math.sin(t * 2.2) * 0.1;
+      }
+      wheelRot = t * (4 + (currentSpeed || 148) / 40);
+      vehBob = Math.sin(t * 7) * 0.9;
+    }
     return {
       vehicle: vehicleId,
       hat: hatId,
       giant: false,
       squashX: reduceMotion ? 1 : sx,
-      squashY: reduceMotion ? 1 : sy
+      squashY: reduceMotion ? 1 : sy,
+      wingFlap: wingFlap,
+      headTilt: headTilt,
+      animT: t,
+      wheelRot: wheelRot,
+      vehBob: vehBob,
+      reduceMotion: reduceMotion
     };
   }
 
@@ -1182,6 +1214,25 @@
     if (!animId) loop(performance.now());
   }
 
+  function spawnFlapFeathers() {
+    if (!bird || reduceMotion) return;
+    var n = 3;
+    var cols = ['#fff', '#ffd93d', '#c4a35a', '#8b6914'];
+    for (var i = 0; i < n; i++) {
+      particles.push({
+        x: bird.x - 6 + (Math.random() - 0.5) * 10,
+        y: bird.y + (Math.random() - 0.5) * 8,
+        vx: -30 - Math.random() * 40,
+        vy: -20 - Math.random() * 50,
+        life: 0.28, max: 0.4,
+        color: cols[i % cols.length],
+        r: 1.6 + Math.random() * 1.4,
+        kind: 'spark'
+      });
+    }
+    trimParticles();
+  }
+
   function flap() {
     var sens = sensitivity;
     var pass = birdPass();
@@ -1192,6 +1243,7 @@
       flapCooldown = FLAP_COOLDOWN;
       squashTarget = 0.72;
       FTAudio.flap();
+      spawnFlapFeathers();
       return;
     }
     if (state !== 'playing' || !bird || !bird.alive) return;
@@ -1200,6 +1252,7 @@
     flapCooldown = FLAP_COOLDOWN;
     squashTarget = 0.68;
     FTAudio.flap();
+    spawnFlapFeathers();
   }
 
   function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {

@@ -1,8 +1,29 @@
-# HANDOFF — Urr Jaa! 3.6.0-urrjaa (IMPROVE post–3.5.1)
+# HANDOFF — Urr Jaa! 3.7.0-urrjaa (pseudo-3D characters)
+
+**Status:** READY_FOR_QA  
+**Version:** 3.7.0-urrjaa  
+**SW:** urrjaa-v16-20260928  
+**Live:** https://offerpk.github.io/flappy-tap/  
+**Path:** `/workspace/games/flappy-tap`
+
+## What landed (3.7.0)
+1. Pseudo-3D birds — flapping wings (independent near/far), moveable head tilt/bob from velocity
+2. Pseudo-3D vehicles — depth shade, perspective, wheel spin, canopy/suspension bob
+3. Hitboxes: Classic forgiving body-only (unchanged)
+4. Light flap feather particles
+5. All ≤3.6 features kept (Mystery/Guide/voice/modes/Share/A2HS)
+
+## Verify
+```bash
+npm run check && npm run smoke && npm run build:web && npm run pack:windows
+```
+
+---
+# HANDOFF — Urr Jaa! 3.7.0-urrjaa (IMPROVE post–3.5.1)
 
 **Status:** READY_FOR_QA (improve delta)  
-**Version:** 3.6.0-urrjaa  
-**SW:** urrjaa-v15-20260928  
+**Version:** 3.7.0-urrjaa  
+**SW:** urrjaa-v16-20260928  
 **Prior:** v3.5.1 QA PASS + Security PASS_WITH_NOTES (F1 now closed)  
 **Live (after Pages deploy):** https://offerpk.github.io/flappy-tap/  
 **Local:** `/workspace/factory/projects/flappy-tap`  
@@ -42,5 +63,5 @@ npm run build:web
 - `js/game.js` — refreshMissions DOM hygiene · shareRunSummary · updateA2hsTip  
 - `index.html` — `#btn-share` · `#a2hs`  
 - `css/style.css` — `.a2hs`  
-- `sw.js` — `urrjaa-v15-20260928`  
+- `sw.js` — `urrjaa-v16-20260928`  
 - `STATUS.md` · this `HANDOFF.md`

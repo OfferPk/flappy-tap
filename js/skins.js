@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.6.0-urrjaa — richer bird/vehicle silhouettes; seasonal packs kept.
+ * Urr Jaa! v3.7.0-urrjaa — pseudo-3D birds (flap wings + head tilt) & vehicles; hitboxes unchanged.
  * Canvas-drawn; forgiving hitboxes unchanged.
  */
 (function (global) {
@@ -219,13 +219,37 @@
     falcon: { body: '#7f8c8d', wing: '#566573', beak: '#f39c12', eye: '#111' }
   };
 
-  function drawBirdBody(ctx, id, scale) {
+  function shadeColor(hex, amt) {
+    if (!hex || hex[0] !== '#') return hex || '#888';
+    var h = hex.length === 4
+      ? '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3]
+      : hex;
+    var n = parseInt(h.slice(1), 16);
+    if (isNaN(n)) return hex;
+    var r = Math.max(0, Math.min(255, (n >> 16) + amt));
+    var g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
+    var b = Math.max(0, Math.min(255, (n & 255) + amt));
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
+  /** Pseudo-3D bird: independent flapping wings + head tilt. Visual only — hitbox unchanged. */
+  function drawBirdBody(ctx, id, scale, opts) {
+    opts = opts || {};
     const c = BIRD_COLORS[id] || BIRD_COLORS.sparrow;
     const s = scale == null ? 1 : scale;
+    const wingFlap = opts.wingFlap || 0; // radians-ish, ~-1..1
+    const headTilt = opts.headTilt || 0;
+    const animT = opts.animT || 0;
     ctx.scale(s, s);
 
-    // Tail silhouette first: accessories and feathers stay outside the forgiving body hitbox.
-    ctx.fillStyle = c.wing;
+    // Soft ground shadow (depth cue)
+    ctx.fillStyle = 'rgba(15,23,42,.18)';
+    ctx.beginPath();
+    ctx.ellipse(1, 13, 14, 3.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tail silhouette first (behind body)
+    ctx.fillStyle = shadeColor(c.wing, -18);
     ctx.beginPath();
     if (id === 'cheel' || id === 'falcon') {
       ctx.moveTo(-12, 2); ctx.lineTo(-26, -5); ctx.lineTo(-21, 2); ctx.lineTo(-27, 8); ctx.closePath();
@@ -233,6 +257,12 @@
       ctx.moveTo(-12, 1); ctx.lineTo(-25, -5); ctx.lineTo(-22, 6); ctx.closePath();
     }
     ctx.fill();
+    // Tail depth rim
+    ctx.strokeStyle = 'rgba(255,255,255,.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-14, 0); ctx.lineTo(-22, -2);
+    ctx.stroke();
 
     if (c.tail || id === 'mor') {
       ctx.fillStyle = '#156f78';
@@ -246,13 +276,29 @@
       }
     }
 
-    // Rounded body with outline gives every unlock a crisp silhouette on bright skies.
-    ctx.fillStyle = c.body;
+    // FAR wing (behind body) — opposite phase for independent motion
+    drawWing(ctx, c, -wingFlap * 0.85, true);
+
+    // Body ellipsoid with top-lit 2.5D shading
+    const bodyGrad = ctx.createRadialGradient(-4, -5, 2, 0, 0, 18);
+    bodyGrad.addColorStop(0, shadeColor(c.body, 42));
+    bodyGrad.addColorStop(0.45, c.body);
+    bodyGrad.addColorStop(1, shadeColor(c.body, -38));
+    ctx.fillStyle = bodyGrad;
     ctx.strokeStyle = 'rgba(15,23,42,.48)';
     ctx.lineWidth = 1.4;
     ctx.beginPath(); ctx.ellipse(0, 0, 16, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // Specular rim (left-top)
+    ctx.strokeStyle = 'rgba(255,255,255,.38)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(-2, -3, 11, 7, -0.35, Math.PI * 0.85, Math.PI * 1.55);
+    ctx.stroke();
+    // Belly occlude shadow
+    ctx.fillStyle = 'rgba(15,23,42,.14)';
+    ctx.beginPath(); ctx.ellipse(2, 5, 10, 5, 0.1, 0, Math.PI * 2); ctx.fill();
 
-    // Species markings.
+    // Species markings (body surface)
     if (id === 'sparrow') {
       ctx.fillStyle = '#ead8a6'; ctx.beginPath(); ctx.ellipse(5, 3, 9, 7, -.15, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#6f5124'; ctx.beginPath(); ctx.arc(5, -5, 7, Math.PI, Math.PI * 2); ctx.fill();
@@ -278,37 +324,100 @@
       ctx.fillStyle = 'rgba(93,173,226,.35)'; ctx.beginPath(); ctx.ellipse(-3,-3,8,3,-.25,0,Math.PI*2); ctx.fill();
     }
 
-    // Layered wing and feather bars.
-    ctx.fillStyle = c.wing;
-    ctx.strokeStyle = 'rgba(15,23,42,.35)';
+    // NEAR wing (in front) — primary flap, independent
+    drawWing(ctx, c, wingFlap, false);
+
+    // Moveable head group: tilts / bobs with velocity look-direction
+    ctx.save();
+    ctx.translate(6, -2);
+    ctx.rotate(headTilt);
+    // subtle bob
+    ctx.translate(0, Math.sin(animT * 9) * (opts.reduceMotion ? 0 : 0.6));
+
+    // Head sphere with depth
+    const headGrad = ctx.createRadialGradient(-2, -3, 1, 2, 0, 11);
+    headGrad.addColorStop(0, shadeColor(c.body, 36));
+    headGrad.addColorStop(1, shadeColor(c.body, -22));
+    ctx.fillStyle = headGrad;
+    ctx.beginPath(); ctx.ellipse(4, 0, 9, 8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(15,23,42,.3)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.ellipse(-3, 2, 10, 6, -.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,.42)';
-    ctx.beginPath(); ctx.moveTo(-10,1); ctx.quadraticCurveTo(-3,4,5,2); ctx.moveTo(-8,4); ctx.quadraticCurveTo(-2,7,4,4); ctx.stroke();
+    ctx.stroke();
 
     if (c.crest) {
       ctx.fillStyle = c.crest; ctx.beginPath();
-      if (id === 'bulbul') { ctx.moveTo(-5,-9); ctx.lineTo(-2,-20); ctx.lineTo(3,-10); }
-      else { ctx.moveTo(-5,-9); ctx.lineTo(0,-18); ctx.lineTo(5,-9); }
+      if (id === 'bulbul') { ctx.moveTo(-3,-7); ctx.lineTo(0,-18); ctx.lineTo(5,-8); }
+      else { ctx.moveTo(-3,-7); ctx.lineTo(2,-16); ctx.lineTo(7,-7); }
       ctx.closePath(); ctx.fill();
     }
-    if (c.cheek) { ctx.fillStyle = c.cheek; ctx.beginPath(); ctx.arc(5, 2, 3.5, 0, Math.PI*2); ctx.fill(); }
-    if (c.neck && id !== 'kabootar') { ctx.fillStyle = c.neck; ctx.beginPath(); ctx.ellipse(-1,4,6,4,0,0,Math.PI*2); ctx.fill(); }
+    if (c.cheek) { ctx.fillStyle = c.cheek; ctx.beginPath(); ctx.arc(3, 3, 3.2, 0, Math.PI*2); ctx.fill(); }
 
     if (id === 'owl') {
-      ctx.fillStyle = '#e6d7bd'; ctx.beginPath(); ctx.arc(7,-3,7,0,Math.PI*2); ctx.arc(14,-3,7,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(7,-3,5,0,Math.PI*2); ctx.arc(14,-3,5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = c.pupil || '#111'; ctx.beginPath(); ctx.arc(8,-3,2.2,0,Math.PI*2); ctx.arc(15,-3,2.2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#e6d7bd'; ctx.beginPath(); ctx.arc(1,-1,6.5,0,Math.PI*2); ctx.arc(8,-1,6.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(1,-1,4.5,0,Math.PI*2); ctx.arc(8,-1,4.5,0,Math.PI*2); ctx.fill();
+      // pupils look slightly with tilt
+      const look = headTilt * 3;
+      ctx.fillStyle = c.pupil || '#111'; ctx.beginPath(); ctx.arc(2+look,-1,2,0,Math.PI*2); ctx.arc(9+look,-1,2,0,Math.PI*2); ctx.fill();
     } else {
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(9,-4,4.6,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = c.eye; ctx.beginPath(); ctx.arc(10.5,-4,2.1,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(11.2,-4.8,.7,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(5,-2,4.4,0,Math.PI*2); ctx.fill();
+      const look = headTilt * 2.5;
+      ctx.fillStyle = c.eye; ctx.beginPath(); ctx.arc(6.2+look,-2,2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(6.9+look,-2.7,.65,0,Math.PI*2); ctx.fill();
     }
     if (c.shades) {
-      ctx.fillStyle = '#111'; ctx.fillRect(4,-7,14,5); ctx.fillStyle = '#4ecdc4'; ctx.fillRect(5,-6,5,3); ctx.fillRect(12,-6,5,3);
+      ctx.fillStyle = '#111'; ctx.fillRect(0,-5,13,4.5); ctx.fillStyle = '#4ecdc4'; ctx.fillRect(1,-4,4.5,2.5); ctx.fillRect(7.5,-4,4.5,2.5);
     }
-    ctx.fillStyle = c.beak; ctx.strokeStyle = 'rgba(15,23,42,.35)';
-    ctx.beginPath(); ctx.moveTo(14,0); ctx.lineTo(25,2); ctx.lineTo(14,5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Beak with slight 3D edge
+    ctx.fillStyle = c.beak;
+    ctx.strokeStyle = 'rgba(15,23,42,.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(10,1); ctx.lineTo(20,3); ctx.lineTo(10,5.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = shadeColor(c.beak, 30);
+    ctx.beginPath(); ctx.moveTo(10,1); ctx.lineTo(20,3); ctx.lineTo(10,2.2); ctx.closePath(); ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawWing(ctx, c, flap, far) {
+    ctx.save();
+    // Pivot near shoulder
+    const px = far ? -5 : -2;
+    const py = far ? 0 : 1;
+    ctx.translate(px, py);
+    // Flap rotates around X-ish axis simulated by scaleY + rotate
+    const ang = flap * (far ? 0.55 : 0.9);
+    ctx.rotate(-0.35 + ang * 0.35);
+    const sy = Math.max(0.28, Math.cos(ang));
+    ctx.scale(far ? 0.92 : 1, sy * (far ? 0.88 : 1));
+    if (far) ctx.globalAlpha = 0.72;
+
+    const wingGrad = ctx.createLinearGradient(-12, -6, 8, 8);
+    wingGrad.addColorStop(0, shadeColor(c.wing, far ? -10 : 28));
+    wingGrad.addColorStop(0.55, c.wing);
+    wingGrad.addColorStop(1, shadeColor(c.wing, -40));
+    ctx.fillStyle = wingGrad;
+    ctx.strokeStyle = 'rgba(15,23,42,.4)';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-6, -8, -16, -4);
+    ctx.quadraticCurveTo(-20, 2, -12, 8);
+    ctx.quadraticCurveTo(-4, 7, 2, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Feather bars
+    ctx.strokeStyle = 'rgba(255,255,255,.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-3, -1); ctx.quadraticCurveTo(-10, 1, -15, 0);
+    ctx.moveTo(-2, 2); ctx.quadraticCurveTo(-9, 4, -13, 5);
+    ctx.stroke();
+    // Tip highlight
+    ctx.fillStyle = 'rgba(255,255,255,.22)';
+    ctx.beginPath(); ctx.ellipse(-14, -2, 3, 1.6, -0.4, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
   }
 
   function drawHat(ctx, hatId) {
@@ -414,26 +523,73 @@
     }
   }
 
-  function drawVehicleUnder(ctx, vid) {
+  function drawVehicleUnder(ctx, vid, opts) {
     if (!vid || vid === 'none') return;
+    opts = opts || {};
+    const wheelRot = opts.wheelRot || 0;
+    const bob = opts.vehBob || 0;
+    const animT = opts.animT || 0;
     ctx.save();
-    ctx.translate(0, 14);
-    ctx.scale(0.85, 0.85);
+    ctx.translate(0, 14 + bob);
+    // Slight perspective foreshortening (2.5D)
+    ctx.scale(0.85, 0.82);
+    ctx.transform(1, 0, -0.08, 1, 0, 0);
+
     function wheel(x, y, r) {
-      ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#d0d5dd'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y, r - 1.4, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(x - r + 2, y); ctx.lineTo(x + r - 2, y); ctx.moveTo(x, y - r + 2); ctx.lineTo(x, y + r - 2); ctx.stroke();
+      ctx.save();
+      ctx.translate(x, y);
+      // Tire shadow
+      ctx.fillStyle = 'rgba(15,23,42,.25)';
+      ctx.beginPath(); ctx.ellipse(1.5, 1.5, r, r * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+      // Tire body with depth
+      const wg = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r);
+      wg.addColorStop(0, '#444');
+      wg.addColorStop(1, '#0a0a0a');
+      ctx.fillStyle = wg;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#d0d5dd'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(0, 0, r - 1.4, 0, Math.PI * 2); ctx.stroke();
+      // Spinning spokes
+      ctx.rotate(wheelRot);
+      ctx.strokeStyle = 'rgba(255,255,255,.4)';
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(i * Math.PI / 2) * (r - 2.5), Math.sin(i * Math.PI / 2) * (r - 2.5));
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
+
+    function bodyShade(base, x0, y0, x1, y1) {
+      const g = ctx.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, shadeColor(base, 35));
+      g.addColorStop(0.45, base);
+      g.addColorStop(1, shadeColor(base, -45));
+      return g;
+    }
+
     if (vid === 'rickshaw' || vid === 'chingchi') {
       const body = vid === 'chingchi' ? '#8e44ad' : '#e74c3c';
       const trim = vid === 'chingchi' ? '#f5b041' : '#ffd93d';
-      ctx.fillStyle = body; ctx.strokeStyle = 'rgba(15,23,42,.45)'; ctx.lineWidth = 1.2;
+      const canopyBob = Math.sin(animT * 5) * 1.2;
+      ctx.fillStyle = bodyShade(body, -20, -12, 22, 10);
+      ctx.strokeStyle = 'rgba(15,23,42,.45)'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(-20,-10); ctx.lineTo(14,-10); ctx.quadraticCurveTo(22,-8,22,0); ctx.lineTo(22,8); ctx.lineTo(-20,8); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = 'rgba(173,216,230,.7)'; ctx.fillRect(-8,-8,16,7);
+      // Side depth panel
+      ctx.fillStyle = 'rgba(15,23,42,.18)';
+      ctx.fillRect(-20, 2, 42, 6);
+      ctx.fillStyle = 'rgba(173,216,230,.75)'; ctx.fillRect(-8,-8,16,7);
       ctx.fillStyle = trim; ctx.fillRect(-18,-12,30,3); ctx.fillRect(-18,5,30,2);
-      ctx.fillStyle = '#222'; ctx.fillRect(-20,-8,5,12); // driver cab
-      ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-4,-10); ctx.lineTo(-4,-18); ctx.lineTo(8,-18); ctx.stroke(); // canopy pole
-      ctx.fillStyle = trim; ctx.beginPath(); ctx.ellipse(2,-18,12,3,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#222'; ctx.fillRect(-20,-8,5,12);
+      ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-4,-10); ctx.lineTo(-4,-18 + canopyBob); ctx.lineTo(8,-18 + canopyBob); ctx.stroke();
+      ctx.fillStyle = trim; ctx.beginPath(); ctx.ellipse(2,-18 + canopyBob,12,3,0,0,Math.PI*2); ctx.fill();
+      // Canopy highlight
+      ctx.fillStyle = 'rgba(255,255,255,.28)';
+      ctx.beginPath(); ctx.ellipse(0, -19 + canopyBob, 7, 1.4, 0, 0, Math.PI * 2); ctx.fill();
       wheel(-8, 10, 6); wheel(14, 10, 6);
     } else if (vid === 'cycle' || vid === 'bicycle') {
       const col = vid === 'bicycle' ? '#27ae60' : '#1abc9c';
@@ -446,27 +602,38 @@
       ctx.moveTo(8,-8); ctx.lineTo(14,-4);
       ctx.moveTo(-2,5); ctx.lineTo(-8,-2);
       ctx.stroke();
+      // Frame highlight
+      ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-10, 4); ctx.lineTo(-1, -2); ctx.stroke();
       ctx.fillStyle = '#2c3e50'; ctx.fillRect(-4,-5,8,2.5);
       ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(8,-8); ctx.lineTo(16,-10); ctx.stroke();
     } else if (vid === 'bike' || vid === 'scooty') {
       const body = vid === 'scooty' ? '#e91e63' : '#2c3e50';
-      ctx.fillStyle = body; ctx.strokeStyle = 'rgba(15,23,42,.4)'; ctx.lineWidth = 1.1;
+      ctx.fillStyle = bodyShade(body, -16, -8, 14, 8);
+      ctx.strokeStyle = 'rgba(15,23,42,.4)'; ctx.lineWidth = 1.1;
       ctx.beginPath(); ctx.moveTo(-16,-1); ctx.lineTo(-16,-4); ctx.lineTo(12,-4); ctx.lineTo(14,6); ctx.lineTo(-16,6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(-14, -3, 20, 1.5);
       ctx.fillStyle = '#111'; ctx.fillRect(-4,-8,10,5);
       ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(8,-2); ctx.lineTo(14,-11); ctx.lineTo(18,-9); ctx.stroke();
       wheel(-10, 8, 6); wheel(12, 8, 6);
       if (vid === 'scooty') { ctx.fillStyle = '#fff'; ctx.fillRect(6,-7,5,3); }
     } else if (vid === 'taxi' || vid === 'mehran') {
       const body = vid === 'taxi' ? '#f1c40f' : '#ecf0f1';
-      ctx.fillStyle = body; ctx.strokeStyle = 'rgba(15,23,42,.45)'; ctx.lineWidth = 1.2;
+      ctx.fillStyle = bodyShade(body, -22, -14, 22, 8);
+      ctx.strokeStyle = 'rgba(15,23,42,.45)'; ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(-22,6); ctx.lineTo(-20,-4); ctx.quadraticCurveTo(-18,-8,-10,-8);
       ctx.lineTo(8,-8); ctx.quadraticCurveTo(14,-8,16,-4); ctx.lineTo(22,6); ctx.closePath();
       ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#5dade2';
+      // Roof depth
+      ctx.fillStyle = shadeColor(body, -25);
       ctx.beginPath(); ctx.moveTo(-10,-8); ctx.lineTo(-6,-14); ctx.lineTo(6,-14); ctx.lineTo(10,-8); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(-5,-13,4,4); ctx.fillRect(1,-13,4,4);
-      ctx.fillStyle = '#111'; ctx.fillRect(-22,0,5,3); ctx.fillRect(17,0,5,3); // bumpers/lights
+      ctx.fillStyle = '#5dade2';
+      ctx.beginPath(); ctx.moveTo(-9,-8); ctx.lineTo(-5.5,-13); ctx.lineTo(5.5,-13); ctx.lineTo(9,-8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(-5,-12.5,4,3.5); ctx.fillRect(1,-12.5,4,3.5);
+      ctx.fillStyle = '#111'; ctx.fillRect(-22,0,5,3); ctx.fillRect(17,0,5,3);
+      // Under-body shadow
+      ctx.fillStyle = 'rgba(15,23,42,.2)'; ctx.fillRect(-20, 5, 40, 2);
       if (vid === 'mehran') {
         ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-18,-3,8,3); ctx.fillRect(4,-3,8,3);
         ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 1; ctx.strokeRect(-12,-7,10,5);
@@ -477,21 +644,28 @@
       }
       wheel(-12, 10, 5); wheel(12, 10, 5);
     } else if (vid === 'bus') {
-      ctx.fillStyle = '#27ae60'; ctx.strokeStyle = 'rgba(15,23,42,.4)'; ctx.lineWidth = 1.2;
+      ctx.fillStyle = bodyShade('#27ae60', -24, -12, 24, 10);
+      ctx.strokeStyle = 'rgba(15,23,42,.4)'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(-24,8); ctx.lineTo(-22,-10); ctx.lineTo(22,-10); ctx.lineTo(24,8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(15,23,42,.15)'; ctx.fillRect(-24, 4, 48, 4);
       ctx.fillStyle = '#ecf0f1'; for (let i = 0; i < 3; i++) ctx.fillRect(-16 + i * 12, -6, 8, 6);
       ctx.fillStyle = '#f1c40f'; ctx.fillRect(-24,2,48,2);
       wheel(-14, 10, 5); wheel(14, 10, 5);
     } else if (vid === 'tractor') {
-      ctx.fillStyle = '#e67e22'; ctx.fillRect(-14, -8, 24, 14);
+      ctx.fillStyle = bodyShade('#e67e22', -14, -14, 14, 8);
+      ctx.fillRect(-14, -8, 24, 14);
       ctx.fillStyle = '#f5b041'; ctx.fillRect(-4, -14, 12, 8);
       ctx.fillStyle = '#3498db'; ctx.fillRect(-2, -12, 6, 5);
+      ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(-12, -6, 18, 2);
       wheel(-10, 10, 8); wheel(12, 8, 5);
     } else if (vid === 'truck') {
-      ctx.fillStyle = '#2980b9'; ctx.fillRect(-22, -8, 26, 16);
-      ctx.fillStyle = '#3498db'; ctx.fillRect(4, -12, 16, 20);
+      ctx.fillStyle = bodyShade('#2980b9', -22, -12, 20, 10);
+      ctx.fillRect(-22, -8, 26, 16);
+      ctx.fillStyle = bodyShade('#3498db', 4, -14, 20, 10);
+      ctx.fillRect(4, -12, 16, 20);
       ctx.fillStyle = '#ecf0f1'; ctx.fillRect(7, -8, 8, 6);
       ctx.fillStyle = '#f1c40f'; ctx.fillRect(-22, 4, 26, 2);
+      ctx.fillStyle = 'rgba(15,23,42,.18)'; ctx.fillRect(-22, 6, 42, 2);
       wheel(-14, 10, 5); wheel(2, 10, 5); wheel(14, 10, 5);
     }
     ctx.restore();
@@ -509,10 +683,18 @@
     ctx.translate(x, y);
     ctx.rotate(rot || 0);
     ctx.scale(squashX, squashY);
-    if (vehicle !== 'none') drawVehicleUnder(ctx, vehicle);
+    if (vehicle !== 'none') drawVehicleUnder(ctx, vehicle, opts);
     ctx.save();
-    drawBirdBody(ctx, birdId || 'sparrow', sc);
+    drawBirdBody(ctx, birdId || 'sparrow', sc, opts);
+    // Hats follow head tilt lightly
+    ctx.save();
+    if (!opts.reduceMotion && opts.headTilt) {
+      ctx.translate(6, -2);
+      ctx.rotate(opts.headTilt * 0.7);
+      ctx.translate(-6, 2);
+    }
     drawHat(ctx, hat);
+    ctx.restore();
     ctx.restore();
     ctx.restore();
   }
@@ -903,7 +1085,13 @@
     if (t.dir < 0) ctx.scale(-1, 1);
     const bob = Math.sin((t.x || 0) * 0.05) * 1.5;
     ctx.translate(0, bob);
-    drawVehicleUnder(ctx, t.kind);
+    const animT = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    const speed = Math.abs(t.vx || 80);
+    drawVehicleUnder(ctx, t.kind, {
+      wheelRot: animT * (speed / 18),
+      vehBob: Math.sin(animT * 6 + (t.x || 0) * 0.02) * 0.8,
+      animT: animT
+    });
     ctx.restore();
   }
 
