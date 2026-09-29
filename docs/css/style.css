@@ -2625,7 +2625,7 @@ html.large-buttons .chip {
 
 /* ——— v3.28: power expiry, daily countdown, reset confirm ——— */
 .power-chip.power-expiring {
-  animation: power-expiry-pulse 0.55s ease-in-out infinite;
+  animation: power-expiry-pulse 0.55s ease-in-out 1;
   box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.65);
   border-color: #fca5a5 !important;
 }
@@ -3141,7 +3141,17 @@ html.is-landscape #app {
   top: calc(78px + var(--hud-top));
 }
 #power-hud {
-  top: calc(78px + var(--hud-top));
+  top: auto;
+  bottom: calc(96px + var(--safe-bottom));
+  left: 12px;
+  right: 12px;
+  width: auto;
+  max-width: none;
+  min-height: 0;
+  height: auto;
+  align-items: center;
+  align-content: flex-end;
+  justify-content: center;
 }
 .screen {
   padding-top: calc(16px + var(--notch-pad));
@@ -3236,21 +3246,27 @@ html.reduce-motion .settings-section > summary.settings-group::after { transitio
 /* ——— v3.37: resume countdown, magnet HUD, cloud polish ——— */
 .resume-countdown {
   position: absolute;
-  inset: 0;
+  inset: auto auto calc(138px + var(--safe-bottom)) 50%;
+  transform: translateX(-50%);
   z-index: 40;
+  min-width: 58px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(11, 16, 32, 0.35);
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow: 0 4px 14px rgba(0,0,0,.28);
   pointer-events: none;
-  backdrop-filter: blur(2px);
 }
 .resume-countdown[hidden] { display: none !important; }
 .resume-countdown-num {
-  font-size: clamp(3.2rem, 18vw, 5.5rem);
+  font-size: 1.15rem;
   font-weight: 900;
   color: #fff;
-  text-shadow: 0 4px 0 #000, 0 0 28px rgba(78,205,196,.55);
+  text-shadow: 0 1px 5px rgba(78,205,196,.4);
   letter-spacing: 0.04em;
 }
 .resume-countdown.resume-go .resume-countdown-num {
@@ -3650,3 +3666,123 @@ html.reduce-motion .btn-play-milestone { animation: none; box-shadow: 0 0 0 2px 
   text-underline-offset: 3px;
 }
 .guide-quick-link:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 3px; }
+
+
+/* v3.58.3 — optional Sukoon section; all effects stay inside this mode. */
+.relax-mode-card {
+  width: 100%;
+  margin: 4px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(125, 211, 252, .28);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(15, 45, 58, .74), rgba(30, 41, 59, .76));
+  color: var(--text, #f8fafc);
+  text-align: left;
+}
+.relax-mode-card > summary {
+  cursor: pointer;
+  color: #bae6fd;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.relax-mode-card > p {
+  margin: 8px 0;
+  color: #dbeafe;
+  font-size: .86rem;
+  line-height: 1.4;
+}
+.relax-mode-card > label {
+  display: block;
+  margin: 8px 0 4px;
+  color: #e0f2fe;
+  font-size: .82rem;
+  font-weight: 700;
+}
+.relax-mode-card > select { width: 100%; margin-bottom: 8px; }
+.relax-mode-card > button { width: 100%; min-height: 46px; }
+.sukoon-mode #score-display,
+.sukoon-mode #combo-display,
+.sukoon-mode #combo-meter,
+.sukoon-mode #coin-hud,
+.sukoon-mode #timer-hud,
+.sukoon-mode #lives-hud,
+.sukoon-mode #power-hud,
+.sukoon-mode #magnet-hud,
+.sukoon-mode #medal-display,
+.sukoon-mode #toast { display: none !important; }
+.relax-complete-screen { z-index: 80; background: rgba(9, 20, 32, .72); }
+.sukoon-mode #screen-pause .pause-stat:first-child,
+.sukoon-mode #pause-tip { display: none !important; }
+.relax-complete-card {
+  width: min(100% - 28px, 390px);
+  padding: 22px 18px;
+  border: 1px solid rgba(186, 230, 253, .3);
+  border-radius: 22px;
+  background: linear-gradient(150deg, #173b49, #182338 78%);
+  color: #f0f9ff;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .3);
+}
+.relax-complete-card h2 { margin: 0 0 8px; color: #bae6fd; }
+.relax-complete-card p { margin: 0 0 16px; line-height: 1.5; }
+.relax-complete-card .btn-col { gap: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .relax-mode-card *, .relax-complete-card * { scroll-behavior: auto !important; }
+}
+
+
+/* v3.58.3 — compact local-only character appearance choices. */
+.mascot-selector {
+  width: 100%;
+  margin: 8px 0 14px;
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, .24);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .55);
+}
+.mascot-selector .section-title { margin: 0 0 5px; }
+.mascot-note, .mascot-status {
+  margin: 4px 0 8px;
+  color: #dbeafe;
+  font-size: .78rem;
+  line-height: 1.35;
+}
+.mascot-status { color: #bae6fd; min-height: 1.1em; }
+.mascot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.mascot-choice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 5px 7px;
+  border: 1px solid rgba(255, 255, 255, .17);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .06);
+  color: #f8fafc;
+  text-align: left;
+  font: inherit;
+  font-size: .76rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.mascot-choice img, .mascot-default-icon {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+.mascot-default-icon { display: grid; place-items: center; font-size: 2rem; }
+.mascot-choice[aria-pressed="true"] {
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, .24);
+  background: rgba(14, 116, 144, .22);
+}
+.mascot-choice:focus-visible { outline: 3px solid #fde68a; outline-offset: 2px; }
+@media (max-width: 360px) {
+  .mascot-choice { gap: 4px; padding-inline: 5px; font-size: .7rem; }
+  .mascot-choice img, .mascot-default-icon { flex-basis: 38px; width: 38px; height: 38px; }
+}

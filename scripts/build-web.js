@@ -50,6 +50,7 @@ function buildTo(dest, { preserveGlobs } = {}) {
   copyDir(path.join(root, 'css'), path.join(dest, 'css'));
   copyDir(path.join(root, 'js'), path.join(dest, 'js'));
   copyDir(path.join(root, 'icons'), path.join(dest, 'icons'));
+  copyDir(path.join(root, 'assets'), path.join(dest, 'assets'));
   for (const [name, tmp] of saved) {
     fs.copyFileSync(tmp, path.join(dest, name));
     fs.unlinkSync(tmp);

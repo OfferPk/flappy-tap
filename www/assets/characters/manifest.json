@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "format": "webp",
+  "sprites": [
+    {
+      "id": "sunseed",
+      "label": "Sunseed Sparrow",
+      "src": "assets/characters/sunseed.webp",
+      "width": 256,
+      "height": 256,
+      "bytes": 19900
+    },
+    {
+      "id": "moonwink",
+      "label": "Moonwink Owl",
+      "src": "assets/characters/moonwink.webp",
+      "width": 256,
+      "height": 256,
+      "bytes": 18718
+    },
+    {
+      "id": "riverflash",
+      "label": "Riverflash Kingfisher",
+      "src": "assets/characters/riverflash.webp",
+      "width": 256,
+      "height": 256,
+      "bytes": 19390
+    },
+    {
+      "id": "cinderwing",
+      "label": "Cinderwing Emberbird",
+      "src": "assets/characters/cinderwing.webp",
+      "width": 256,
+      "height": 256,
+      "bytes": 24546
+    },
+    {
+      "id": "ticktock",
+      "label": "Tick-Tock Tinbird",
+      "src": "assets/characters/ticktock.webp",
+      "width": 256,
+      "height": 256,
+      "bytes": 22256
+    },
+    {
+      "id": "zipzap",
+      "label": "Zipzap Hummingbird",
+      "src": "assets/characters/zipzap.webp",
+      "width": 256,
+      "height": 256,
+      "bytes": 19628
+    }
+  ]
+}

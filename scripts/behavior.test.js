@@ -26,6 +26,23 @@ function testGameplayRules() {
     perfect: true, basePoints: 5, multiplier: 1, gained: 5, tag: 'PERFECT!'
   }, 'a simultaneous near miss keeps the higher existing base award');
 
+  assert.equal(sim.softenCoinComboOnMiss(5), 4, 'a missed coin steps a combo down one level');
+  assert.equal(sim.softenCoinComboOnMiss(2), 1);
+  assert.equal(sim.softenCoinComboOnMiss(1), 0);
+  assert.equal(sim.softenCoinComboOnMiss(0), 0);
+
+  assert.equal(sim.isRelaxMode('relax'), true, 'only the new opt-in mode uses Relax rules');
+  for (const mode of ['classic', 'timeattack', 'hard', 'nocoin', 'challenge', 'onelife', 'daily', 'practice']) {
+    assert.equal(sim.isRelaxMode(mode), false, mode + ' retains its existing rules');
+  }
+  assert.equal(sim.normalizeRelaxDuration('60'), 60);
+  assert.equal(sim.normalizeRelaxDuration('180'), 180);
+  assert.equal(sim.normalizeRelaxDuration('300'), 300);
+  assert.equal(sim.normalizeRelaxDuration('999'), 180, 'invalid duration falls back to three minutes');
+  assert.deepEqual(sim.relaxBumpResponse('ground', 540, 14, 260, 600, 72), { y: 512, vy: -70 });
+  assert.deepEqual(sim.relaxBumpResponse('ceiling', 4, 14, -260, 600, 72), { y: 16, vy: 70 });
+  assert.deepEqual(sim.relaxBumpResponse('pipe', 300, 14, 300, 600, 72), { y: 300, vy: 110 });
+
   const dailySequence = (date) => {
     const rng = sim.makeRng(sim.hashSeed('urrjaa-daily-' + date + '-stage-1'));
     return [rng(), rng()];
@@ -71,6 +88,33 @@ function testSavedProgress() {
   assert.equal(storage.getBest(), 12, 'best score survives a fresh storage module instance');
   assert.equal(storage.getDailyBest(), 9, 'Daily best survives a fresh storage module instance');
   assert.equal(storage.getCoins(), 25, 'coins survive a fresh storage module instance');
+  storage.unlockBird('owl');
+  storage.setBird('owl');
+  const progressBeforeMascot = {
+    bird: storage.getBird(),
+    birds: JSON.stringify(storage.getUnlockedBirds()),
+    coins: storage.getCoins(),
+    best: storage.getBest(),
+    albumBirds: storage.collectionCounts().birds
+  };
+  assert.equal(storage.getMascotSelection(), '', 'the old equipped-bird appearance remains the default');
+  assert.equal(storage.BIRDS.moonwink, undefined, 'visual concepts are not added to owned bird species');
+  assert.equal(storage.isBirdUnlocked('moonwink'), false, 'new looks do not rewrite bird unlock ownership');
+  assert.equal(storage.setMascotSelection('moonwink'), 'moonwink');
+  assert.equal(storage.getMascotSelection(), 'moonwink');
+  storage = loadStorage();
+  assert.equal(storage.getMascotSelection(), 'moonwink', 'visual preference persists on this device');
+  assert.equal(storage.getBird(), progressBeforeMascot.bird, 'visual preference leaves the equipped bird untouched');
+  assert.equal(JSON.stringify(storage.collectionCounts().birds), JSON.stringify(progressBeforeMascot.albumBirds), 'visual preference leaves album totals untouched');
+  assert.equal(storage.setMascotSelection('not-a-mascot'), false, 'unknown mascot ids are rejected');
+  assert.equal(storage.getMascotSelection(), 'moonwink', 'invalid choice does not clear the prior visual preference');
+  assert.equal(storage.setMascotSelection('equipped'), '', 'Use equipped bird only clears the visual preference');
+  assert.equal(storage.getMascotSelection(), '');
+  assert.equal(storage.getBird(), progressBeforeMascot.bird);
+  assert.equal(JSON.stringify(storage.getUnlockedBirds()), progressBeforeMascot.birds);
+  assert.equal(storage.getCoins(), progressBeforeMascot.coins);
+  assert.equal(storage.getBest(), progressBeforeMascot.best);
+  assert.equal(JSON.stringify(storage.collectionCounts().birds), JSON.stringify(progressBeforeMascot.albumBirds));
   assert.equal(storage.spendCoins(10), true);
   assert.equal(storage.getCoins(), 15);
   assert.equal(storage.spendCoins(99), false, 'cannot spend more coins than saved');
@@ -140,6 +184,10 @@ async function main() {
 
   const game = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');
   assert.match(game, /FTSim\.scorePipePass\(/, 'live pipe scoring is wired to the tested pure rules');
+  assert.match(game, /FTSim\.softenCoinComboOnMiss\(/, 'missed coins use the forgiving rule');
+  assert.match(game, /FTSim\.isRelaxMode\(playMode\)/, 'only the separately selected Relax mode activates its special rules');
+  assert.match(game, /FTSim\.relaxBumpResponse\(/, 'Relax collisions use the tested non-lethal response');
+  assert.match(game, /if \(isRelax\(\)\) return;/, 'Relax suppresses optional competitive pickups and scoring');
   assert.match(game, /FTSim\.rectanglesOverlap\(/, 'live collision geometry is wired to the tested pure rules');
   assert.match(game, /FTSim\.canTransition\(/, 'live run controls use the tested transition rules');
   console.log('BEHAVIOR TESTS OK · collision · scoring · mode/pause/retry · local saves · offline assets');

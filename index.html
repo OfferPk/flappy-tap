@@ -68,7 +68,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.58.2-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.58.3-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -131,6 +131,17 @@
         <button class="btn secondary" type="button" data-mode="onelife">1️⃣ One Life Challenge</button>
         <button class="btn ghost btn-sm" type="button" data-mode="daily">📅 Daily</button>
         <button class="btn ghost btn-sm" type="button" data-mode="practice">🛡 Practice</button>
+        <details class="relax-mode-card" id="sukoon-mode-section">
+          <summary>🌙 Sukoon / Relax · optional quiet flight</summary>
+          <p>Slower, wider gaps with gentle bumps. No score, coins, streaks, missions, or records.</p>
+          <label for="relax-duration">Session length</label>
+          <select id="relax-duration" class="setting-select" aria-label="Sukoon session length">
+            <option value="60">1 minute</option>
+            <option value="180" selected>3 minutes</option>
+            <option value="300">5 minutes</option>
+          </select>
+          <button class="btn primary" type="button" data-mode="relax">Start Sukoon flight</button>
+        </details>
         <button class="btn ghost" type="button" data-close="modes">Back</button>
       </div>
     </div>
@@ -162,6 +173,20 @@
       <p id="garage-filter-hint" class="hint garage-filter-hint">★ pin · double-tap equip · long-press preview</p>
       <h3 class="section-title">Birds</h3>
       <div class="skin-row" id="garage-birds"></div>
+      <section class="mascot-selector" aria-labelledby="mascot-selector-title">
+        <h3 class="section-title" id="mascot-selector-title">Character look</h3>
+        <p class="mascot-note">Six new art looks · appearance only. Selection stays on this device; birds, unlocks, coins and stats are unchanged.</p>
+        <p id="mascot-selection-status" class="mascot-status" role="status" aria-live="polite">Equipped bird selected.</p>
+        <div class="mascot-grid" id="mascot-selector" role="group" aria-label="Choose character appearance">
+          <button type="button" class="mascot-choice" data-mascot-selection="equipped" aria-pressed="true"><span class="mascot-default-icon" aria-hidden="true">🐦</span><span>Use equipped bird</span></button>
+          <button type="button" class="mascot-choice" data-mascot-selection="sunseed" aria-pressed="false"><img src="assets/characters/sunseed.webp" width="48" height="48" alt="" aria-hidden="true"><span>Sunseed Sparrow</span></button>
+          <button type="button" class="mascot-choice" data-mascot-selection="moonwink" aria-pressed="false"><img src="assets/characters/moonwink.webp" width="48" height="48" alt="" aria-hidden="true"><span>Moonwink Owl</span></button>
+          <button type="button" class="mascot-choice" data-mascot-selection="riverflash" aria-pressed="false"><img src="assets/characters/riverflash.webp" width="48" height="48" alt="" aria-hidden="true"><span>Riverflash Kingfisher</span></button>
+          <button type="button" class="mascot-choice" data-mascot-selection="cinderwing" aria-pressed="false"><img src="assets/characters/cinderwing.webp" width="48" height="48" alt="" aria-hidden="true"><span>Cinderwing Emberbird</span></button>
+          <button type="button" class="mascot-choice" data-mascot-selection="ticktock" aria-pressed="false"><img src="assets/characters/ticktock.webp" width="48" height="48" alt="" aria-hidden="true"><span>Tick-Tock Tinbird</span></button>
+          <button type="button" class="mascot-choice" data-mascot-selection="zipzap" aria-pressed="false"><img src="assets/characters/zipzap.webp" width="48" height="48" alt="" aria-hidden="true"><span>Zipzap Hummingbird</span></button>
+        </div>
+      </section>
       <h3 class="section-title">Vehicles (pair)</h3>
       <div class="skin-row" id="garage-vehicles"></div>
       <h3 class="section-title">Environments</h3>
@@ -303,7 +328,7 @@
     </div>
 
     <!-- Pause -->
-    <div id="resume-countdown" class="resume-countdown" hidden aria-live="assertive" aria-atomic="true">
+    <div id="resume-countdown" class="resume-countdown" hidden role="status" aria-live="polite" aria-atomic="true">
       <span id="resume-countdown-num" class="resume-countdown-num">3</span>
     </div>
     <div id="screen-pause" class="screen pause-screen" hidden>
@@ -317,6 +342,16 @@
       <div class="btn-col">
         <button id="btn-resume" class="btn primary" type="button">Resume</button>
         <button id="btn-quit-pause" class="btn ghost" type="button">Quit to Menu</button>
+      </div>
+    </div>
+    <div id="screen-relax-end" class="screen panel-screen relax-complete-screen" hidden role="dialog" aria-modal="true" aria-labelledby="relax-end-title">
+      <div class="relax-complete-card">
+        <h2 id="relax-end-title" tabindex="-1">Sukoon session complete</h2>
+        <p role="status" aria-live="polite">Your quiet flight is complete. Nothing was scored or saved.</p>
+        <div class="btn-col">
+          <button id="btn-relax-continue" class="btn secondary" type="button">Continue gently</button>
+          <button id="btn-relax-finish" class="btn primary" type="button">Done · Back to menu</button>
+        </div>
       </div>
     </div>
 
@@ -440,6 +475,7 @@
       <details class="settings-changelog" id="settings-changelog">
         <summary>Changelog · recent</summary>
         <ul class="changelog-list" aria-label="Recent changes">
+          <li><strong>3.58.3</strong> — compact power timers · gentle Sukoon mode · softened coin-combo misses · feather polish</li>
           <li><strong>3.58</strong> — PERFECT voice throttle · star budget · hot-combo ring</li>
           <li><strong>3.57</strong> — PERFECT haptic throttle · rail spark scale · cam sway</li>
           <li><strong>3.56</strong> — PERFECT toast throttle · clear cam nudge · juice budget</li>
@@ -460,7 +496,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.58.2-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.58.3-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -501,7 +537,7 @@
         <ul class="guide-list">
           <li><strong>Tap</strong> anywhere to flap and fly.</li>
           <li>Dodge <strong>pipes</strong> and traffic — don’t hit!</li>
-          <li>Collect <strong>coins</strong> 🪙 in gaps for combos.</li>
+          <li>Collect <strong>coins</strong> 🪙 in gaps for combos; a missed coin lowers the multiplier one step instead of wiping it.</li>
           <li>Grab <strong>gifts</strong> 📦 — they stack in Mystery Rewards.</li>
           <li><strong>Power-ups:</strong> Shield, Turbo, Magnet, Slow-mo, Ghost (brief).</li>
           <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice &amp; more.</li>
@@ -516,6 +552,8 @@
           <li><strong>Practice:</strong> follow the ghost bird through gaps.</li>
           <li><strong>Power VFX:</strong> Slow-mo purple edge, Ghost afterimage, Turbo speed lines.</li>
           <li><strong>One Life:</strong> heart HUD — no continue.</li>
+          <li><strong>Sukoon / Relax:</strong> optional 1/3/5-minute slow flight, wider gaps, gentle non-lethal bumps, and no score or rewards.</li>
+          <li><strong>Character looks:</strong> Garage has six local-only optional mascot appearances; “Use equipped bird” returns to the existing unlocked bird.</li>
           <li><strong>Mystery wheel:</strong> Spin once is a full <strong>15s</strong> decelerate into the segment; Spin all uses 15s / 8s / 5s tiering.</li>
           <li><strong>Tips &amp; fireworks:</strong> menu/pause/death tips · high-score fireworks · lattice &amp; stripe pipes.</li>
           <li><strong>3.18:</strong> combo milestones · garage preview flap · mission claim juice · Quiet at night · gift glow · snappier taps.</li>
@@ -533,6 +571,7 @@
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>3.30:</strong> flap whoosh juice · Settings changelog-lite · Guide refresh · performance pass.</li>
+          <li><strong>3.58.3:</strong> compact power timers · optional Sukoon flight · a softer coin-combo miss rule · feather detail.</li>
           <li><strong>3.58:</strong> throttle PERFECT voice · adaptive perfect stars · longer clear ring on hot combo · Spin once still 15s.</li>
           <li><strong>3.57:</strong> throttle PERFECT haptic · adaptive rail sparks · clearer clear-cam sway · Spin once still 15s.</li>
           <li><strong>3.56:</strong> throttle rapid PERFECT toasts · micro cam on clear · one particle-budget read · Spin once still 15s.</li>
@@ -572,10 +611,12 @@
         <ul class="guide-list">
           <li><strong>Tap</strong> karo — bird urr jati hai.</li>
           <li><strong>Pipes</strong> aur traffic se bacho.</li>
-          <li>Gaps mein <strong>coins</strong> 🪙 lo — combo banaye.</li>
+          <li>Gaps mein <strong>coins</strong> 🪙 lo — combo banaye; coin miss ho to multiplier aik darja kam hota hai, poora khatam nahi.</li>
           <li><strong>Gifts</strong> 📦 collect karo — Mystery Rewards mein stack hote hain.</li>
           <li><strong>Power-ups:</strong> Shield, Turbo, Magnet, Slow-mo, Ghost (thori der).</li>
           <li><strong>Modes:</strong> Classic, Hard, Time Attack, Daily, Practice wagaira.</li>
+          <li><strong>Sukoon / Relax:</strong> 1, 3 ya 5 minute ki narm flight; khulay gaps, halki takkar, score ya reward nahi.</li>
+          <li><strong>Character looks:</strong> Garage mein chhay local mascot looks chunein; “Use equipped bird” purane pasandeeda parinde par wapas lata hai.</li>
           <li><strong>Mystery:</strong> har <strong>10 boxes = 1 spin</strong> (444–999 coins). History past spins save karta hai.</li>
           <li><strong>Wheel:</strong> Spin once poora <strong>15s</strong>; Spin all 15 / 8 / 5s.</li>
           <li><strong>Skill:</strong> edge ke paas CLOSE; gap ke center mein PERFECT.</li>
@@ -611,10 +652,12 @@
         <ul class="guide-list">
           <li><strong>ٹیپ</strong> کریں — پرندہ اڑتا ہے۔</li>
           <li><strong>پائپس</strong> اور ٹریفک سے بچیں۔</li>
-          <li>فاصلوں میں <strong>سکہ</strong> 🪙 لیں — کومبو بنائیں۔</li>
+          <li>فاصلوں میں <strong>سکہ</strong> 🪙 لیں — کومبو بنائیں؛ سکہ رہ جائے تو ضرب ایک درجہ کم ہوگی، پوری ختم نہیں ہوگی۔</li>
           <li><strong>تحفے</strong> 📦 جمع کریں — مسٹری ریوارڈز میں محفوظ ہوتے ہیں۔</li>
           <li><strong>پاور اپس:</strong> شیلڈ، ٹربو، میگنیٹ، سلو، گھوسٹ (مختصر)۔</li>
           <li><strong>موڈز:</strong> کلاسک، ہارڈ، ٹائم اٹیک، ڈیلی، پریکٹس وغیرہ۔</li>
+          <li><strong>سکون / ریلکس:</strong> ۱، ۳ یا ۵ منٹ کی آہستہ پرواز، کھلے فاصلے اور نرم ٹکر؛ کوئی اسکور یا انعام نہیں۔</li>
+          <li><strong>کردار کی شکل:</strong> گیراج میں چھ مقامی ماسکوٹ شکلیں چنیں؛ “Use equipped bird” سے اپنا پہلے والا کھلا پرندہ واپس لائیں۔</li>
           <li><strong>مسٹری:</strong> ہر <strong>۱۰ باکس = ۱ اسپن</strong> (۴۴۴–۹۹۹ سکے)۔</li>
           <li><strong>وہیل:</strong> ایک اسپن پورا <strong>۱۵ سیکنڈ</strong>؛ سب اسپن ۱۵ / ۸ / ۵ سیکنڈ۔</li>
           <li><strong>مہارت:</strong> کنارے کے قریب CLOSE، درمیان سے گزریں تو PERFECT۔</li>
@@ -624,6 +667,7 @@
           <li><strong>کلیکشن:</strong> نئے پرندے اور علاقے سکے یا اسکور سے کھلیں۔</li>
           <li><strong>سیزنل (آف لائن):</strong> آزادی / عید / سردی / بسنت — مقامی تاریخ یا اسکور۔ کوئی سرور سیزن نہیں۔</li>
           <li><strong>نیا (۳.۲۸–۳.۳۰):</strong> یومیہ کاؤنٹ ڈاؤن · پاور ختم وارننگ · باس وارن · گفٹ→اسپن ٹوسٹ · ہیپٹک شدت · فلیپ وُش · چینج لاگ۔</li>
+                  <li><strong>3.58.3:</strong> مختصر پاور ٹائمر · سکون موڈ · سکے چھوٹنے پر کومبو ایک درجہ کم۔</li>
                   <li><strong>3.58:</strong> PERFECT وائس تھروٹل · ستارے · hot combo · 15s Spin۔</li>
                   <li><strong>3.57:</strong> PERFECT ہیپٹک تھروٹل · rail · cam sway · 15s Spin۔</li>
                   <li><strong>3.56:</strong> PERFECT ٹوسٹ تھروٹل · clear cam · 15s Spin۔</li>

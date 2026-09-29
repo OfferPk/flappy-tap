@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.58.2-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.58.3-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -60,9 +60,11 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 |---------|--------|
 | One-tap flap | Click / touch / Space — squash juice, rate-clamped |
 | **Modes** | Classic · Time Attack 60s · Hard · No Coin · Challenge · One Life · Daily · Practice |
+| **Sukoon / Relax** | Optional 1/3/5-minute slower flight · wider gaps · gentle non-lethal bumps · no score, coins, streaks, missions, or records |
+| Character looks | Six compact local mascot sprites in Garage; “Use equipped bird” restores the existing appearance · visual-only, no coins/unlocks/passive changes |
 | Near-miss | **CLOSE!** · 3 consecutive → **RISKY x3** |
 | **Perfect Pass** | Gap center → **PERFECT!** (+3) · Near-miss pass (+5) · Normal (+1) |
-| Coin combo | Continuous ladder **x1→x5** · miss resets · near-miss/RISKY boost |
+| Coin combo | Continuous ladder **x1→x5** · missed coin gently steps multiplier down one level · near-miss/RISKY boost |
 | **Mystery Rewards** | Menu/Album → visual **spin wheel**. In-run 📦 → inventory. **10 gifts = 1 spin**. Prizes **444–999** 🪙. Spin once / Spin all |
 | Spin unlock popup | One-time when a new ×10 threshold is crossed (not spam on menu open) |
 | **Guide** | Menu → Guide · **English / Roman Urdu / اردو** |
@@ -80,7 +82,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v69-20260929** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
+| PWA | `sw.js` cache **urrjaa-v71-20260929** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)

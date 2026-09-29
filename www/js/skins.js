@@ -25,6 +25,28 @@
     { id: 'seagull', label: 'Sea wali', cost: 60, unlockScore: 60 }
   ];
 
+  const MASCOTS = [
+    { id: 'sunseed', label: 'Sunseed Sparrow', src: 'assets/characters/sunseed.webp' },
+    { id: 'moonwink', label: 'Moonwink Owl', src: 'assets/characters/moonwink.webp' },
+    { id: 'riverflash', label: 'Riverflash Kingfisher', src: 'assets/characters/riverflash.webp' },
+    { id: 'cinderwing', label: 'Cinderwing Emberbird', src: 'assets/characters/cinderwing.webp' },
+    { id: 'ticktock', label: 'Tick-Tock Tinbird', src: 'assets/characters/ticktock.webp' },
+    { id: 'zipzap', label: 'Zipzap Hummingbird', src: 'assets/characters/zipzap.webp' }
+  ];
+  const MASCOT_BY_ID = Object.create(null);
+  const MASCOT_IMAGES = Object.create(null);
+  MASCOTS.forEach(function (mascot) {
+    MASCOT_BY_ID[mascot.id] = mascot;
+    if (typeof global.Image === 'function') {
+      const image = new global.Image();
+      image.decoding = 'async';
+      image.src = mascot.src;
+      MASCOT_IMAGES[mascot.id] = image;
+    }
+  });
+
+
+
   const VEHICLES = [
     { id: 'none', label: 'Solo', cost: 0, free: true },
     { id: 'rickshaw', label: 'Rickshaw', cost: 50 },
@@ -493,6 +515,22 @@
     }
 
     ctx.restore();
+    // Paired feather glints refine the existing silhouette at phone size.
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(15,23,42,.28)';
+    ctx.beginPath();
+    ctx.moveTo(-10, 2); ctx.quadraticCurveTo(-6, 4, -2, 3);
+    ctx.moveTo(-9, 6); ctx.quadraticCurveTo(-5, 8, -1, 7);
+    ctx.stroke();
+    ctx.lineWidth = 0.75;
+    ctx.strokeStyle = 'rgba(255,255,255,.38)';
+    ctx.beginPath();
+    ctx.moveTo(-10, 1.5); ctx.quadraticCurveTo(-6, 3.5, -2, 2.5);
+    ctx.moveTo(-9, 5.5); ctx.quadraticCurveTo(-5, 7.5, -1, 6.5);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function drawWing(ctx, c, flap, far, tipFlutter) {
@@ -896,6 +934,25 @@
     ctx.restore();
   }
 
+  function drawMascotSprite(ctx, id, scale, opts) {
+    if (!MASCOT_BY_ID[id]) return false;
+    const s = scale == null ? 1 : scale;
+    const image = MASCOT_IMAGES[id];
+    if (!image || !image.complete || !image.naturalWidth) {
+      drawBirdBody(ctx, (opts && opts.fallbackBirdId) || 'sparrow', s, opts);
+      return true;
+    }
+    // The same flight rotation/squash drives this visual-only sprite; no extra motion under reduced-motion.
+    if (opts && !opts.reduceMotion && opts.wingFlap) {
+      ctx.rotate(Math.max(-0.055, Math.min(0.055, opts.wingFlap * 0.035)));
+    }
+    const size = 48 * s;
+    ctx.drawImage(image, -size / 2, -size / 2, size, size);
+    return true;
+  }
+
+
+
   function draw(ctx, birdId, x, y, rot, scale, opts) {
     opts = opts || {};
     const vehicle = opts.vehicle || 'none';
@@ -910,7 +967,7 @@
     ctx.scale(squashX, squashY);
     if (vehicle !== 'none') drawVehicleUnder(ctx, vehicle, opts);
     ctx.save();
-    drawBirdBody(ctx, birdId || 'sparrow', sc, opts);
+    if (!drawMascotSprite(ctx, birdId || 'sparrow', sc, opts)) drawBirdBody(ctx, birdId || 'sparrow', sc, opts);
     // Hats follow head tilt lightly
     ctx.save();
     if (!opts.reduceMotion && (opts.headTilt || opts.headBob || opts.mouthOpen)) {
@@ -1516,7 +1573,7 @@
   }
 
   global.FTSkins = {
-    SKINS, BIRDS, VEHICLES, ENVS, WEATHERS, HATS, TRAILS, SEASONAL_PACKS,
+    SKINS, BIRDS, MASCOTS, VEHICLES, ENVS, WEATHERS, HATS, TRAILS, SEASONAL_PACKS,
     BIRD_PASSIVES, birdPassive, weatherMods, BOSS_KINDS, pickBossKind,
     seasonalInWindow, seasonalEligible,
     THEME_IDS: { jungle: 1, alpine: 1, seagull: 1, jungle_rickshaw: 1, snow_bike: 1, sea_boat: 1 },

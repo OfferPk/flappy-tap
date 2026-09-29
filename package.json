@@ -1,6 +1,6 @@
 {
   "name": "urr-jaa",
-  "version": "3.58.2-urrjaa",
+  "version": "3.58.3-urrjaa",
   "description": "Urr Jaa! \u2014 offline one-tap fly arcade (PWA + Capacitor). Repo folder: flappy-tap.",
   "private": true,
   "scripts": {
@@ -15,7 +15,7 @@
     "start:py": "python3 -m http.server 4174",
     "check": "node --check js/sim.js && node --check js/storage.js && node --check js/audio.js && node --check js/ads.js && node --check js/skins.js && node --check js/game.js",
     "smoke": "node scripts/smoke.js",
-    "test": "node scripts/behavior.test.js"
+    "test": "node scripts/behavior.test.js && node scripts/character-assets.test.js"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",

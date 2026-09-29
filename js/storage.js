@@ -16,6 +16,7 @@
     weather: PREFIX + 'weather',
     hat: PREFIX + 'hat',
     trail: PREFIX + 'trail',
+    mascotSelection: PREFIX + 'mascot-selection',
     mute: PREFIX + 'mute',
     quietNight: PREFIX + 'quiet-night',
     areaMusic: PREFIX + 'area-music',
@@ -89,6 +90,8 @@
     mynah: 1, bulbul: 1, cheel: 1, mor: 1, kawwa: 1, kabootar: 1, hoopoe: 1, falcon: 1,
     jungle: 1, alpine: 1, seagull: 1
   };
+  // Visual-only concepts stay outside BIRDS so album counts and legacy ownership remain stable.
+  const MASCOT_SELECTIONS = { sunseed: 1, moonwink: 1, riverflash: 1, cinderwing: 1, ticktock: 1, zipzap: 1 };
   const VEHICLES = {
     none: 1, rickshaw: 1, cycle: 1, bike: 1, scooty: 1, bicycle: 1,
     chingchi: 1, taxi: 1, bus: 1, mehran: 1, tractor: 1, truck: 1,
@@ -341,6 +344,20 @@
     if (!BIRDS[id] || !isBirdUnlocked(id)) return;
     set(KEYS.bird, id);
     set(KEYS.skin, id === 'sparrow' ? 'bird' : id);
+  }
+  function getMascotSelection() {
+    const id = get(KEYS.mascotSelection, '');
+    return MASCOT_SELECTIONS[id] ? id : '';
+  }
+  function setMascotSelection(id) {
+    if (id == null || id === '' || id === 'equipped') {
+      set(KEYS.mascotSelection, '');
+      return '';
+    }
+    id = String(id);
+    if (!MASCOT_SELECTIONS[id]) return false;
+    set(KEYS.mascotSelection, id);
+    return id;
   }
   function getSkin() { return getBird(); }
   function setSkin(id) { setBird(LEGACY_SKIN[id] || id); }
@@ -1329,7 +1346,7 @@
     getBest, setBest, getDailyBest, setDailyBest, getDailyDate,
     getTodayBest, setTodayBest, getAllTimeBest, setAllTimeBest,
     getBestCombo, setBestCombo, getLeaderboards,
-    getSkin, setSkin, getBird, setBird, getVehicle, setVehicle,
+    getSkin, setSkin, getBird, setBird, getMascotSelection, setMascotSelection, getVehicle, setVehicle,
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
     isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, getNightAmbVol, setNightAmbVol, isSwipeDismiss, setSwipeDismiss, isResumeCountdown, setResumeCountdown, getGuideLang, setGuideLang, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
@@ -1361,6 +1378,6 @@
     getGiftBoxes, setGiftBoxes, addGiftBoxes, spendGiftBoxes, getSpinCharges,
     beginWheelSpin, grantSpinCoins, spinWheelOnce, spinWheelAll, rollWheelCoins, WHEEL_REWARDS, GIFTS_PER_SPIN,
     getSpinHistory, recordSpinHistory, getSpinHistoryTotal, clearSpinHistory, SPIN_HISTORY_MAX,
-    BIRDS, VEHICLES, ENVS, HATS, TRAILS, SEASONALS
+    BIRDS, MASCOT_SELECTIONS, VEHICLES, ENVS, HATS, TRAILS, SEASONALS
   };
 })(window);

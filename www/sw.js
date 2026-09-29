@@ -1,5 +1,5 @@
-/* Offline-first service worker — Urr Jaa! v3.58.2-urrjaa */
-const CACHE = 'urrjaa-v69-20260929';
+/* Offline-first service worker — Urr Jaa! v3.58.3-urrjaa */
+const CACHE = 'urrjaa-v71-20260929';
 const ASSETS = [
   './',
   './index.html',
@@ -15,6 +15,13 @@ const ASSETS = [
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './assets/characters/manifest.json',
+  './assets/characters/sunseed.webp',
+  './assets/characters/moonwink.webp',
+  './assets/characters/riverflash.webp',
+  './assets/characters/cinderwing.webp',
+  './assets/characters/ticktock.webp',
+  './assets/characters/zipzap.webp',
 ];
 
 self.addEventListener('install', (event) => {

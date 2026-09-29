@@ -52,6 +52,25 @@
     };
   }
 
+  function softenCoinComboOnMiss(combo) {
+    return Math.max(0, (Number(combo) | 0) - 1);
+  }
+
+  function isRelaxMode(mode) { return mode === 'relax'; }
+  function normalizeRelaxDuration(value) {
+    var seconds = parseInt(value, 10);
+    return seconds === 60 || seconds === 180 || seconds === 300 ? seconds : 180;
+  }
+  function relaxBumpResponse(cause, y, halfH, velocity, height, groundHeight) {
+    var groundY = Number(height) - Number(groundHeight);
+    y = Number(y) || 0;
+    halfH = Math.max(0, Number(halfH) || 0);
+    velocity = Number(velocity) || 0;
+    if (cause === 'ground' || y + halfH >= groundY) return { y: groundY - halfH - 2, vy: -70 };
+    if (cause === 'ceiling' || y - halfH <= 0) return { y: halfH + 2, vy: 70 };
+    return { y: y, vy: Math.max(-110, Math.min(110, velocity * 0.72)) };
+  }
+
   function canTransition(state, action, mode) {
     if (action === 'pause') return state === 'playing';
     if (action === 'resume') return state === 'paused';
@@ -68,6 +87,10 @@
     makeRng: makeRng,
     rectanglesOverlap: rectanglesOverlap,
     scorePipePass: scorePipePass,
+    softenCoinComboOnMiss: softenCoinComboOnMiss,
+    isRelaxMode: isRelaxMode,
+    normalizeRelaxDuration: normalizeRelaxDuration,
+    relaxBumpResponse: relaxBumpResponse,
     canTransition: canTransition
   };
 });
