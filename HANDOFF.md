@@ -1,25 +1,15 @@
 # HANDOFF — Urr Jaa!
 
-**Patch candidate:** `3.58.5-urrjaa` on `feature/magic-powerup`
-**Based on:** `v3.58.4-urrjaa` · `5fc2e379cfdb3e9202fefc18d4f9e7086f78df3b`
-**Live site:** [Urr Jaa!](https://offerpk.github.io/flappy-tap/) remains on the v3.58.4 baseline. This patch is local and has not been pushed or deployed.
+Urr Jaa! `3.58.5-urrjaa` is released at commit `d829300e0cbe611438433033758114395bd6eb64`, a direct child of the requested v3.58.4 baseline. The [v3.58.5-urrjaa tag and release](https://github.com/OfferPk/flappy-tap/releases/tag/v3.58.5-urrjaa) are public, and the [live game](https://offerpk.github.io/flappy-tap/) is serving the new version.
+
+The Windows package is available as [urr-jaa-web-windows.zip](https://github.com/OfferPk/flappy-tap/releases/download/v3.58.5-urrjaa/urr-jaa-web-windows.zip). Its SHA-256 is `c5afa31d3bb2ab7c9e4c2a280dd628b0b46a5d5d89e6d521751c2b46112206a9`.
+
+GitHub Pages reports `built` from `main:/docs` at the release commit. Public HTTP checks returned v3.58.5 for the HTML, `js/game.js`, `js/storage.js`, and `sw.js` (`urrjaa-v73-20260929`). The ZIP download returned HTTP 200 and matches both the local artifact and GitHub’s reported digest.
 
 ## MAGIC 🪄
 
-MAGIC has persistent local inventory shared by the menu and gameplay HUD. A new local calendar day adds one free item without replacing saved items; activation consumes one. The gameplay button reflects the current count and disables at zero or while active. The simple **MAGIC 🪄** screen shows **Available** and **USE MAGIC**.
+The menu and gameplay HUD share persistent local inventory. A new local calendar day adds one free item without overwriting inventory; each activation consumes one. MAGIC runs for 10 seconds: smooth gap-seeking autopilot for the first 7 seconds, followed by a red 3-second countdown with player control returned. The timer pauses with the game, and pipe/traffic collisions are non-lethal during the effect; world boundaries behave normally. Visuals include a purple-gold glow and trail.
 
-Each use starts a 10-second guided flight: the first 7 seconds steer smoothly toward the next pipe gap; at 3, player control returns and the timer turns red/pulses through 2, 1, then 0. Pause duration is excluded and the timer refreshes on resume. Pipe and traffic collisions are non-lethal during the effect, while normal ground/ceiling boundaries remain. The bird receives a purple-gold glow and trail. Timer accessibility labels and reduced-motion styling are included.
+Rewarded ads are unavailable without a connected SDK. The action remains disabled and cannot grant items; reward-state logic enforces a maximum of 2 per local day with a 10-hour cooldown for any future verified integration.
 
-**Rewarded ads are not connected in this build.** The action is visibly unavailable and grants nothing; saved ad-reward state enforces at most 2 per local day and a 10-hour cooldown for a future verified SDK integration.
-
-## Verification
-
-`npm run check`, `npm test`, and `npm run smoke` pass. Tests cover daily claim idempotence and additive inventory, exact consumption, persistence, ad reward/cooldown/cap logic, SDK-unavailable behavior, timer phases and pause-offset math, steering bounds, and app-scoped service-worker cleanup. Responsive Chromium layout checks cover 320×568 and 390×844. The Windows ZIP passes integrity and hash-parity checks against its Pages copy. A local browser preview verified the menu inventory, one-item use, visible timer, and red 3-second control-return state.
-
-No physical-device or airplane-mode network test was performed. The public release tag and Pages deployment are intentionally unchanged.
-
-## Local artifacts
-
-- Pages source: `docs/`
-- Capacitor web assets: `www/`
-- Windows package: `dist/urr-jaa-web-windows.zip`
+`npm run check`, `npm test`, `npm run smoke`, `npm run pack:windows`, and Chromium responsive layout tests at 320×568 and 390×844 passed. Physical-device and airplane-mode testing were not performed.
