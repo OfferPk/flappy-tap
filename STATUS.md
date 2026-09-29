@@ -4,7 +4,7 @@
 
 The release commit is `d829300e0cbe611438433033758114395bd6eb64`. The [v3.58.5-urrjaa release](https://github.com/OfferPk/flappy-tap/releases/tag/v3.58.5-urrjaa) is public, and the [live game](https://offerpk.github.io/flappy-tap/) is serving it.
 
-GitHub reports a successful Pages build from `main:/docs` at the release commit. Direct public requests returned HTTP 200 for the page, game/storage scripts, and the v3.58.5 service worker `urrjaa-v73-20260929`.
+GitHub reports a successful build from the configured `main:/docs` Pages source. Direct public requests returned HTTP 200 for the page, game/storage scripts, and the v3.58.5 service worker `urrjaa-v73-20260929`.
 
 **Windows ZIP:** [Download](https://github.com/OfferPk/flappy-tap/releases/download/v3.58.5-urrjaa/urr-jaa-web-windows.zip) · SHA-256 `c5afa31d3bb2ab7c9e4c2a280dd628b0b46a5d5d89e6d521751c2b46112206a9`
 

@@ -4,7 +4,7 @@ Urr Jaa! `3.58.5-urrjaa` is released at commit `d829300e0cbe61143843303375811439
 
 The Windows package is available as [urr-jaa-web-windows.zip](https://github.com/OfferPk/flappy-tap/releases/download/v3.58.5-urrjaa/urr-jaa-web-windows.zip). Its SHA-256 is `c5afa31d3bb2ab7c9e4c2a280dd628b0b46a5d5d89e6d521751c2b46112206a9`.
 
-GitHub Pages reports `built` from `main:/docs` at the release commit. Public HTTP checks returned v3.58.5 for the HTML, `js/game.js`, `js/storage.js`, and `sw.js` (`urrjaa-v73-20260929`). The ZIP download returned HTTP 200 and matches both the local artifact and GitHub’s reported digest.
+GitHub Pages reports a successful build from the configured `main:/docs` source. Public HTTP checks returned v3.58.5 for the HTML, `js/game.js`, `js/storage.js`, and `sw.js` (`urrjaa-v73-20260929`). The ZIP download returned HTTP 200 and matches both the local artifact and GitHub’s reported digest.
 
 ## MAGIC 🪄
 
