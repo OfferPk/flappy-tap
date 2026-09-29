@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.58.1-urrjaa — offline asset fallback, behavior tests, accessible results,
+ * Urr Jaa! v3.58.2-urrjaa — offline asset fallback, behavior tests, accessible results,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.

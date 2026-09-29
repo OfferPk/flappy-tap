@@ -19,7 +19,7 @@ def copytree(src, dst):
         else:
             shutil.copy2(p, dst / p.name)
 
-for f in ['index.html', 'manifest.json', 'sw.js']:
+for f in ['index.html', 'how-to-play.html', 'manifest.json', 'sw.js']:
     shutil.copy2(root / f, staging / f)
 copytree(root / 'css', staging / 'css')
 copytree(root / 'js', staging / 'js')
@@ -29,7 +29,8 @@ copytree(root / 'icons', staging / 'icons')
     b'@echo off\r\ncd /d "%~dp0"\r\nstart "" "index.html"\r\n'
 )
 (staging / 'README-PLAY.txt').write_text(
-    'Urr Jaa! — offline web build (v3.4.1-urrjaa)\r\n'
+    'Urr Jaa! — offline web build (v3.58.2-urrjaa)\r\n'
+    'Quick guide: open how-to-play.html (English / Roman Urdu)\r\n'
     'Windows: double-click PLAY-WINDOWS.bat (or open index.html in Chrome/Edge)\r\n'
     'Android: open the GitHub Pages link in Chrome (Add to Home Screen for PWA)\r\n'
     'Controls: tap / click / Space to flap — NO countdown\r\n'
