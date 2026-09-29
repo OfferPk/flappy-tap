@@ -49,6 +49,19 @@ function testGameplayRules() {
   };
   assert.deepEqual(dailySequence('2026-09-29'), dailySequence('2026-09-29'), 'same Daily seed reproduces its initial RNG sequence');
   assert.notDeepEqual(dailySequence('2026-09-29'), dailySequence('2026-09-30'), 'a new local date changes the Daily sequence');
+  const magicStart = sim.magicCountdownState(1000, 1000, 10000, 7000);
+  assert.deepEqual(magicStart, { active: true, remaining: 10, automatic: true, warning: false });
+  assert.equal(sim.magicCountdownState(7999, 1000, 10000, 7000).remaining, 4, 'the first seven seconds remain in autopilot');
+  const handoff = sim.magicCountdownState(8000, 1000, 10000, 7000);
+  assert.deepEqual(handoff, { active: true, remaining: 3, automatic: false, warning: true }, 'control returns as the red final-three-second warning begins');
+  assert.equal(sim.magicCountdownState(10999, 1000, 10000, 7000).remaining, 1);
+  assert.equal(sim.magicCountdownState(11000, 1000, 10000, 7000).active, false, 'MAGIC ends at ten seconds');
+  const pausedMagic = sim.magicCountdownState(63000, 61000, 10000, 7000);
+  assert.equal(pausedMagic.remaining, 8, 'shifting the start by paused time preserves remaining seconds on resume');
+  let flightY = 100;
+  for (let i = 0; i < 60; i++) flightY = sim.magicFlightStep(flightY, 300, 1 / 60, 24, 520);
+  assert.ok(flightY >= 290 && flightY <= 300, 'smooth autopilot converges to the next gap center');
+  assert.equal(sim.magicFlightStep(100, 500, 0.05, 24, 200), 117, 'autopilot movement is speed-limited and stays within the safe flight bounds');
 
   assert.equal(sim.canTransition('playing', 'pause', 'daily'), true);
   assert.equal(sim.canTransition('paused', 'pause', 'daily'), false);
@@ -101,7 +114,9 @@ function testSavedProgress() {
   const source = fs.readFileSync(path.join(root, 'js/storage.js'), 'utf8');
   function loadStorage() {
     const context = { window: {}, localStorage, Date, Math, Object, Array, String, Number, parseInt, isFinite };
-    vm.runInNewContext(source, context, { filename: 'js/storage.js' });
+    const testSource = source.replace('global.FTStorage = {', 'global.FTStorage = { __testClaimMagicAdReward: claimMagicAdReward,');
+    assert.notEqual(testSource, source, 'test-only MAGIC ad grant hook is injected only by the test harness');
+    vm.runInNewContext(testSource, context, { filename: 'js/storage.js (test harness)' });
     return context.window.FTStorage;
   }
   let storage = loadStorage();
@@ -148,11 +163,42 @@ function testSavedProgress() {
   assert.equal(storage.getCoins(), 15);
   assert.equal(storage.spendCoins(99), false, 'cannot spend more coins than saved');
   assert.equal(storage.getCoins(), 15, 'failed purchase leaves saved coins unchanged');
+
+  const day1 = new Date(2026, 8, 29, 12, 0, 0);
+  const day2 = new Date(2026, 8, 30, 12, 0, 0);
+  const daily = storage.claimDailyMagic(day1);
+  assert.equal(daily.claimed, true);
+  assert.equal(storage.getMagicCount(), 1, 'first local calendar-day claim grants exactly one saved MAGIC');
+  assert.equal(storage.claimDailyMagic(day1).claimed, false, 'daily claim is idempotent within the same local date');
+  assert.equal(storage.claimDailyMagic(day2).count, 2, 'the next local date adds one MAGIC without overwriting the saved item');
+  assert.equal(storage.claimDailyMagic(new Date(2026, 8, 30, 18, 0, 0)).claimed, false, 'reopening on the same next-day date does not duplicate the reward');
+  assert.equal(storage.consumeMagic(), true);
+  assert.equal(storage.getMagicCount(), 1, 'activation consumes exactly one item');
+  assert.equal(storage.consumeMagic(), true);
+  assert.equal(storage.getMagicCount(), 0, 'the second saved MAGIC is independently consumable');
+  assert.equal(storage.consumeMagic(), false, 'empty inventory cannot be consumed');
+  const adTime = 1000000;
+  const firstAd = storage.__testClaimMagicAdReward(adTime, day1);
+  assert.equal(firstAd.adCount, 1);
+  assert.equal(storage.getMagicCount(), 1, 'a rewarded ad adds exactly one item');
+  assert.equal(storage.getMagicAdStatus(adTime + 10 * 60 * 60 * 1000 - 1, day1).eligible, false, 'the ad cooldown blocks just-before ten hours');
+  assert.equal(storage.getMagicAdStatus(adTime + 10 * 60 * 60 * 1000, day1).eligible, true, 'the next ad unlocks at ten hours exactly');
+  const secondAd = storage.__testClaimMagicAdReward(adTime + 10 * 60 * 60 * 1000, day1);
+  assert.equal(secondAd.adCount, 2);
+  assert.equal(storage.__testClaimMagicAdReward(adTime + 20 * 60 * 60 * 1000, day1), null, 'the daily ad cap blocks any third reward');
+  assert.equal(storage.getMagicAdStatus(adTime + 20 * 60 * 60 * 1000, day1).eligible, false);
+  storage = loadStorage();
+  assert.equal(storage.getMagicCount(), 2, 'MAGIC inventory survives a fresh storage module instance');
+  assert.equal(storage.isDailyMagicClaimed(day2), true, 'the latest daily claim date persists locally');
+  assert.equal(storage.getMagicAdStatus(adTime + 20 * 60 * 60 * 1000, day1).count, 2, 'ad count persists locally');
+  assert.equal(storage.claimMagicAdReward, undefined, 'production storage exposes no user-callable ad grant path');
 }
 
-function serviceWorkerHarness(fetchImpl, seededCache) {
+function serviceWorkerHarness(fetchImpl, seededCache, seededCacheNames) {
   const listeners = Object.create(null);
   const cacheData = new Map(seededCache || []);
+  const cacheNames = seededCacheNames || [];
+  const deletedCacheNames = [];
   const appShell = { body: 'cached app shell', ok: true, clone() { return this; } };
   const caches = {
     async match(request) {
@@ -163,8 +209,8 @@ function serviceWorkerHarness(fetchImpl, seededCache) {
     async open() {
       return { async put(request, response) { cacheData.set(request.url, response); }, async addAll() {} };
     },
-    async keys() { return []; },
-    async delete() { return true; }
+    async keys() { return cacheNames.slice(); },
+    async delete(key) { deletedCacheNames.push(key); return true; }
   };
   const self = {
     location: { origin: 'https://game.test', href: 'https://game.test/flappy-tap/sw.js' },
@@ -179,6 +225,12 @@ function serviceWorkerHarness(fetchImpl, seededCache) {
       listeners.fetch({ request, respondWith(promise) { responsePromise = promise; } });
       assert.ok(responsePromise, 'GET request is handled by the service worker');
       return responsePromise;
+    },
+    async activate() {
+      let activationPromise;
+      listeners.activate({ waitUntil(promise) { activationPromise = promise; } });
+      await activationPromise;
+      return deletedCacheNames.slice();
     },
     cacheData
   };
@@ -203,13 +255,28 @@ async function testOfflineAssetFallback() {
   const cachedScript = { body: 'cached game code' };
   const warmWorker = serviceWorkerHarness(networkDown, [['https://game.test/app/js/game.js', cachedScript]]);
   const cached = await warmWorker.fetch({ method: 'GET', url: 'https://game.test/app/js/game.js', mode: 'cors' });
-  assert.equal(cached.body, 'cached game code', 'a precached offline game script remains available');
+  assert.equal(cached.body, 'cached game code', 'a precached game script remains available');
+
+  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v72-20260929', 'another-app-cache', 'urrjaa-v73-20260929']);
+  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v72-20260929'], 'activation deletes only this app’s older named cache and preserves unrelated/current caches');
+}
+
+async function testMagicAdsUnavailableWithoutSdk() {
+  const context = { window: {}, Promise };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'js/ads.js'), 'utf8'), context, { filename: 'js/ads.js' });
+  assert.equal(context.window.Ads.isMagicRewardAvailable(), false, 'no SDK means no user-reachable MAGIC ad reward');
+  const result = await context.window.Ads.showMagicReward();
+  assert.equal(result.rewarded, false);
+  assert.equal(result.reason, 'no-plugin');
+  const genericMagic = await context.window.Ads.showRewarded('magic');
+  assert.equal(genericMagic.rewarded, false, 'the generic stub cannot grant MAGIC either');
 }
 
 async function main() {
   testGameplayRules();
   testPowerIndicators();
   testSavedProgress();
+  await testMagicAdsUnavailableWithoutSdk();
   await testOfflineAssetFallback();
 
   const game = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');
@@ -221,9 +288,15 @@ async function main() {
   assert.match(game, /FTSim\.rectanglesOverlap\(/, 'live collision geometry is wired to the tested pure rules');
   assert.match(game, /FTSim\.canTransition\(/, 'live run controls use the tested transition rules');
   assert.match(game, /FTSim\.activePowerIndicators\(/, 'live HUD consumes the tested active effect list');
+  assert.match(game, /FTSim\.magicFlightStep\(/, 'MAGIC autopilot uses the bounded deterministic steering helper');
+  assert.match(game, /for \(var i = 0; i < pipes\.length && !isMagicActive\(\); i\+\+\)/, 'MAGIC pipe immunity is scoped to the pipe collision loop');
+  assert.match(game, /for \(var j = 0; j < traffic\.length && !isMagicActive\(\); j\+\+\)/, 'MAGIC safe flight also passes traffic obstacles without a lethal collision');
+  assert.match(game, /magicStartedAt \+= Math\.max\(0, performance\.now\(\) - magicPauseAt\)/, 'MAGIC countdown shifts by paused duration on resume');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   assert.match(html, /id="power-hud" hidden role="group" aria-label="Active effects" aria-live="off"/,
     'indicators are exposed in a labeled, non-spamming screen-reader group');
+  assert.match(html, /id="btn-magic-action" class="magic-game-button" type="button" disabled/, 'gameplay MAGIC control starts disabled until inventory is available');
+  assert.match(html, /id="screen-magic"[^>]*hidden/, 'MAGIC menu is a separate screen');
   const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
   assert.match(css, /#power-hud\[hidden\]\s*\{\s*display:\s*none\s*!important;/,
     'inactive indicator row is explicitly hidden despite flex layout');

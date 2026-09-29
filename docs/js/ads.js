@@ -76,7 +76,10 @@
       const r = reason || 'continue';
       let body;
       let title = 'Rewarded Ad (stub)';
-      if (r === 'mystery' || r === 'mystery-box') {
+      if (r === 'magic') {
+        resolve({ rewarded: false, stub: false, reason: 'no-plugin' });
+        return;
+      } else if (r === 'mystery' || r === 'mystery-box') {
         body = 'Open a bonus Mystery Box?\n\nNo AdMob ID configured. Grant reward for this session?\n(mystery-box)\n\nNever shown mid-flight.';
       } else {
         title = 'Revive · Continue (stub)';
@@ -108,5 +111,10 @@
     });
   }
 
-  global.Ads = { showRewarded, showInterstitial, CONFIG };
+  /** Dedicated future SDK seam. Grant only from a verified SDK reward callback; no SDK is connected here. */
+  function isMagicRewardAvailable() { return false; }
+  function showMagicReward() {
+    return Promise.resolve({ rewarded: false, stub: false, reason: 'no-plugin' });
+  }
+  global.Ads = { showRewarded, showMagicReward, isMagicRewardAvailable, showInterstitial, CONFIG };
 })(window);

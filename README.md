@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.58.4-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.58.5-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -31,7 +31,7 @@ Or `npm start` / `python3 -m http.server 4174`.
 
 Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat** or open `index.html`.
 
-## Features (v3.31.0-urrjaa)
+## Features (v3.58.5-urrjaa)
 
 - **Soft collision dust** · **area/menu music stub** · **collection % meter** · **mystery jackpot juice**
 - Changelog · flap whoosh · guide refresh · perf · haptic intensity · boss warn · gift→spin toast
@@ -39,6 +39,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 - **Mystery wheel 15s** Spin once (KEEP) · Close (X) · tips · fireworks · pipes · safe-area
 - Power VFX clarity (Slow-mo / Ghost / Turbo) · Challenge stage picker · One Life heart HUD
 - Coin economy balance · Bird unlock teasers · Gift haptic · Landscape safe-area
+- **MAGIC 🪄** persistent inventory · daily +1 · pause-aware 10-second safe flight; ad rewards stay unavailable until a real SDK is connected
 - Universal Close (X) on all panels · Esc · mid-spin Mystery keeps charge
 
 - Perfect Pass center-rail juice + Practice ghost guide
@@ -78,11 +79,12 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Missions XSS | Allowlisted ids + textContent cards (F1 closed) |
 | Collection | Birds · Vehicles · Accessories · Trails · Areas · Challenges · 25–100% rewards |
 | Ads stubs | Continue once / Mystery Box — never mid-flight |
+| MAGIC 🪄 | Persistent inventory · daily +1 · 10-second guided safe flight · rewarded ads unavailable without SDK |
 | Feel / forgiveness | Smaller hitbox · corner grace · **LUCKY** · first-10s ease · Classic curve · first-run protect |
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v72-20260929** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
+| PWA | `sw.js` cache **urrjaa-v73-20260929** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)

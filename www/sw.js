@@ -1,5 +1,5 @@
-/* Offline-first service worker — Urr Jaa! v3.58.4-urrjaa */
-const CACHE = 'urrjaa-v72-20260929';
+/* Offline-first service worker — Urr Jaa! v3.58.5-urrjaa */
+const CACHE = 'urrjaa-v73-20260929';
 const ASSETS = [
   './',
   './index.html',
@@ -33,7 +33,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))
+      Promise.all(keys.filter((key) => key.indexOf('urrjaa-v') === 0 && key !== CACHE).map((key) => caches.delete(key)))
     ).then(() => self.clients.claim())
   );
 });

@@ -49,6 +49,8 @@
       <div id="timer-hud" hidden>60s</div>
       <div id="lives-hud" class="lives-hud" hidden aria-label="Lives"></div>
       <div id="power-hud" hidden role="group" aria-label="Active effects" aria-live="off"></div>
+      <div id="magic-timer" class="magic-timer" hidden role="timer" aria-live="off" aria-label="MAGIC 🪄 countdown">10</div>
+      <button id="btn-magic-action" class="magic-game-button" type="button" disabled aria-label="MAGIC 🪄 unavailable">🪄 MAGIC × 0</button>
       <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause" title="Pause">⏸</button>
       <button id="btn-mute" class="icon-btn mute-btn" type="button" aria-label="Mute sound" title="Mute" aria-pressed="false"></button>
     </div>
@@ -68,7 +70,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.58.4-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.58.5-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -88,6 +90,7 @@
         <div class="btn-row menu-tools" aria-label="Help and rewards">
           <button id="btn-guide" class="btn ghost btn-sm menu-tool" type="button"><span>📖</span> Guide</button>
           <button id="btn-gifts" class="btn ghost btn-sm menu-tool mystery-tool" type="button"><span>🎁</span> Mystery</button>
+          <button id="btn-magic-menu" class="btn ghost btn-sm menu-tool magic-menu-tool" type="button">MAGIC 🪄</button>
           <button id="btn-settings" class="btn ghost btn-sm menu-tool" type="button"><span>⚙</span> Settings</button>
         </div>
       </div>
@@ -143,6 +146,24 @@
           <button class="btn primary" type="button" data-mode="relax">Start Sukoon flight</button>
         </details>
         <button class="btn ghost" type="button" data-close="modes">Back</button>
+      </div>
+    </div>
+
+    <!-- MAGIC 🪄 inventory and rewards -->
+    <div id="screen-magic" class="screen panel-screen magic-screen" hidden>
+      <button type="button" class="panel-close" data-panel-close="magic" aria-label="Close">X</button>
+      <h2>MAGIC 🪄</h2>
+      <div class="magic-inventory-card" aria-live="polite">
+        <p>Available: <strong id="magic-available-count">0</strong></p>
+        <p id="magic-daily-status" class="hint" role="status">Daily reward is ready.</p>
+      </div>
+      <div class="btn-col magic-actions">
+        <button id="btn-use-magic" class="btn primary" type="button" disabled>USE MAGIC</button>
+        <p class="hint">Starts a Classic flight with 10 seconds of MAGIC 🪄. Control returns at 3.</p>
+        <p id="magic-ad-status" class="hint" role="status"></p>
+        <button id="btn-magic-watch-ad" class="btn reward" type="button">Watch Ad → +1 MAGIC 🪄</button>
+        <p class="hint">Up to 2 ad rewards per day · 10-hour cooldown · ad SDK not connected</p>
+        <button class="btn ghost" type="button" data-panel-close="magic">Back</button>
       </div>
     </div>
 
@@ -476,6 +497,7 @@
         <summary>Changelog · recent</summary>
         <ul class="changelog-list" aria-label="Recent changes">
           <li><strong>3.58.4</strong> — compact active-effect chips · live timers/expiry · responsive wrap · one-hit Shield status</li>
+          <li><strong>3.58.5</strong> — MAGIC 🪄 inventory · daily reward · pause-aware 10-second guided safe flight</li>
           <li><strong>3.58.3</strong> — compact power timers · gentle Sukoon mode · softened coin-combo misses · feather polish</li>
           <li><strong>3.58</strong> — PERFECT voice throttle · star budget · hot-combo ring</li>
           <li><strong>3.57</strong> — PERFECT haptic throttle · rail spark scale · cam sway</li>
@@ -497,7 +519,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.58.4-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.58.5-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -572,6 +594,7 @@
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>3.30:</strong> flap whoosh juice · Settings changelog-lite · Guide refresh · performance pass.</li>
+          <li><strong>3.58.5:</strong> MAGIC 🪄 inventory, daily reward, and a pause-aware 10-second guided flight.</li>
           <li><strong>3.58.4:</strong> small active power chips with live timers and auto-expiry; Shield stays one-hit.</li>
           <li><strong>3.58.3:</strong> compact power timers · optional Sukoon flight · a softer coin-combo miss rule · feather detail.</li>
           <li><strong>3.58:</strong> throttle PERFECT voice · adaptive perfect stars · longer clear ring on hot combo · Spin once still 15s.</li>
@@ -669,6 +692,7 @@
           <li><strong>کلیکشن:</strong> نئے پرندے اور علاقے سکے یا اسکور سے کھلیں۔</li>
           <li><strong>سیزنل (آف لائن):</strong> آزادی / عید / سردی / بسنت — مقامی تاریخ یا اسکور۔ کوئی سرور سیزن نہیں۔</li>
           <li><strong>نیا (۳.۲۸–۳.۳۰):</strong> یومیہ کاؤنٹ ڈاؤن · پاور ختم وارننگ · باس وارن · گفٹ→اسپن ٹوسٹ · ہیپٹک شدت · فلیپ وُش · چینج لاگ۔</li>
+          <li><strong>3.58.5:</strong> MAGIC 🪄 محفوظ انوینٹری، روزانہ تحفہ، توقف پر رکنے والا ۱۰ سیکنڈ محفوظ سفر۔</li>
                   <li><strong>3.58.4:</strong> مختصر پاور چپس، باقی وقت، ختم ہونے پر خود غائب؛ شیلڈ ایک ہٹ تک۔</li>
                   <li><strong>3.58.3:</strong> مختصر پاور ٹائمر · سکون موڈ · سکے چھوٹنے پر کومبو ایک درجہ کم۔</li>
                   <li><strong>3.58:</strong> PERFECT وائس تھروٹل · ستارے · hot combo · 15s Spin۔</li>

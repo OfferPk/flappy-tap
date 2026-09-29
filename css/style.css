@@ -3804,3 +3804,73 @@ html.reduce-motion .btn-play-milestone { animation: none; box-shadow: 0 0 0 2px 
   .mascot-choice { gap: 4px; padding-inline: 5px; font-size: .7rem; }
   .mascot-choice img, .mascot-default-icon { flex-basis: 38px; width: 38px; height: 38px; }
 }
+
+
+/* MAGIC 🪄 gameplay and inventory UI (v3.58.5) */
+.magic-game-button {
+  pointer-events: auto;
+  position: absolute;
+  right: calc(12px + var(--safe-right));
+  bottom: calc(84px + var(--safe-bottom));
+  z-index: 8;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 236, 170, .85);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fff1a8, #ffd23f 54%, #ffad33);
+  color: #432a06;
+  font: 900 .88rem/1 system-ui, sans-serif;
+  letter-spacing: .01em;
+  text-shadow: 0 1px rgba(255,255,255,.5);
+  box-shadow: 0 5px 18px rgba(255, 176, 32, .45), inset 0 1px rgba(255,255,255,.8);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.magic-game-button:active:not(:disabled) { transform: scale(.96); }
+.magic-game-button:disabled { cursor: default; opacity: .48; filter: saturate(.55); }
+.magic-game-button.is-active:disabled { opacity: .88; filter: none; background: linear-gradient(135deg,#e5d5ff,#b58cff 55%,#7c5ce0); color:#201042; }
+.magic-timer {
+  position: absolute;
+  top: calc(208px + var(--hud-top));
+  right: calc(12px + var(--safe-right));
+  left: auto;
+  z-index: 8;
+  transform: none;
+  min-width: 58px;
+  padding: 4px 16px;
+  border: 1px solid rgba(255, 239, 175, .8);
+  border-radius: 999px;
+  background: rgba(86, 52, 157, .88);
+  color: #fff6cf;
+  font-size: clamp(1.45rem, 6vw, 2rem);
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0,0,0,.48);
+  box-shadow: 0 0 20px rgba(183, 139, 255, .62);
+  pointer-events: none;
+}
+.magic-timer.magic-warning {
+  border-color: rgba(255, 235, 235, .95);
+  background: rgba(190, 35, 61, .94);
+  color: #fff;
+  box-shadow: 0 0 22px rgba(255, 63, 89, .82);
+  animation: magic-warning-pulse .55s ease-in-out infinite alternate;
+}
+@keyframes magic-warning-pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
+.magic-menu-tool { color: #ffe69a !important; }
+.magic-inventory-card {
+  width: min(100%, 340px);
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 217, 61, .4);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(91,64,157,.55), rgba(31,41,75,.72));
+  box-shadow: 0 12px 30px rgba(0,0,0,.22), inset 0 1px rgba(255,255,255,.09);
+}
+.magic-inventory-card p:first-child { font-size: 1.1rem; font-weight: 700; }
+.magic-inventory-card strong { color: var(--gold); font-size: 1.45rem; font-variant-numeric: tabular-nums; }
+.magic-actions { width: min(100%, 340px); }
+.magic-screen .hint { max-width: 340px; }
+.magic-actions .btn:disabled { opacity: .48; filter: saturate(.55); }
+html.reduce-motion .magic-timer.magic-warning { animation: none; }

@@ -82,7 +82,13 @@
     // v3.4
     giftBoxes: PREFIX + 'gift-boxes',
     // v3.10
-    spinHistory: PREFIX + 'spin-history'
+    spinHistory: PREFIX + 'spin-history',
+    // v3.58.5 MAGIC 🪄 inventory/reward state
+    magicCount: PREFIX + 'magic-count',
+    magicDailyDate: PREFIX + 'magic-daily-date',
+    magicAdDate: PREFIX + 'magic-ad-date',
+    magicAdCount: PREFIX + 'magic-ad-count',
+    magicLastAdAt: PREFIX + 'magic-last-ad-at'
   };
 
   const BIRDS = {
@@ -136,6 +142,51 @@
   function todayKey() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function magicDateKey(value) {
+    const d = value == null ? new Date() : (value instanceof Date ? value : new Date(value));
+    if (!Number.isFinite(d.getTime())) return todayKey();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function getMagicCount() {
+    return Math.max(0, parseInt(get(KEYS.magicCount, '0'), 10) || 0);
+  }
+  function claimDailyMagic(dateValue) {
+    const date = magicDateKey(dateValue);
+    if (get(KEYS.magicDailyDate, '') === date) return { claimed: false, count: getMagicCount(), date: date };
+    const count = getMagicCount() + 1;
+    set(KEYS.magicDailyDate, date);
+    set(KEYS.magicCount, count);
+    return { claimed: true, count: count, date: date };
+  }
+  function isDailyMagicClaimed(dateValue) {
+    return get(KEYS.magicDailyDate, '') === magicDateKey(dateValue);
+  }
+  function getMagicAdStatus(nowValue, dateValue) {
+    const now = nowValue == null ? Date.now() : Number(nowValue);
+    const date = magicDateKey(dateValue);
+    const count = get(KEYS.magicAdDate, '') === date ? Math.max(0, parseInt(get(KEYS.magicAdCount, '0'), 10) || 0) : 0;
+    const lastAt = Math.max(0, parseInt(get(KEYS.magicLastAdAt, '0'), 10) || 0);
+    const cooldownRemainingMs = lastAt ? Math.max(0, 10 * 60 * 60 * 1000 - (now - lastAt)) : 0;
+    return { count: count, maxPerDay: 2, lastAt: lastAt, cooldownRemainingMs: cooldownRemainingMs, eligible: count < 2 && cooldownRemainingMs === 0 };
+  }
+  function claimMagicAdReward(nowValue, dateValue) {
+    const now = nowValue == null ? Date.now() : Number(nowValue);
+    const date = magicDateKey(dateValue);
+    const status = getMagicAdStatus(now, dateValue);
+    if (!status.eligible || !Number.isFinite(now)) return null;
+    const count = status.count + 1;
+    set(KEYS.magicAdDate, date);
+    set(KEYS.magicAdCount, count);
+    set(KEYS.magicLastAdAt, Math.floor(now));
+    set(KEYS.magicCount, getMagicCount() + 1);
+    return { count: getMagicCount(), adCount: count, date: date, lastAt: Math.floor(now) };
+  }
+  function consumeMagic() {
+    const count = getMagicCount();
+    if (count < 1) return false;
+    set(KEYS.magicCount, count - 1);
+    return true;
   }
   /** 3.28: ms until local midnight (daily challenge / missions reset). */
   function msUntilDailyReset() {
@@ -1376,6 +1427,7 @@
     getBestPerfect, setBestPerfect, bumpNearMissTotal, bumpPerfectTotal,
     rollBoxRarity, BOX_RARITIES,
     getGiftBoxes, setGiftBoxes, addGiftBoxes, spendGiftBoxes, getSpinCharges,
+    getMagicCount, consumeMagic, claimDailyMagic, isDailyMagicClaimed, getMagicAdStatus,
     beginWheelSpin, grantSpinCoins, spinWheelOnce, spinWheelAll, rollWheelCoins, WHEEL_REWARDS, GIFTS_PER_SPIN,
     getSpinHistory, recordSpinHistory, getSpinHistoryTotal, clearSpinHistory, SPIN_HISTORY_MAX,
     BIRDS, MASCOT_SELECTIONS, VEHICLES, ENVS, HATS, TRAILS, SEASONALS

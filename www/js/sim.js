@@ -91,6 +91,32 @@
     return indicators;
   }
 
+  function magicCountdownState(now, startedAt, durationMs, automaticMs) {
+    now = Number(now) || 0;
+    startedAt = Number(startedAt) || 0;
+    durationMs = Math.max(1, Number(durationMs) || 10000);
+    automaticMs = Math.max(0, Math.min(durationMs, Number(automaticMs) || 7000));
+    var elapsed = Math.max(0, now - startedAt);
+    var active = startedAt > 0 && elapsed < durationMs;
+    var remaining = active ? Math.max(1, Math.ceil((durationMs - elapsed) / 1000)) : 0;
+    return {
+      active: active,
+      remaining: remaining,
+      automatic: active && elapsed < automaticMs,
+      warning: active && remaining <= 3
+    };
+  }
+
+  function magicFlightStep(y, targetY, dt, minY, maxY) {
+    y = Number(y) || 0;
+    targetY = Math.max(Number(minY) || 0, Math.min(Number(maxY) || 600, Number(targetY) || y));
+    dt = Math.max(0, Math.min(0.05, Number(dt) || 0));
+    var eased = y + (targetY - y) * (1 - Math.exp(-dt * 4.8));
+    var maxStep = 340 * dt;
+    var nextY = Math.max(y - maxStep, Math.min(y + maxStep, eased));
+    return Math.max(Number(minY) || 0, Math.min(Number(maxY) || 600, nextY));
+  }
+
   function isRelaxMode(mode) { return mode === 'relax'; }
   function normalizeRelaxDuration(value) {
     var seconds = parseInt(value, 10);
@@ -124,6 +150,8 @@
     scorePipePass: scorePipePass,
     softenCoinComboOnMiss: softenCoinComboOnMiss,
     activePowerIndicators: activePowerIndicators,
+    magicCountdownState: magicCountdownState,
+    magicFlightStep: magicFlightStep,
     isRelaxMode: isRelaxMode,
     normalizeRelaxDuration: normalizeRelaxDuration,
     relaxBumpResponse: relaxBumpResponse,

@@ -1,15 +1,25 @@
 # HANDOFF — Urr Jaa!
 
-**Live version:** 3.58.4-urrjaa · service worker `urrjaa-v72-20260929`
+**Patch candidate:** `3.58.5-urrjaa` on `feature/magic-powerup`
+**Based on:** `v3.58.4-urrjaa` · `5fc2e379cfdb3e9202fefc18d4f9e7086f78df3b`
+**Live site:** [Urr Jaa!](https://offerpk.github.io/flappy-tap/) remains on the v3.58.4 baseline. This patch is local and has not been pushed or deployed.
 
-**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.58.4-urrjaa
+## MAGIC 🪄
 
-**Live game:** https://offerpk.github.io/flappy-tap/
+MAGIC has persistent local inventory shared by the menu and gameplay HUD. A new local calendar day adds one free item without replacing saved items; activation consumes one. The gameplay button reflects the current count and disables at zero or while active. The simple **MAGIC 🪄** screen shows **Available** and **USE MAGIC**.
 
-**Windows ZIP:** https://github.com/OfferPk/flappy-tap/releases/latest/download/urr-jaa-web-windows.zip
+Each use starts a 10-second guided flight: the first 7 seconds steer smoothly toward the next pipe gap; at 3, player control returns and the timer turns red/pulses through 2, 1, then 0. Pause duration is excluded and the timer refreshes on resume. Pipe and traffic collisions are non-lethal during the effect, while normal ground/ceiling boundaries remain. The bird receives a purple-gold glow and trail. Timer accessibility labels and reduced-motion styling are included.
 
-**This patch:** active power effects use small horizontal chips with live second counts and expiry removal. Shield remains the existing one-hard-hit protection (it has no time limit), so its chip says “1 hit” and disappears when used; no gameplay durations or stacking rules were changed. Chips wrap within the HUD-safe width, stay below the score/control/status band, and have labeled screen-reader output with no per-second live announcements.
+**Rewarded ads are not connected in this build.** The action is visibly unavailable and grants nothing; saved ad-reward state enforces at most 2 per local day and a 10-hour cooldown for a future verified SDK integration.
 
-**Verification:** `npm run check`, `npm run smoke`, and `npm test` (including timer/expiry/multiple-effect tests and real Chromium device-emulation layout checks at 320×568 and 390×844) passed. Pages/Capacitor assets were rebuilt and compared; the Windows ZIP passed integrity and hash parity checks.
+## Verification
 
-Keep the game local/offline. No server, account, or network feature was added. Existing modes, scores, saved data, Sukoon, mascots, and PWA behavior remain in scope and were not intentionally changed.
+`npm run check`, `npm test`, and `npm run smoke` pass. Tests cover daily claim idempotence and additive inventory, exact consumption, persistence, ad reward/cooldown/cap logic, SDK-unavailable behavior, timer phases and pause-offset math, steering bounds, and app-scoped service-worker cleanup. Responsive Chromium layout checks cover 320×568 and 390×844. The Windows ZIP passes integrity and hash-parity checks against its Pages copy. A local browser preview verified the menu inventory, one-item use, visible timer, and red 3-second control-return state.
+
+No physical-device or airplane-mode network test was performed. The public release tag and Pages deployment are intentionally unchanged.
+
+## Local artifacts
+
+- Pages source: `docs/`
+- Capacitor web assets: `www/`
+- Windows package: `dist/urr-jaa-web-windows.zip`

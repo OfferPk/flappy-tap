@@ -31,6 +31,7 @@ const html = `<!doctype html>
 <span class="power-chip power-risky" aria-label="Risky multiplier: 4 seconds remaining">🎯 RISKY 3× 4s</span>
 <span class="power-chip power-onelife" aria-label="One Life mode">1️⃣ One Life</span>
 </div>
+<div id="magic-timer" class="magic-timer">10</div><button id="btn-magic-action" class="magic-game-button">🪄 MAGIC × 3</button>
 <button id="btn-pause" class="icon-btn" aria-label="Pause">⏸</button><button id="btn-mute" class="icon-btn" aria-label="Mute sound">🔊</button>
 </div></main>
 <script>
@@ -39,13 +40,19 @@ function runCheck(){
   const app=document.getElementById('app').getBoundingClientRect();
   const hud=document.getElementById('power-hud');
   const row=hud.getBoundingClientRect();
+  const magicTimer=document.getElementById('magic-timer').getBoundingClientRect();
+  const magicButton=document.getElementById('btn-magic-action').getBoundingClientRect();
   const chips=[...hud.querySelectorAll('.power-chip')].map(x=>({el:x,r:x.getBoundingClientRect()}));
-  const ids=['score-display','combo-display','btn-pause','btn-mute','mode-badge','coin-hud','timer-hud','lives-hud'];
+  const ids=['score-display','combo-display','btn-pause','btn-mute','mode-badge','coin-hud','timer-hud','lives-hud','magic-timer','btn-magic-action'];
   const blockers=ids.map(id=>({id,r:document.getElementById(id).getBoundingClientRect()}));
   const errors=[];
   if(row.width>app.width+0.5 || row.left<app.left-0.5 || row.right>app.right+0.5) errors.push('row outside app');
   if(row.top < blockers.find(x=>x.id==='lives-hud').r.bottom) errors.push('row overlaps lives/status band');
   if(row.bottom > innerHeight*0.5) errors.push('row extends into center gameplay region');
+  if(magicTimer.width<=0 || magicTimer.height<=0 || magicTimer.top<row.bottom-0.5) errors.push('MAGIC timer overlaps or precedes effect chips');
+  if(magicTimer.left<app.left-0.5 || magicTimer.right>app.right+0.5 || magicTimer.left<app.left+app.width/2) errors.push('MAGIC timer outside app or not top-right');
+  if(magicButton.width<=0 || magicButton.height<=0 || magicButton.left<app.left-0.5 || magicButton.right>app.right+0.5 || magicButton.top<app.top-0.5 || magicButton.bottom>app.bottom+0.5) errors.push('MAGIC button outside app');
+  for(const id of ['btn-pause','btn-mute']) if(overlaps(magicButton,blockers.find(x=>x.id===id).r)) errors.push('MAGIC button overlaps '+id);
   for(const chip of chips){
     if(chip.r.width<=0 || chip.r.height<=0) errors.push('empty chip');
     if(chip.r.height>30) errors.push('chip is not compact horizontally');
@@ -57,7 +64,7 @@ function runCheck(){
   if(getComputedStyle(hiddenProbe).display!=='none') errors.push('hidden state overridden by flex styling');
   document.documentElement.dataset.layoutOk=errors.length?'false':'true';
   document.documentElement.dataset.layoutErrors=errors.join(';');
-  document.documentElement.dataset.layoutBounds=JSON.stringify({viewport:[innerWidth,innerHeight],row:[row.left,row.top,row.right,row.bottom],chips:chips.map(x=>[x.r.left,x.r.top,x.r.right,x.r.bottom])});
+  document.documentElement.dataset.layoutBounds=JSON.stringify({viewport:[innerWidth,innerHeight],row:[row.left,row.top,row.right,row.bottom],magicTimer:[magicTimer.left,magicTimer.top,magicTimer.right,magicTimer.bottom],magicButton:[magicButton.left,magicButton.top,magicButton.right,magicButton.bottom],chips:chips.map(x=>[x.r.left,x.r.top,x.r.right,x.r.bottom])});
 }
 requestAnimationFrame(()=>requestAnimationFrame(runCheck));
 </script></body></html>`;

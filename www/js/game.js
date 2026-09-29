@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.58.4-urrjaa — compact active power chips, live expiry, softer combo decay,
+ * Urr Jaa! v3.58.5-urrjaa — MAGIC 🪄 inventory, daily/ad rewards and timed safe flight,
  * offline asset fallback, accessible results, soft landing dust, credits/version in settings.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -54,6 +54,8 @@
   const M_PER_PX = 0.08;
   const TIME_ATTACK_S = 60;
   const RELAX_DEFAULT_SECONDS = 180;
+  const MAGIC_DURATION_MS = 10000;
+  const MAGIC_AUTO_MS = 7000;
   const TRAFFIC_CHANCE = 0.018;
   const PERFECT_CENTER_PX = 14;
   const BOSS_EVERY_M = 180;
@@ -146,6 +148,11 @@
   let turboUntil = 0;
   let ghostUntil = 0;
   let score2xUntil = 0;
+  let magicStartedAt = 0;
+  let magicPauseAt = 0;
+  let magicWasAutomatic = false;
+  let magicZeroHideTimer = 0;
+  let magicAdInFlight = false;
   let rng = Math.random;
   let sensitivity = 1;
   let reduceMotion = false;
@@ -198,6 +205,15 @@
   const comboMeterFillEl = document.getElementById('combo-meter-fill');
   const modeBadgeEl = document.getElementById('mode-badge');
   const powerHudEl = document.getElementById('power-hud');
+  const magicTimerEl = document.getElementById('magic-timer');
+  const btnMagicAction = document.getElementById('btn-magic-action');
+  const screenMagic = document.getElementById('screen-magic');
+  const btnMagicMenu = document.getElementById('btn-magic-menu');
+  const btnUseMagic = document.getElementById('btn-use-magic');
+  const btnMagicWatchAd = document.getElementById('btn-magic-watch-ad');
+  const magicAvailableEl = document.getElementById('magic-available-count');
+  const magicDailyStatusEl = document.getElementById('magic-daily-status');
+  const magicAdStatusEl = document.getElementById('magic-ad-status');
   const resumeCountdownEl = document.getElementById('resume-countdown');
   const resumeCountdownNumEl = document.getElementById('resume-countdown-num');
   const resumeCountdownChk = document.getElementById('resume-countdown-toggle');
@@ -1502,7 +1518,138 @@ function updateComboMeter(visible) {
 
   function allScreens() {
     return [screenStart, screenDeath, screenSettings, screenPause, screenRelaxEnd, screenGarage, screenModes,
-      screenMissions, screenCollection, screenGifts, screenGuide, screenBoards, screenStreak];
+      screenMissions, screenCollection, screenGifts, screenGuide, screenBoards, screenStreak, screenMagic];
+  }
+
+  function magicClockNow(now) {
+    now = now == null ? performance.now() : now;
+    return state === 'paused' && magicPauseAt ? magicPauseAt : now;
+  }
+  function magicPhase(now) {
+    return FTSim.magicCountdownState(magicClockNow(now), magicStartedAt, MAGIC_DURATION_MS, MAGIC_AUTO_MS);
+  }
+  function isMagicActive(now) {
+    return magicPhase(now).active;
+  }
+  function refreshMagicUI() {
+    var count = FTStorage.getMagicCount ? FTStorage.getMagicCount() : 0;
+    var active = isMagicActive();
+    if (btnMagicAction) {
+      btnMagicAction.hidden = state !== 'playing';
+      btnMagicAction.textContent = '🪄 MAGIC × ' + count;
+      btnMagicAction.disabled = count < 1 || active;
+      btnMagicAction.classList.toggle('is-active', active);
+      btnMagicAction.setAttribute('aria-label', active ? 'MAGIC 🪄 active' : (count < 1 ? 'MAGIC 🪄 unavailable' : 'Activate MAGIC 🪄, ' + count + ' available'));
+    }
+    if (magicAvailableEl) magicAvailableEl.textContent = String(count);
+    if (btnUseMagic) btnUseMagic.disabled = count < 1;
+    if (magicDailyStatusEl) {
+      var dailyClaimed = FTStorage.isDailyMagicClaimed && FTStorage.isDailyMagicClaimed();
+      magicDailyStatusEl.textContent = dailyClaimed ? 'Daily reward claimed today.' : 'Daily +1 MAGIC 🪄 is ready.';
+    }
+    if (magicAdStatusEl && FTStorage.getMagicAdStatus) {
+      var ad = FTStorage.getMagicAdStatus();
+      var adAvailable = !!(Ads && Ads.isMagicRewardAvailable && Ads.isMagicRewardAvailable());
+      if (!adAvailable) magicAdStatusEl.textContent = 'Rewarded ads are unavailable · no ad SDK connected.';
+      else if (ad.count >= ad.maxPerDay) magicAdStatusEl.textContent = '2/2 ad rewards claimed today.';
+      else if (ad.cooldownRemainingMs > 0) magicAdStatusEl.textContent = 'Next reward in ' + FTStorage.formatDailyCountdown(ad.cooldownRemainingMs) + '.';
+      else magicAdStatusEl.textContent = ad.count + '/2 ad rewards claimed today · Ready.';
+      if (btnMagicWatchAd) btnMagicWatchAd.disabled = !adAvailable || !ad.eligible || magicAdInFlight;
+    }
+  }
+  function updateMagicTimer(now) {
+    if (!magicTimerEl || !magicStartedAt) return;
+    var phase = magicPhase(now);
+    if (phase.active) {
+      if (magicZeroHideTimer) { clearTimeout(magicZeroHideTimer); magicZeroHideTimer = 0; }
+      magicTimerEl.hidden = false;
+      magicTimerEl.textContent = String(phase.remaining);
+      magicTimerEl.classList.toggle('magic-warning', phase.warning);
+      magicTimerEl.setAttribute('aria-label', 'MAGIC 🪄: ' + phase.remaining + ' seconds remaining' + (phase.warning ? ' · control returned' : ''));
+      if (magicWasAutomatic && !phase.automatic && bird) bird.vy = Math.max(-110, Math.min(110, bird.vy * 0.28));
+      magicWasAutomatic = phase.automatic;
+      if (btnMagicAction) btnMagicAction.disabled = true;
+      return;
+    }
+    magicStartedAt = 0;
+    magicPauseAt = 0;
+    magicWasAutomatic = false;
+    magicTimerEl.textContent = '0';
+    magicTimerEl.classList.remove('magic-warning');
+    magicTimerEl.setAttribute('aria-label', 'MAGIC 🪄 ended');
+    magicTimerEl.hidden = false;
+    refreshMagicUI();
+    clearTimeout(magicZeroHideTimer);
+    magicZeroHideTimer = setTimeout(function () {
+      if (!magicStartedAt && magicTimerEl) magicTimerEl.hidden = true;
+      magicZeroHideTimer = 0;
+    }, 160);
+  }
+  function clearMagicMode() {
+    magicStartedAt = 0;
+    magicPauseAt = 0;
+    magicWasAutomatic = false;
+    if (magicZeroHideTimer) { clearTimeout(magicZeroHideTimer); magicZeroHideTimer = 0; }
+    if (magicTimerEl) {
+      magicTimerEl.hidden = true;
+      magicTimerEl.classList.remove('magic-warning');
+      magicTimerEl.textContent = '10';
+    }
+    refreshMagicUI();
+  }
+  function activateMagic() {
+    if (state !== 'playing' || isMagicActive()) return false;
+    if (!FTStorage.consumeMagic || !FTStorage.consumeMagic()) return false;
+    magicStartedAt = performance.now();
+    magicPauseAt = 0;
+    magicWasAutomatic = true;
+    if (bird) bird.vy = 0;
+    refreshMagicUI();
+    updateMagicTimer(magicStartedAt);
+    if (FTAudio && FTAudio.powerup) FTAudio.powerup();
+    haptic('power');
+    showBanner('MAGIC 🪄!', 900);
+    if (!reduceMotion && bird) spawnConfettiBurst(bird.x, bird.y, 16);
+    return true;
+  }
+  function applyDailyMagicReward() {
+    var reward = FTStorage.claimDailyMagic ? FTStorage.claimDailyMagic() : null;
+    if (reward && reward.claimed) showToast('Daily reward · +1 MAGIC 🪄', 1800, 'gift');
+    refreshMagicUI();
+    return reward;
+  }
+  var lastMagicDailyCheckAt = 0;
+  function checkDailyMagicReward() {
+    var now = performance.now();
+    if (now - lastMagicDailyCheckAt < 5000) return;
+    lastMagicDailyCheckAt = now;
+    applyDailyMagicReward();
+  }
+  function openMagicScreen() {
+    if (screenStart && !screenStart.hidden) menuPanelReturnFocus = btnMagicMenu;
+    hideAllScreens();
+    if (screenMagic) screenMagic.hidden = false;
+    refreshMagicUI();
+    focusPanelHeading(screenMagic);
+  }
+  function useMagicFromMenu() {
+    if (!btnUseMagic || btnUseMagic.disabled || state !== 'menu') return;
+    startRun(false, 'classic');
+    if (state === 'playing') activateMagic();
+  }
+  async function claimMagicAdReward() {
+    if (magicAdInFlight || !Ads || !Ads.isMagicRewardAvailable || !Ads.isMagicRewardAvailable() || !FTStorage.getMagicAdStatus || !FTStorage.getMagicAdStatus().eligible) return;
+    magicAdInFlight = true;
+    refreshMagicUI();
+    try {
+      var result = await Ads.showMagicReward();
+      if (result && result.rewarded) showToast('+1 MAGIC 🪄 · ad reward', 1800, 'gift');
+    } catch (_) {
+      showToast('Rewarded ad unavailable');
+    } finally {
+      magicAdInFlight = false;
+      refreshMagicUI();
+    }
   }
 
   var menuPanelReturnFocus = null;
@@ -1524,7 +1671,7 @@ function updateComboMeter(visible) {
 
   document.addEventListener('click', function (e) {
     var trigger = e.target && e.target.closest ? e.target.closest(
-      '#btn-modes, #btn-garage, #btn-missions, #btn-collection, #btn-boards, #btn-streak, #btn-guide, #btn-gifts, #btn-settings'
+      '#btn-modes, #btn-garage, #btn-missions, #btn-collection, #btn-boards, #btn-streak, #btn-guide, #btn-gifts, #btn-magic-menu, #btn-settings'
     ) : null;
     if (!trigger || !screenStart || screenStart.hidden) return;
     menuPanelReturnFocus = trigger;
@@ -1862,6 +2009,8 @@ function updateComboMeter(visible) {
   }
 
   function showMenu() {
+    clearMagicMode();
+    applyDailyMagicReward();
     stopGaragePreview();
     if (typeof closeGarageLongPreview === 'function') closeGarageLongPreview();
     if (typeof clearEquipUndoStack === 'function') clearEquipUndoStack({ silent: true });
@@ -2182,6 +2331,8 @@ function updateComboMeter(visible) {
   function pauseGame() {
     if (!FTSim.canTransition(state, 'pause', playMode)) return;
     hideResumeCountdown();
+    magicPauseAt = magicStartedAt ? performance.now() : 0;
+    if (magicStartedAt) updateMagicTimer(magicPauseAt);
     state = 'paused';
     if (screenPause) screenPause.hidden = false;
     pauseReturnFocus = btnPause;
@@ -2214,10 +2365,18 @@ function updateComboMeter(visible) {
   function finishResumeFromPause() {
     if (!FTSim.canTransition(state, 'resume', playMode)) return;
     hideResumeCountdown();
+    applyDailyMagicReward();
+    if (magicStartedAt && magicPauseAt) {
+      magicStartedAt += Math.max(0, performance.now() - magicPauseAt);
+      magicPauseAt = 0;
+    }
     state = 'playing';
     if (screenPause) screenPause.hidden = true;
     setPauseBlur(false);
     lastTs = 0;
+    updatePowerHud();
+    updateMagicTimer(performance.now());
+    refreshMagicUI();
     focusElementSafely(pauseReturnFocus && pauseReturnFocus.isConnected ? pauseReturnFocus : btnPause);
     pauseReturnFocus = null;
   }
@@ -2353,6 +2512,7 @@ function updateComboMeter(visible) {
     var requestedMode = mode || playMode;
     var transition = fromContinue ? 'continue' : (state === 'dead' ? 'retry' : 'start');
     if (!FTSim.canTransition(state, transition, requestedMode)) return;
+    clearMagicMode();
     menuPanelReturnFocus = null;
     FTAudio.unlock();
     if (typeof clearPlayShimmer === 'function') clearPlayShimmer();
@@ -2479,6 +2639,7 @@ function updateComboMeter(visible) {
     updateComboUI();
     updatePowerHud();
     updateCoinHud();
+    refreshMagicUI();
     if (!animId) loop(performance.now());
   }
 
@@ -2520,6 +2681,7 @@ function updateComboMeter(visible) {
     var sens = sensitivity;
     var pass = birdPass();
     var impulse = FLAP_IMPULSE * sens * (pass.flapMul || 1);
+    if (state === 'playing' && magicPhase().automatic) return;
     if (state === 'menu') {
       startRun(false, 'classic');
       bird.vy = FLAP_IMPULSE * sens;
@@ -2585,7 +2747,7 @@ function updateComboMeter(visible) {
     var inset = Math.max(4, Math.round(Math.min(bird.w, bird.h) * HITBOX_INSET * insetMul));
     var bx = left + inset, by0 = top + inset, bw = bird.w - inset * 2, bh = bird.h - inset * 2;
     var softHit = false;
-    for (var i = 0; i < pipes.length; i++) {
+    for (var i = 0; i < pipes.length && !isMagicActive(); i++) {
       var p = pipes[i];
       var gap = p.gap != null ? p.gap : currentGap;
       var pw = p.w || PIPE_W;
@@ -2604,7 +2766,7 @@ function updateComboMeter(visible) {
         else { lastHitCause = 'pipe'; return 'hard'; }
       }
     }
-    for (var j = 0; j < traffic.length; j++) {
+    for (var j = 0; j < traffic.length && !isMagicActive(); j++) {
       var tv = traffic[j];
       var thb = FTSkins.trafficHitbox(tv);
       var tw = thb.w * (isForgivingMode() ? 0.82 : 0.88), th = thb.h * (isForgivingMode() ? 0.82 : 0.88);
@@ -3811,6 +3973,7 @@ function updateComboMeter(visible) {
     }
     bird.alive = false;
     state = 'dying';
+    clearMagicMode();
     hideCoach();
     hitThisRun = true;
     coinCombo = 0;
@@ -4046,6 +4209,8 @@ function updateComboMeter(visible) {
     if (dt > 0.05) dt = 0.05;
     if (state === 'paused') return;
     var now = performance.now();
+    checkDailyMagicReward();
+    updateMagicTimer(now);
     var slowActive = now < slowMoUntil;
     var timeScale = slowActive ? SLOWMO_SCALE : 1;
     var sdt = dt * timeScale;
@@ -4277,13 +4442,33 @@ function updateComboMeter(visible) {
       relaxTimeLeft -= sdt;
       if (relaxTimeLeft <= 0) { finishRelaxSession(); return; }
     }
-    var g = GRAVITY * sensitivity * (birdPass().gravityMul || 1);
-    // 3.11: Classic/Daily/Practice slightly floatier; Hard/Challenge/OneLife unchanged
-    if (isForgivingMode()) g *= 0.93;
-    var term = TERMINAL_V * Math.max(0.85, sensitivity);
-    bird.vy += g * sdt;
-    if (bird.vy > term) bird.vy = term;
-    bird.y += bird.vy * sdt;
+    var magicMotion = magicPhase(now);
+    if (magicMotion.automatic) {
+      var targetPipe = null;
+      var nearestAhead = Infinity;
+      for (var mi = 0; mi < pipes.length; mi++) {
+        var candidate = pipes[mi];
+        if (candidate.x + (candidate.w || PIPE_W) < bird.x - 4) continue;
+        var ahead = Math.max(0, candidate.x - bird.x);
+        if (ahead < nearestAhead) { nearestAhead = ahead; targetPipe = candidate; }
+      }
+      var safeMinY = bird.h / 2 + 8;
+      var safeMaxY = H - GROUND_H - bird.h / 2 - 8;
+      var targetY = targetPipe
+        ? targetPipe.gapY + (targetPipe.gap != null ? targetPipe.gap : currentGap) / 2
+        : Math.max(safeMinY, Math.min(safeMaxY, H * 0.42));
+      var priorY = bird.y;
+      bird.y = FTSim.magicFlightStep(bird.y, targetY, dt, safeMinY, safeMaxY);
+      bird.vy = dt > 0 ? (bird.y - priorY) / dt : 0;
+    } else {
+      var g = GRAVITY * sensitivity * (birdPass().gravityMul || 1);
+      // 3.11: Classic/Daily/Practice slightly floatier; Hard/Challenge/OneLife unchanged
+      if (isForgivingMode()) g *= 0.93;
+      var term = TERMINAL_V * Math.max(0.85, sensitivity);
+      bird.vy += g * sdt;
+      if (bird.vy > term) bird.vy = term;
+      bird.y += bird.vy * sdt;
+    }
     // 3.23/3.36 soft landing dust + bounce juice when skimming ground
     if (bird && bird.alive && state === 'playing') {
       var gY = H - GROUND_H;
@@ -5571,6 +5756,45 @@ function updateComboMeter(visible) {
     ctx.restore();
   }
 
+  function drawMagicAura(now) {
+    if (!bird || !magicStartedAt) return;
+    var phase = magicPhase(now);
+    if (!phase.active) return;
+    var t = reduceMotion ? 0 : Math.max(0, (magicClockNow(now) - magicStartedAt) / 1000);
+    var pulse = reduceMotion ? 1 : 1 + Math.sin(t * 9) * 0.08;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var glow = ctx.createRadialGradient(bird.x, bird.y, 8, bird.x, bird.y, 43 * pulse);
+    glow.addColorStop(0, 'rgba(255,232,153,0.24)');
+    glow.addColorStop(0.55, 'rgba(191,148,255,0.22)');
+    glow.addColorStop(1, 'rgba(191,148,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(bird.x, bird.y, 43 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(226,204,255,0.72)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(bird.x, bird.y, 31 * pulse, 19 * pulse, -0.22, t * 2, t * 2 + Math.PI * 1.55);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,217,61,0.62)';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(bird.x - 36, bird.y + 12);
+    ctx.quadraticCurveTo(bird.x - 8, bird.y + 27 * pulse, bird.x + 20, bird.y + 3);
+    ctx.stroke();
+    for (var i = 0; i < 3; i++) {
+      var a = t * (1.5 + i * 0.18) + i * Math.PI * 2 / 3;
+      var ox = Math.cos(a) * 34;
+      var oy = Math.sin(a) * 22;
+      ctx.fillStyle = i % 2 ? 'rgba(255,235,161,0.95)' : 'rgba(224,197,255,0.95)';
+      ctx.beginPath();
+      ctx.arc(bird.x + ox, bird.y + oy, 2.2 + (i % 2) * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawFrame(idle) {
     // 3.26: death camera freeze zoom toward bird
     var dZoom = (state === 'dying' && !reduceMotion) ? deathCamZoom : 0;
@@ -5605,6 +5829,7 @@ function updateComboMeter(visible) {
       drawShieldAura();
       drawGhostAura();
       drawMagnetAura();
+      drawMagicAura(performance.now());
       ctx.globalAlpha = ghostActive() ? 0.55 : 1;
       FTSkins.draw(ctx, activeVisualBirdId(), bird.x, bird.y, bird.rot, 1, cosmeticsOpts());
       ctx.globalAlpha = 1;
@@ -5811,7 +6036,7 @@ function updateComboMeter(visible) {
     }
     // Generic panel → menu
     if (key === 'modes' || key === 'garage' || key === 'missions' || key === 'collection' ||
-        key === 'boards' || key === 'streak' || key === 'guide') {
+        key === 'boards' || key === 'streak' || key === 'guide' || key === 'magic') {
       showMenu();
       return true;
     }
@@ -5905,7 +6130,7 @@ function updateComboMeter(visible) {
     if (state === 'dead' && screenDeath && !screenDeath.hidden) { showMenu(); return true; }
     // Any visible panel screen (not start)
     var panels = [screenSettings, screenGarage, screenModes, screenMissions, screenCollection,
-      screenGifts, screenGuide, screenBoards, screenStreak];
+      screenGifts, screenGuide, screenBoards, screenStreak, screenMagic];
     for (var i = 0; i < panels.length; i++) {
       if (panels[i] && !panels[i].hidden) {
         if (panels[i] === screenGifts) abortPendingSpinKeepCharge();
@@ -7730,6 +7955,13 @@ function updateComboMeter(visible) {
     });
   }
 if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen(); });
+  if (btnMagicMenu) btnMagicMenu.addEventListener('click', openMagicScreen);
+  if (btnUseMagic) btnUseMagic.addEventListener('click', useMagicFromMenu);
+  if (btnMagicAction) btnMagicAction.addEventListener('click', function () { activateMagic(); });
+  if (btnMagicWatchAd) btnMagicWatchAd.addEventListener('click', function () { claimMagicAdReward(); });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) applyDailyMagicReward();
+  });
   if (btnCollectionGifts) btnCollectionGifts.addEventListener('click', function () { openGiftsScreen(); });
   document.querySelectorAll('[data-close="gifts"]').forEach(function (b) {
     b.addEventListener('click', function () {
