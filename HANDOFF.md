@@ -1,6 +1,13 @@
 # HANDOFF — Urr Jaa!
 
-**Live version:** 3.58.0-urrjaa · SW `urrjaa-v67-20260928`  
-**Last ship:** 3.58 PERFECT voice throttle · star budget · hot-combo ring. KEEP 15s Spin once + Close + ALL ≤3.57.
+**Live version:** 3.58.1-urrjaa · SW `urrjaa-v68-20260929`
 
-**Do next (only if owner continues):** new pack ≠ 3.11–3.40 ideas. KEEP ALL. fetch/merge; check+smoke; publish GH_TOKEN unset GITHUB_TOKEN; tag+zip; STOP after ship.
+**Release:** https://github.com/OfferPk/flappy-tap/releases/tag/v3.58.1-urrjaa
+
+**Live game:** https://offerpk.github.io/flappy-tap/
+
+**This pack:** behavior-level gameplay/storage/PWA tests; navigation-only offline app-shell fallback; polite result announcements and focus return; English + Roman Urdu quick guide in-game and in the README.
+
+**Daily replay decision:** only the existing deterministic Daily retry was retained (shown as “RETRY DAILY”). A personal-best ghost was skipped because gameplay and visual-effect randomness share a seeded RNG stream; full playback can diverge until those consumers are separated.
+
+**Before any future ship:** run `npm run check`, `npm run smoke`, `npm test`, then `npm run build:web`; compare the root, `docs/`, and `www/` outputs. Keep play local/offline and preserve the existing modes, scoring, saves, and PWA behavior.

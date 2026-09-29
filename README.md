@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.58.0-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.58.1-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -14,6 +14,8 @@ Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOC
 | **Browser (PC / Android Chrome)** | https://offerpk.github.io/flappy-tap/ |
 | **Windows zip** | https://github.com/OfferPk/flappy-tap/releases/latest/download/urr-jaa-web-windows.zip |
 | **Android** | Same browser link in Chrome (Add to Home Screen). APK not built yet. |
+
+**Quick start:** [How to play — English + Roman Urdu](https://offerpk.github.io/flappy-tap/how-to-play.html) · [Source guide](./how-to-play.html). The game menu also links to this offline-ready guide.
 
 ## Play locally (web)
 
@@ -78,7 +80,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v19-20260928** |
+| PWA | `sw.js` cache **urrjaa-v68-20260929** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)

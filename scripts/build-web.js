@@ -42,7 +42,7 @@ function buildTo(dest, { preserveGlobs } = {}) {
   }
   rmrf(dest);
   fs.mkdirSync(dest, { recursive: true });
-  const files = ['index.html', 'manifest.json', 'sw.js'];
+  const files = ['index.html', 'how-to-play.html', 'manifest.json', 'sw.js'];
   for (const f of files) {
     const src = path.join(root, f);
     if (fs.existsSync(src)) copyFile(src, path.join(dest, f));

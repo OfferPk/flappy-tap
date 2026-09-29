@@ -1,9 +1,11 @@
-/* Offline-first service worker — Urr Jaa! v3.58.0-urrjaa */
-const CACHE = 'urrjaa-v67-20260928';
+/* Offline-first service worker — Urr Jaa! v3.58.1-urrjaa */
+const CACHE = 'urrjaa-v68-20260929';
 const ASSETS = [
   './',
   './index.html',
+  './how-to-play.html',
   './css/style.css',
+  './js/sim.js',
   './js/storage.js',
   './js/audio.js',
   './js/ads.js',
@@ -24,7 +26,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))
     ).then(() => self.clients.claim())
   );
 });
@@ -32,14 +34,22 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match('./index.html'));
-    })
-  );
+  event.respondWith((async () => {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+    try {
+      const response = await fetch(req);
+      if (response.ok && new URL(req.url).origin === self.location.origin) {
+        const copy = response.clone();
+        caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
+      }
+      return response;
+    } catch (error) {
+      if (req.mode === 'navigate') {
+        const shell = await caches.match('./index.html');
+        if (shell) return shell;
+      }
+      throw error;
+    }
+  })());
 });

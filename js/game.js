@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.58.0-urrjaa — Reduced-motion respect, score-card screenshot share, bird shadow polish,
+ * Urr Jaa! v3.58.1-urrjaa — offline asset fallback, behavior tests, accessible results,
  * soft landing dust, credits/version in settings, bugfixes.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -536,20 +536,11 @@
   }
 
   function hashSeed(str) {
-    var h = 2166136261 >>> 0;
-    for (var i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return h >>> 0;
+    return FTSim.hashSeed(str);
   }
 
   function makeRng(seed) {
-    var s = seed >>> 0 || 1;
-    return function () {
-      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-      return (s >>> 0) / 4294967296;
-    };
+    return FTSim.makeRng(seed);
   }
 
   function setupRngForMode() {
@@ -1490,6 +1481,40 @@ function updateComboMeter(visible) {
       screenMissions, screenCollection, screenGifts, screenGuide, screenBoards, screenStreak];
   }
 
+  var menuPanelReturnFocus = null;
+  var pauseReturnFocus = null;
+
+  function focusElementSafely(el) {
+    if (!el || typeof el.focus !== 'function') return;
+    try { el.focus({ preventScroll: true }); } catch (_) { el.focus(); }
+  }
+
+  function focusPanelHeading(panel) {
+    if (!panel) return;
+    var heading = panel.querySelector('h2');
+    if (heading) {
+      heading.setAttribute('tabindex', '-1');
+      focusElementSafely(heading);
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var trigger = e.target && e.target.closest ? e.target.closest(
+      '#btn-modes, #btn-garage, #btn-missions, #btn-collection, #btn-boards, #btn-streak, #btn-guide, #btn-gifts, #btn-settings'
+    ) : null;
+    if (!trigger || !screenStart || screenStart.hidden) return;
+    menuPanelReturnFocus = trigger;
+    window.setTimeout(function () {
+      var screens = allScreens();
+      for (var i = 0; i < screens.length; i++) {
+        if (screens[i] && screens[i] !== screenStart && !screens[i].hidden) {
+          focusPanelHeading(screens[i]);
+          return;
+        }
+      }
+    }, 0);
+  }, true);
+
   var MODE_SHARE_LABELS = {
     classic: 'Classic', timeattack: 'Time Attack', hard: 'Hard', nocoin: 'No Coin',
     challenge: 'Challenge', onelife: 'One Life', daily: 'Daily', practice: 'Practice'
@@ -1839,6 +1864,10 @@ function updateComboMeter(visible) {
     maybePlayShimmer(); // 3.51 once/day Play shimmer
     if (FTAudio && FTAudio.setQuietMode) FTAudio.setQuietMode(false);
     drawFrame(true);
+    var returnTarget = menuPanelReturnFocus;
+    menuPanelReturnFocus = null;
+    pauseReturnFocus = null;
+    focusElementSafely(returnTarget && returnTarget.isConnected ? returnTarget : btnPlay);
   }
 
   function persistScore() {
@@ -2069,7 +2098,7 @@ function updateComboMeter(visible) {
       setTimeout(function () { maybeShowSpinUnlockPopup(); }, 700);
     }
     if (btnRetry) {
-      btnRetry.textContent = isOneLife() ? 'HOME' : 'RETRY';
+      btnRetry.textContent = isOneLife() ? 'HOME' : (playMode === 'daily' ? 'RETRY DAILY' : 'RETRY');
     }
     // Persist daily missions (today's 3 from pool)
     FTStorage.bumpMission('fly_m', Math.floor(metersFlown));
@@ -2093,6 +2122,14 @@ function updateComboMeter(visible) {
     var seasonalNew = FTStorage.checkSeasonalUnlocks ? FTStorage.checkSeasonalUnlocks(FTStorage.getBest()) : [];
     var allNew = unlocked.concat(themeNew || []).concat(seasonalNew || []);
     if (allNew.length) showToast('Unlocked: ' + allNew.join(', '), 2500);
+    var resultAnnouncement = document.getElementById('run-result-announcement');
+    if (resultAnnouncement) {
+      var resultMode = MODE_SHARE_LABELS[playMode] || playMode;
+      var modeBest = bestDeathEl ? bestDeathEl.textContent : String(score);
+      resultAnnouncement.textContent = 'Run complete. ' + resultMode + ' mode. Score ' + score + '. Best ' + modeBest +
+        (isRecord ? '. New personal record.' : '.');
+    }
+    focusElementSafely(document.getElementById('run-summary-heading'));
   }
 
   function setPauseBlur(on) {
@@ -2105,10 +2142,11 @@ function updateComboMeter(visible) {
     }
   }
   function pauseGame() {
-    if (state !== 'playing') return;
+    if (!FTSim.canTransition(state, 'pause', playMode)) return;
     hideResumeCountdown();
     state = 'paused';
     if (screenPause) screenPause.hidden = false;
+    pauseReturnFocus = btnPause;
     setPauseBlur(true);
     var pauseScore = document.getElementById('pause-score');
     var pauseMode = document.getElementById('pause-mode');
@@ -2124,6 +2162,7 @@ function updateComboMeter(visible) {
     if (pauseTip) {
       pauseTip.textContent = '💡 ' + pickTutorialTip(Math.floor(Math.random() * 99) + score);
     }
+    focusElementSafely(document.getElementById('btn-resume'));
   }
   var resumeCountdownTimer = 0;
   var resumeCountdownBusy = false;
@@ -2135,11 +2174,14 @@ function updateComboMeter(visible) {
   }
 
   function finishResumeFromPause() {
+    if (!FTSim.canTransition(state, 'resume', playMode)) return;
     hideResumeCountdown();
     state = 'playing';
     if (screenPause) screenPause.hidden = true;
     setPauseBlur(false);
     lastTs = 0;
+    focusElementSafely(pauseReturnFocus && pauseReturnFocus.isConnected ? pauseReturnFocus : btnPause);
+    pauseReturnFocus = null;
   }
 
   function runResumeCountdown() {
@@ -2178,7 +2220,7 @@ function updateComboMeter(visible) {
   }
 
   function resumeGame() {
-    if (state !== 'paused') return;
+    if (!FTSim.canTransition(state, 'resume', playMode)) return;
     if (resumeCountdownBusy) return;
     var wantCd = !(FTStorage.isResumeCountdown) || !!FTStorage.isResumeCountdown();
     if (!wantCd || reduceMotion) {
@@ -2270,6 +2312,10 @@ function updateComboMeter(visible) {
   }
 
   function startRun(fromContinue, mode) {
+    var requestedMode = mode || playMode;
+    var transition = fromContinue ? 'continue' : (state === 'dead' ? 'retry' : 'start');
+    if (!FTSim.canTransition(state, transition, requestedMode)) return;
+    menuPanelReturnFocus = null;
     FTAudio.unlock();
     if (typeof clearPlayShimmer === 'function') clearPlayShimmer();
     if (FTAudio.stopMenuMusic) FTAudio.stopMenuMusic();
@@ -2453,7 +2499,7 @@ function updateComboMeter(visible) {
   }
 
   function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
-    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+    return FTSim.rectanglesOverlap(ax, ay, aw, ah, bx, by, bw, bh);
   }
 
   function ghostActive() { return performance.now() < ghostUntil; }
@@ -3786,12 +3832,18 @@ function updateComboMeter(visible) {
     var gap = p.gap != null ? p.gap : currentGap;
     var center = p.gapY + gap / 2;
     var distCenter = Math.abs(bird.y - center);
-    var basePts = 1;
-    var tag = '';
-    if (distCenter <= PERFECT_CENTER_PX) {
-      basePts = 3;
+    var pass = p._wasNearMiss ? birdPass() : null;
+    var award = FTSim.scorePipePass({
+      distanceFromCenter: distCenter,
+      perfectCenterPx: PERFECT_CENTER_PX,
+      multiplier: mult,
+      nearMiss: !!p._wasNearMiss,
+      nearMissBonus: pass ? pass.nearMissBonus : 0
+    });
+    var basePts = award.basePoints;
+    var tag = award.tag;
+    if (award.perfect) {
       runPerfects += 1;
-      tag = 'PERFECT!';
       if (FTAudio.perfect) FTAudio.perfect();
       showBanner('PERFECT!', 800);
       // 3.56/3.57: throttle PERFECT toast + haptic on rapid string (banner still fires)
@@ -3827,14 +3879,8 @@ function updateComboMeter(visible) {
         addPipeScore._lastPerfectVoiceAt = nowPerfect;
       }
     }
-    // Near-miss bonus score already tracked separately; if just near-missed this pipe, bump
-    if (p._wasNearMiss) {
-      basePts = Math.max(basePts, 5);
-      tag = tag || 'CLOSE +5';
-      var pass = birdPass();
-      if (pass.nearMissBonus) basePts += pass.nearMissBonus;
-    }
-    var gained = basePts * mult;
+    // The pure scoring rule keeps normal / PERFECT / CLOSE awards stable and testable.
+    var gained = award.gained;
     setScore(score + gained);
     // 3.51–3.58: soft pipe-clear SFX/mix; tinted ring; soft squash; micro cam on clear
     var juiceKind = tag === 'PERFECT!' ? 'perfect' : (tag.indexOf('CLOSE') === 0 ? 'close' : 'clear');
@@ -5836,6 +5882,7 @@ function updateComboMeter(visible) {
 
   async function retryFlow() {
     if (isOneLife()) { showMenu(); return; }
+    if (!FTSim.canTransition(state, 'retry', playMode)) return;
     if (FTStorage.getRunCount() % 2 === 0) await Ads.showInterstitial('between-runs');
     startRun(false, playMode === 'challenge' && challengeWon ? 'classic' : playMode);
   }
@@ -6731,7 +6778,7 @@ function updateComboMeter(visible) {
     });
   }
   // 3.42/3.43: pin refresh + favorite sync toast
-  global.onGarageFavoriteChange = function (kind, id, nowOn, label) {
+  window.onGarageFavoriteChange = function (kind, id, nowOn, label) {
     var favCount = 0;
     if (FTStorage.getGarageFavorites) favCount = FTStorage.getGarageFavorites().length;
     var syncMsg = (nowOn ? '★ Synced · ' : '☆ Synced · ') + (label || id) +
@@ -6952,7 +6999,7 @@ function updateComboMeter(visible) {
   bindGarageLongPress();
 
   // 3.45: double-tap skin card → light fanfare + toast
-  global.onGarageDoubleEquip = function (kind, id, label) {
+  window.onGarageDoubleEquip = function (kind, id, label) {
     playEquipFanfareLight();
     if (!extendTopEquipUndo(kind, id, label || id)) {
       showToast('Equipped · ' + (label || id), 1200, 'medal');

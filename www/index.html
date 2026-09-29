@@ -68,7 +68,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.58.0-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.58.1-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -92,6 +92,7 @@
         </div>
       </div>
       <p class="hint">Tap / Space · Coins in gaps · Esc pause · 2s to learn</p>
+      <p class="guide-quick-link-wrap"><a class="guide-quick-link" href="how-to-play.html">How to play · English / Roman Urdu</a></p>
       <p id="menu-tip" class="menu-tip hint" role="status">💡 Tip loads…</p>
       <p class="runs-line">Runs: <span id="total-runs">0</span></p>
       <div id="a2hs" class="a2hs" hidden role="status">
@@ -247,7 +248,8 @@
     <!-- Death / Run Summary -->
     <div id="screen-death" class="screen panel-screen scroll-screen" hidden>
       <button type="button" class="panel-close" data-panel-close="death" aria-label="Close">X</button>
-      <h2>Run Summary</h2>
+      <h2 id="run-summary-heading" tabindex="-1">Run Summary</h2>
+      <p id="run-result-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
       <div id="new-record-banner" class="new-record-banner" hidden>🏆 NEW RECORD!</div>
       <p id="death-tip" class="death-tip hint" role="status" hidden></p>
       <div id="medal-display" class="medal" hidden>
@@ -458,7 +460,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.58.0-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.58.1-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -681,6 +683,7 @@
     <div id="toast" class="toast" hidden></div>
   </div>
 
+  <script src="js/sim.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/ads.js"></script>
