@@ -48,7 +48,7 @@
       <div id="magnet-hud" class="magnet-hud" hidden aria-label="Coin magnet active">🧲</div>
       <div id="timer-hud" hidden>60s</div>
       <div id="lives-hud" class="lives-hud" hidden aria-label="Lives"></div>
-      <div id="power-hud" hidden></div>
+      <div id="power-hud" hidden role="group" aria-label="Active effects" aria-live="off"></div>
       <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause" title="Pause">⏸</button>
       <button id="btn-mute" class="icon-btn mute-btn" type="button" aria-label="Mute sound" title="Mute" aria-pressed="false"></button>
     </div>
@@ -68,7 +68,7 @@
     <!-- Start / Menu -->
     <div id="screen-start" class="screen">
       <h1 class="logo logo-shimmer">Urr Jaa!</h1>
-      <p class="tagline">One-tap fly · اڑ جا! · v3.58.3-urrjaa</p>
+      <p class="tagline">One-tap fly · اڑ جا! · v3.58.4-urrjaa</p>
       <p id="unlock-teaser" class="unlock-teaser" hidden></p>
       <p id="seasonal-hint" class="seasonal-hint hint" hidden role="status"></p>
       <p class="coins-line">🪙 <span id="coins-start">0</span> · Best: <span id="best-start">0</span> · Today: <span id="daily-best-start">0</span></p>
@@ -475,6 +475,7 @@
       <details class="settings-changelog" id="settings-changelog">
         <summary>Changelog · recent</summary>
         <ul class="changelog-list" aria-label="Recent changes">
+          <li><strong>3.58.4</strong> — compact active-effect chips · live timers/expiry · responsive wrap · one-hit Shield status</li>
           <li><strong>3.58.3</strong> — compact power timers · gentle Sukoon mode · softened coin-combo misses · feather polish</li>
           <li><strong>3.58</strong> — PERFECT voice throttle · star budget · hot-combo ring</li>
           <li><strong>3.57</strong> — PERFECT haptic throttle · rail spark scale · cam sway</li>
@@ -496,7 +497,7 @@
         </ul>
       </details>
       <div class="settings-credits" aria-label="Credits">
-        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.58.3-urrjaa</p>
+        <p class="credits-ver"><strong>Urr Jaa!</strong> · v3.58.4-urrjaa</p>
         <p class="credits-line">Offline one-tap fly · OfferPk / CEO BOT Games</p>
         <p class="credits-line">Mia Smith · Pakistan · No ads servers · PWA</p>
         <p class="credits-line muted">15s Mystery Spin · Close (X) · KEEP ALL features</p>
@@ -571,6 +572,7 @@
           <li><strong>3.28:</strong> power expiry pulse · near-miss edge flash · daily reset countdown · settings reset confirm.</li>
           <li><strong>3.29:</strong> haptic intensity · better boss warning · gift→spin mid-run toast · panel slide-in.</li>
           <li><strong>3.30:</strong> flap whoosh juice · Settings changelog-lite · Guide refresh · performance pass.</li>
+          <li><strong>3.58.4:</strong> small active power chips with live timers and auto-expiry; Shield stays one-hit.</li>
           <li><strong>3.58.3:</strong> compact power timers · optional Sukoon flight · a softer coin-combo miss rule · feather detail.</li>
           <li><strong>3.58:</strong> throttle PERFECT voice · adaptive perfect stars · longer clear ring on hot combo · Spin once still 15s.</li>
           <li><strong>3.57:</strong> throttle PERFECT haptic · adaptive rail sparks · clearer clear-cam sway · Spin once still 15s.</li>
@@ -667,6 +669,7 @@
           <li><strong>کلیکشن:</strong> نئے پرندے اور علاقے سکے یا اسکور سے کھلیں۔</li>
           <li><strong>سیزنل (آف لائن):</strong> آزادی / عید / سردی / بسنت — مقامی تاریخ یا اسکور۔ کوئی سرور سیزن نہیں۔</li>
           <li><strong>نیا (۳.۲۸–۳.۳۰):</strong> یومیہ کاؤنٹ ڈاؤن · پاور ختم وارننگ · باس وارن · گفٹ→اسپن ٹوسٹ · ہیپٹک شدت · فلیپ وُش · چینج لاگ۔</li>
+                  <li><strong>3.58.4:</strong> مختصر پاور چپس، باقی وقت، ختم ہونے پر خود غائب؛ شیلڈ ایک ہٹ تک۔</li>
                   <li><strong>3.58.3:</strong> مختصر پاور ٹائمر · سکون موڈ · سکے چھوٹنے پر کومبو ایک درجہ کم۔</li>
                   <li><strong>3.58:</strong> PERFECT وائس تھروٹل · ستارے · hot combo · 15s Spin۔</li>
                   <li><strong>3.57:</strong> PERFECT ہیپٹک تھروٹل · rail · cam sway · 15s Spin۔</li>

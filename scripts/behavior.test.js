@@ -62,6 +62,35 @@ function testGameplayRules() {
   assert.equal(sim.canTransition('playing', 'start', 'classic'), false);
 }
 
+function testPowerIndicators() {
+  const effects = sim.activePowerIndicators(1000, {
+    shieldActive: true,
+    slowMoUntil: 4000,
+    magnetUntil: 5000,
+    turboUntil: 1000,
+    ghostUntil: 2200
+  });
+  assert.deepEqual(effects.map((item) => item.id), ['shield', 'slowmo', 'magnet', 'ghost'],
+    'all active effects render together; a timer at its deadline is already absent');
+  assert.equal(effects[0].text, '🛡 Shield · 1 hit', 'Shield keeps its existing one-hit gameplay rather than gaining a new timer');
+  assert.equal(effects[0].remainingSeconds, null);
+  assert.match(effects[1].text, /3s$/, 'timed chip displays ceiling-rounded seconds');
+  assert.equal(effects[1].remainingSeconds, 3);
+  assert.equal(effects[3].remainingSeconds, 2);
+  assert.equal(effects[3].expiring, true, 'last 1.2 seconds receive a distinct expiring state');
+  assert.match(effects[3].ariaLabel, /2 seconds remaining/, 'timer has an accessible descriptive label');
+
+  const afterExpiry = sim.activePowerIndicators(4000, {
+    shieldActive: true,
+    slowMoUntil: 4000,
+    magnetUntil: 3999,
+    turboUntil: 0,
+    ghostUntil: 1000
+  });
+  assert.deepEqual(afterExpiry.map((item) => item.id), ['shield'],
+    'timed chips disappear at/after expiry while the one-hit Shield lasts until consumed');
+}
+
 function testSavedProgress() {
   const values = new Map();
   const localStorage = {
@@ -179,6 +208,7 @@ async function testOfflineAssetFallback() {
 
 async function main() {
   testGameplayRules();
+  testPowerIndicators();
   testSavedProgress();
   await testOfflineAssetFallback();
 
@@ -190,7 +220,14 @@ async function main() {
   assert.match(game, /if \(isRelax\(\)\) return;/, 'Relax suppresses optional competitive pickups and scoring');
   assert.match(game, /FTSim\.rectanglesOverlap\(/, 'live collision geometry is wired to the tested pure rules');
   assert.match(game, /FTSim\.canTransition\(/, 'live run controls use the tested transition rules');
-  console.log('BEHAVIOR TESTS OK · collision · scoring · mode/pause/retry · local saves · offline assets');
+  assert.match(game, /FTSim\.activePowerIndicators\(/, 'live HUD consumes the tested active effect list');
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  assert.match(html, /id="power-hud" hidden role="group" aria-label="Active effects" aria-live="off"/,
+    'indicators are exposed in a labeled, non-spamming screen-reader group');
+  const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
+  assert.match(css, /#power-hud\[hidden\]\s*\{\s*display:\s*none\s*!important;/,
+    'inactive indicator row is explicitly hidden despite flex layout');
+  console.log('BEHAVIOR TESTS OK · gameplay · timer display/expiry/multiple effects · local saves · offline assets');
 }
 
 main().catch((error) => {

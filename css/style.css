@@ -144,16 +144,24 @@ html.reduce-motion #app.shake { animation: none; }
 
 #power-hud {
   position: absolute;
-  bottom: calc(88px + var(--safe-bottom));
-  left: 0;
-  right: 0;
+  top: calc(112px + var(--hud-top));
+  bottom: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100% - 24px - var(--safe-left) - var(--safe-right));
   text-align: center;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 4px rgba(0,0,0,.5);
+  z-index: 7;
   pointer-events: none;
 }
+#power-hud[hidden] { display: none !important; }
 
 #btn-mute {
   pointer-events: auto;
@@ -1469,15 +1477,19 @@ html.reduce-motion .logo.logo-shimmer {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  justify-content: flex-end;
-  max-width: 58%;
+  justify-content: center;
 }
 .power-chip {
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
+  justify-content: center;
+  padding: 4px 8px;
   border-radius: 999px;
-  font-size: 0.68rem;
+  min-height: 24px;
+  max-width: 100%;
+  white-space: nowrap;
+  font-size: 0.66rem;
+  line-height: 1.1;
   font-weight: 800;
   letter-spacing: 0.02em;
   background: rgba(15,23,42,.72);
@@ -1486,6 +1498,11 @@ html.reduce-motion .logo.logo-shimmer {
   box-shadow: 0 2px 8px rgba(0,0,0,.25);
   backdrop-filter: blur(4px);
 }
+.power-chip.power-expiring {
+  border-color: #fde68a;
+  box-shadow: 0 0 0 1px rgba(253,230,138,.18), 0 2px 8px rgba(0,0,0,.25);
+}
+html.reduce-motion .power-chip { transition: none !important; animation: none !important; }
 #combo-display.combo-x3 {
   color: #fde68a;
   text-shadow: 0 0 10px rgba(251,191,36,.45);
@@ -3141,16 +3158,17 @@ html.is-landscape #app {
   top: calc(78px + var(--hud-top));
 }
 #power-hud {
-  top: auto;
-  bottom: calc(96px + var(--safe-bottom));
-  left: 12px;
-  right: 12px;
-  width: auto;
-  max-width: none;
+  top: calc(112px + var(--hud-top));
+  bottom: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 24px - var(--safe-left) - var(--safe-right));
   min-height: 0;
   height: auto;
   align-items: center;
-  align-content: flex-end;
+  align-content: center;
   justify-content: center;
 }
 .screen {

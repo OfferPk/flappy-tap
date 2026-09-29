@@ -2,7 +2,7 @@
 
 **اڑ جا!** Vanilla HTML/CSS/JS Flappy-style game with Pakistani flair. **100% offline after first load.** No servers, no accounts, no live ops.
 
-**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.58.3-urrjaa**
+**Display name:** Urr Jaa! · **Folder / repo:** `flappy-tap` (https://github.com/OfferPk/flappy-tap) · **Version:** **3.58.4-urrjaa**
 
 Tagline: **One-tap fly** — tap to flap, 2-second learn, **no countdown**.  
 Core loop: **FLY → DODGE → COINS → COMBO → POWER-UP → RECORD → UNLOCK → TRY AGAIN**.
@@ -68,7 +68,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | **Mystery Rewards** | Menu/Album → visual **spin wheel**. In-run 📦 → inventory. **10 gifts = 1 spin**. Prizes **444–999** 🪙. Spin once / Spin all |
 | Spin unlock popup | One-time when a new ×10 threshold is crossed (not spam on menu open) |
 | **Guide** | Menu → Guide · **English / Roman Urdu / اردو** |
-| Power-ups | Shield · Turbo · Coin Magnet · Slow-mo 3s · Ghost |
+| Power-ups | Compact active chips show live remaining time and disappear on expiry; Shield accurately shows its existing one-hit protection · Turbo · Coin Magnet · Slow-mo 3s · Ghost |
 | Bird passives | Sparrow control · Parrot +5% coin · Owl night · Eagle near-miss (mild, free) |
 | Weather | Clear · Rain · Fog · Storm · Night · Sunset (light speed/visibility) |
 | Boss/Chase | Every ~180m · DANGER 30–60s · truck/eagle/police/storm/giant |
@@ -82,7 +82,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v71-20260929** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
+| PWA | `sw.js` cache **urrjaa-v72-20260929** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)

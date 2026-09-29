@@ -56,6 +56,41 @@
     return Math.max(0, (Number(combo) | 0) - 1);
   }
 
+  function activePowerIndicators(now, effects) {
+    effects = effects || {};
+    now = Number(now) || 0;
+    var indicators = [];
+    if (effects.shieldActive) {
+      indicators.push({
+        id: 'shield', icon: '🛡', label: 'Shield', text: '🛡 Shield · 1 hit',
+        remainingSeconds: null, expiring: false,
+        ariaLabel: 'Shield active: blocks one hard hit'
+      });
+    }
+    var timed = [
+      { id: 'slowmo', icon: '⏱', label: 'Slow-mo', until: effects.slowMoUntil },
+      { id: 'magnet', icon: '🧲', label: 'Magnet', until: effects.magnetUntil },
+      { id: 'turbo', icon: '⚡', label: 'Turbo', until: effects.turboUntil },
+      { id: 'ghost', icon: '👻', label: 'Ghost', until: effects.ghostUntil }
+    ];
+    timed.forEach(function (effect) {
+      var until = Number(effect.until) || 0;
+      if (until <= now) return;
+      var remainingSeconds = Math.max(1, Math.ceil((until - now) / 1000));
+      var expiring = until - now <= 1200;
+      indicators.push({
+        id: effect.id,
+        icon: effect.icon,
+        label: effect.label,
+        text: effect.icon + ' ' + effect.label + ' ' + remainingSeconds + 's',
+        remainingSeconds: remainingSeconds,
+        expiring: expiring,
+        ariaLabel: effect.label + ': ' + remainingSeconds + ' second' + (remainingSeconds === 1 ? '' : 's') + ' remaining'
+      });
+    });
+    return indicators;
+  }
+
   function isRelaxMode(mode) { return mode === 'relax'; }
   function normalizeRelaxDuration(value) {
     var seconds = parseInt(value, 10);
@@ -88,6 +123,7 @@
     rectanglesOverlap: rectanglesOverlap,
     scorePipePass: scorePipePass,
     softenCoinComboOnMiss: softenCoinComboOnMiss,
+    activePowerIndicators: activePowerIndicators,
     isRelaxMode: isRelaxMode,
     normalizeRelaxDuration: normalizeRelaxDuration,
     relaxBumpResponse: relaxBumpResponse,

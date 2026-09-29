@@ -1,5 +1,5 @@
 /**
- * Urr Jaa! v3.58.3-urrjaa — compact power timers, softer coin-combo miss decay,
+ * Urr Jaa! v3.58.4-urrjaa — compact active power chips, live expiry, softer combo decay,
  * offline asset fallback, accessible results, soft landing dust, credits/version in settings.
  * KEEP ALL ≤3.22 incl. 15s Mystery Spin once + Close (X) + large buttons + seasonal hint.
  * Core: FLY→DODGE→COINS→COMBO→POWER-UP→RECORD→UNLOCK→TRY AGAIN. NO countdown.
@@ -198,7 +198,6 @@
   const comboMeterFillEl = document.getElementById('combo-meter-fill');
   const modeBadgeEl = document.getElementById('mode-badge');
   const powerHudEl = document.getElementById('power-hud');
-  const magnetHudEl = document.getElementById('magnet-hud');
   const resumeCountdownEl = document.getElementById('resume-countdown');
   const resumeCountdownNumEl = document.getElementById('resume-countdown-num');
   const resumeCountdownChk = document.getElementById('resume-countdown-toggle');
@@ -920,29 +919,27 @@ function updateComboMeter(visible) {
   function updatePowerHud() {
     if (!powerHudEl) return;
     var now = performance.now();
-    var bits = [];
-    if (shieldActive) bits.push({ t: '🛡 Shield', k: 'shield', exp: false });
-    if (now < slowMoUntil) bits.push({ t: '⏱ ' + powerRemainSec(slowMoUntil) + 's', k: 'slowmo', exp: powerExpiring(slowMoUntil) });
-    if (now < magnetUntil) bits.push({ t: '🧲 ' + powerRemainSec(magnetUntil) + 's', k: 'magnet', exp: powerExpiring(magnetUntil) });
-    if (now < turboUntil) bits.push({ t: '⚡ ' + powerRemainSec(turboUntil) + 's', k: 'turbo', exp: powerExpiring(turboUntil) });
-    if (now < ghostUntil) bits.push({ t: '👻 ' + powerRemainSec(ghostUntil) + 's', k: 'ghost', exp: powerExpiring(ghostUntil) });
-    if (riskyActive()) bits.push({ t: '🎯x3', k: 'risky', exp: powerExpiring(riskyUntil, 1500) });
-    if (isHard()) bits.push({ t: '🔥', k: 'hard', exp: false });
-    if (isNoCoin()) bits.push({ t: '🚫🪙', k: 'nocoin', exp: false });
-    if (isOneLife()) bits.push({ t: '1️⃣', k: 'onelife', exp: false });
-    // 3.37: dedicated coin magnet HUD icon near coins
-    if (magnetHudEl) {
-      var magOn = now < magnetUntil;
-      magnetHudEl.hidden = !magOn;
-      if (magOn) {
-        magnetHudEl.classList.toggle('magnet-expiring', powerExpiring(magnetUntil));
-        magnetHudEl.textContent = '🧲 ' + powerRemainSec(magnetUntil) + 's';
-      }
+    var bits = FTSim.activePowerIndicators(now, {
+      shieldActive: shieldActive,
+      slowMoUntil: slowMoUntil,
+      magnetUntil: magnetUntil,
+      turboUntil: turboUntil,
+      ghostUntil: ghostUntil
+    }).map(function (effect) {
+      return { t: effect.text, k: effect.id, exp: effect.expiring, aria: effect.ariaLabel };
+    });
+    if (riskyActive()) bits.push({ t: '🎯 RISKY 3× ' + powerRemainSec(riskyUntil) + 's', k: 'risky', exp: powerExpiring(riskyUntil, 1500), aria: 'Risky multiplier: ' + powerRemainSec(riskyUntil) + ' seconds remaining' });
+    if (isHard()) bits.push({ t: '🔥 Hard', k: 'hard', exp: false, aria: 'Hard mode' });
+    if (isNoCoin()) bits.push({ t: '🚫 No Coin', k: 'nocoin', exp: false, aria: 'No Coin mode' });
+    if (isOneLife()) bits.push({ t: '1️⃣ One Life', k: 'onelife', exp: false, aria: 'One Life mode' });
+    var magOn = now < magnetUntil;
+    if (updatePowerHud._magOn !== magOn) {
+      updatePowerHud._magOn = magOn;
+      var coinHud = document.getElementById('coin-hud');
+      if (coinHud) coinHud.classList.toggle('coin-magnet-on', magOn);
     }
-    var coinHud = document.getElementById('coin-hud');
-    if (coinHud) coinHud.classList.toggle('coin-magnet-on', now < magnetUntil);
     if (bits.length) {
-      var fp = bits.map(function (b) { return b.t + (b.exp ? '!' : ''); }).join('|');
+      var fp = bits.map(function (b) { return [b.k, b.t, b.aria, b.exp ? '!' : ''].join(':'); }).join('|');
       if (updatePowerHud._fp === fp && !powerHudEl.hidden) return; // 3.30 perf: skip DOM rebuild
       updatePowerHud._fp = fp;
       powerHudEl.hidden = false;
@@ -950,7 +947,8 @@ function updateComboMeter(visible) {
       bits.forEach(function (b) {
         var chip = document.createElement('span');
         chip.className = 'power-chip power-' + (b.k || 'generic') + (b.exp ? ' power-expiring' : '');
-        if (b.exp) chip.setAttribute('aria-label', b.t + ' expiring soon');
+        chip.setAttribute('aria-label', b.aria || b.t);
+        chip.title = b.aria || b.t;
         chip.textContent = b.t;
         powerHudEl.appendChild(chip);
       });
@@ -4126,11 +4124,16 @@ function updateComboMeter(visible) {
     } else {
       weatherFlash = 0;
     }
-    // Refresh power HUD countdown chips ~4 Hz
-    if (state === 'playing' && powerHudEl && !powerHudEl.hidden) {
-      if (!updatePowerHud._acc) updatePowerHud._acc = 0;
-      updatePowerHud._acc += dt;
-      if (updatePowerHud._acc > 0.25) { updatePowerHud._acc = 0; updatePowerHud(); syncQuietNight(); }
+    // Refresh visible power timers each frame so chips disappear at expiry, including while paused.
+    if ((state === 'playing' || state === 'paused') && powerHudEl && !powerHudEl.hidden) {
+      updatePowerHud();
+      if (state === 'playing') {
+        updatePowerHud._quietSyncAcc = (updatePowerHud._quietSyncAcc || 0) + dt;
+        if (updatePowerHud._quietSyncAcc >= 0.25) {
+          updatePowerHud._quietSyncAcc = 0;
+          syncQuietNight();
+        }
+      }
     }
 
     for (var i = particles.length - 1; i >= 0; i--) {

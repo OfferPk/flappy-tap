@@ -1,16 +1,17 @@
 # Urr Jaa! STATUS
 
-## Current: **3.58.2-urrjaa** (2026-09-29 PKT)
+## Current: **3.58.4-urrjaa** (2026-09-29 PKT)
 
-### This pack (follow-up to the 3.58.1 source tag)
-- **Reliability** — behavior-level tests cover collision geometry, pipe scoring, mode-aware pause/resume/retry transitions, persistent progress, and service-worker offline/missing-asset cases.
-- **PWA** — failed JS/image requests remain asset errors; only offline document navigations fall back to the app shell. Guide and simulation module are precached.
-- **Accessibility** — run results receive one concise polite announcement and focus; menu panels and pause restore focus without animation-frame chatter. The Roman Urdu guide section is tagged `lang="ur-Latn"`.
-- **Guide** — English and Roman Urdu quick guide linked from the game menu and README.
-- **Windows ZIP** — refreshed package includes the new guide and simulation module, plus a corrected 3.58.2 build note.
-- **Daily** — retry is explicitly labeled and restarts today’s seeded run locally. A full personal-best ghost/replay is intentionally omitted: gameplay and visual-effect randomness still share the seeded stream, so a recorded run could diverge until those RNG consumers are separated.
+### Focused patch — compact active power indicators
+- **UI** — Shield and timed effects use compact horizontal chips, wrap across narrow screens, show remaining time while active, and disappear at expiry.
+- **Gameplay rules** — Shield is an existing one-hard-hit protection with no timer; its indicator reports “1 hit” and clears when consumed. Existing effect durations and stacking behavior are unchanged.
+- **Accessibility** — active effects have a labeled group and descriptive chip labels; updates do not spam a live region. Reduced-motion mode avoids animation.
+- **Responsive layout** — real Chromium device-emulation checks pass at 320×568 and 390×844; seven simultaneous chips remain inside the screen, clear of the standard HUD, and above the central play area.
+- **Preservation** — no new server/account/network feature; scores, local data, modes, Sukoon, mascots, and offline/PWA design are retained.
+- **Verification** — `npm run check`, `npm run smoke`, `npm test`, `npm run build:web`, and `npm run pack:windows` passed. Source/Pages/www assets match; Windows ZIP copies have identical SHA-256 and pass `unzip -t`.
 
-SW cache: `urrjaa-v69-20260929`
+SW cache: `urrjaa-v72-20260929`
 
-**Ship commit:** tag `v3.58.2-urrjaa` (see main history)
+**Ship tag:** `v3.58.4-urrjaa`
 **Live:** https://offerpk.github.io/flappy-tap/
+**Windows ZIP:** https://github.com/OfferPk/flappy-tap/releases/latest/download/urr-jaa-web-windows.zip
