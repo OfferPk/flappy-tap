@@ -2178,7 +2178,17 @@ function updateComboMeter(visible) {
   // 3.53: day rollover while tab was hidden — retry shimmer on return to menu
   if (typeof document !== 'undefined' && document.addEventListener) {
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden) return;
+      if (document.hidden) {
+        if (state === 'playing') {
+          pauseGame();
+        } else if (state === 'paused' && resumeCountdownBusy) {
+          hideResumeCountdown();
+          if (screenPause) screenPause.hidden = false;
+          setPauseBlur(true);
+          focusElementSafely(document.getElementById('btn-resume'));
+        }
+        return;
+      }
       if (state === 'menu') maybePlayShimmer();
     });
   }

@@ -152,9 +152,19 @@ class DevTools {
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && !!document.getElementById('btn-play')"), 'app initialization');
 
     // Seed a deterministic local save and skip first-run coach marks, then reload so the game initializes from it.
-    await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:runs','10'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); true");
+    await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:runs','10'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); localStorage.setItem('flappy-tap:resume-countdown','1'); true");
     await cdp.send('Page.reload', { ignoreCache: true });
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden"), 'menu after boot');
+    async function changePageVisibility(hidden) {
+      const state = hidden ? 'hidden' : 'visible';
+      const actual = await cdp.evaluate(`(() => {
+        Object.defineProperty(document, 'hidden', { configurable: true, value: ${hidden} });
+        Object.defineProperty(document, 'visibilityState', { configurable: true, value: ${JSON.stringify(state)} });
+        document.dispatchEvent(new Event('visibilitychange'));
+        return { hidden: document.hidden, visibilityState: document.visibilityState };
+      })()`);
+      assert.deepEqual(actual, { hidden, visibilityState: state }, 'dispatch a coherent page visibilitychange transition');
+    }
     async function checkShortMenuViewport(width, height) {
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
       await waitFor(() => cdp.evaluate(`innerWidth === ${width} && innerHeight === ${height}`), `${width}×${height} menu viewport`);
@@ -299,6 +309,10 @@ class DevTools {
     await cdp.send('Emulation.clearDeviceMetricsOverride');
     await waitFor(() => cdp.evaluate('innerWidth > 320 && innerHeight > 400'), 'restore desktop viewport');
     await cdp.evaluate("document.getElementById('btn-play').focus(); true");
+    await changePageVisibility(true);
+    await changePageVisibility(false);
+    const menuAfterVisibility = await cdp.evaluate("({menu:!document.getElementById('screen-start').hidden,hud:document.getElementById('hud').hidden,pause:!document.getElementById('screen-pause').hidden})");
+    assert.deepEqual(menuAfterVisibility, { menu: true, hud: true, pause: false }, 'hiding and returning while in the menu does not start or pause a run');
 
     const activeId = () => cdp.evaluate("document.activeElement && document.activeElement.id || ''");
     let current = await activeId();
@@ -624,6 +638,11 @@ class DevTools {
     assert.match(pauseAnnouncement, /Score \d+/);
     const pausePanelVisible = await cdp.evaluate("!document.getElementById('screen-pause').hidden && document.activeElement.id === 'btn-resume'");
     assert.equal(pausePanelVisible, true, 'keyboard activation of the visible pause control opens the pause panel and focuses Resume');
+    const manualPauseAnnouncement = await cdp.evaluate("document.getElementById('game-announcer').textContent");
+    await changePageVisibility(true);
+    await changePageVisibility(false);
+    assert.equal(await cdp.evaluate("!document.getElementById('screen-pause').hidden"), true, 'an already-paused game remains paused across hide/show');
+    assert.equal(await cdp.evaluate("document.getElementById('game-announcer').textContent"), manualPauseAnnouncement, 'backgrounding an already-paused game does not announce a second pause');
     await cdp.press('Escape', 'Escape', 27);
     const resumeAnnouncement = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'resume announcement');
     assert.equal(resumeAnnouncement, 'Game resumed.');
@@ -633,8 +652,33 @@ class DevTools {
     await cdp.press('Escape', 'Escape', 27);
     assert.equal(await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'Escape resume announcement'), 'Game resumed.');
 
+    await changePageVisibility(true);
+    const backgroundPause = await waitFor(() => cdp.evaluate("!document.getElementById('screen-pause').hidden && document.getElementById('game-announcer').textContent.includes('Game paused') && document.getElementById('game-announcer').textContent"), 'active-run background auto-pause');
+    assert.match(backgroundPause, /Score \d+/);
+    await changePageVisibility(false);
+    assert.equal(await cdp.evaluate("!document.getElementById('screen-pause').hidden"), true, 'returning from a hidden page leaves the active run paused');
+    assert.equal(await cdp.evaluate("document.getElementById('game-announcer').textContent"), backgroundPause, 'returning does not announce or trigger an automatic resume');
+    await changePageVisibility(true);
+    await changePageVisibility(false);
+    assert.equal(await cdp.evaluate("!document.getElementById('screen-pause').hidden"), true, 'repeated visibility events do not unpause or duplicate the pause');
+    assert.equal(await cdp.evaluate("document.getElementById('game-announcer').textContent"), backgroundPause, 'the repeated hide/show cycle does not repeat the pause announcement');
+
+    await cdp.press('Enter', 'Enter', 13);
+    await waitFor(() => cdp.evaluate("!document.getElementById('resume-countdown').hidden && document.getElementById('screen-pause').hidden"), 'resume countdown begins');
+    await changePageVisibility(true);
+    await changePageVisibility(false);
+    const cancelledCountdownState = await cdp.evaluate("({pause:!document.getElementById('screen-pause').hidden,countdown:!document.getElementById('resume-countdown').hidden,focus:document.activeElement.id,announcement:document.getElementById('game-announcer').textContent})");
+    assert.deepEqual(cancelledCountdownState, { pause: true, countdown: false, focus: 'btn-resume', announcement: backgroundPause }, 'hiding during resume countdown cancels it and restores the explicit Resume control');
+    await cdp.press('Enter', 'Enter', 13);
+    assert.equal(await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'explicit resume after returning'), 'Game resumed.');
+
     const firstRunResult = await waitFor(() => cdp.evaluate("!document.getElementById('screen-death').hidden && document.getElementById('run-result-announcement').textContent"), 'new-record run-end announcement', 15000);
     assert.equal(firstRunResult, 'Run complete. Score 0. New personal record.', 'run end announces the final score and new record once in concise text');
+    const gameOverAnnouncement = await cdp.evaluate("document.getElementById('run-result-announcement').textContent");
+    await changePageVisibility(true);
+    await changePageVisibility(false);
+    const gameOverAfterVisibility = await cdp.evaluate("({death:!document.getElementById('screen-death').hidden,pause:!document.getElementById('screen-pause').hidden,result:document.getElementById('run-result-announcement').textContent})");
+    assert.deepEqual(gameOverAfterVisibility, { death: true, pause: false, result: gameOverAnnouncement }, 'hiding and returning on the game-over screen preserves its result without opening Pause');
     const stableRunResult = await cdp.evaluate("document.getElementById('run-result-announcement').textContent");
     await delay(250);
     assert.equal(await cdp.evaluate("document.getElementById('run-result-announcement').textContent"), stableRunResult,
@@ -648,7 +692,7 @@ class DevTools {
     const secondRunResult = await waitFor(() => cdp.evaluate("!document.getElementById('screen-death').hidden && document.getElementById('run-result-announcement').textContent"), 'no-new-record run-end announcement', 15000);
     assert.equal(secondRunResult, 'Run complete. Score 0. No new record.', 'run end explicitly announces when the score is not a new record');
 
-    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · pause controls · event/run-end announcements · backup flows');
+    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · background pause/recovery · menu/pause/game-over preservation · event/run-end announcements · backup flows');
   } finally {
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
     if (browser && browser.exitCode === null) {
