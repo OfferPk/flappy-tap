@@ -217,6 +217,16 @@ function testSavedProgress() {
   assert.equal(storage.importProgress(futureCooldown).ok, false, 'implausible future cooldown timestamps are rejected');
   const unknownKey = Object.assign({}, exported, { data: Object.assign({}, exported.data, { admin: '1' }) });
   assert.equal(storage.importProgress(unknownKey).ok, false, 'unknown keys are rejected');
+  const inheritedBirdId = JSON.parse(JSON.stringify(exported));
+  inheritedBirdId.data.unlockedBirds = 'constructor';
+  assert.equal(storage.importProgress(inheritedBirdId).ok, false, 'inherited object properties are not accepted as unlocked bird IDs');
+  const inheritedCollectionKind = JSON.parse(JSON.stringify(exported));
+  inheritedCollectionKind.data.collection = '{"__proto__":{}}';
+  assert.equal(storage.importProgress(inheritedCollectionKind).ok, false, 'prototype names are not accepted as collection kinds');
+  const inheritedRunMode = JSON.parse(JSON.stringify(exported));
+  inheritedRunMode.data.topRuns = JSON.stringify([{ score: 1, mode: 'constructor', date: exported.exportedAt.slice(0, 10), perfects: 0, combo: 0 }]);
+  assert.equal(storage.importProgress(inheritedRunMode).ok, false, 'inherited object properties are not accepted as run modes');
+  assert.deepEqual(Array.from(values.entries()), beforeInvalidImport, 'prototype-derived values do not write or mutate saved progress');
   const emptyBackup = Object.assign({}, exported, { data: {} });
   assert.equal(storage.importProgress(emptyBackup).ok, false, 'empty backups cannot overwrite state');
 }
@@ -331,11 +341,57 @@ async function testMagicAdsUnavailableWithoutSdk() {
   assert.equal(localDemo.window.Ads.isDemoMode(), true, 'explicit demo mode can be used on localhost only');
 }
 
+async function testMysteryRewardSingleFlight() {
+  const source = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');
+  const handler = source.match(/if \(btnMysteryAd\) btnMysteryAd\.addEventListener\('click', async function \(\) \{[\s\S]*?\n  \}\);/);
+  assert.ok(handler, 'the mystery gift button handler is present for the in-flight regression');
+  let requests = 0;
+  let grantReward;
+  let grants = 0;
+  const button = { disabled: false, textContent: 'DEMO · Simulate +1 gift', addEventListener(event, callback) { this.clickHandler = callback; } };
+  const context = {
+    Ads: { isDemoMode: () => true, showRewarded: () => { requests++; return new Promise((resolve) => { grantReward = resolve; }); } },
+    mysteryAdUsed: false, mysteryAdInFlight: false, state: 'dead', btnMysteryAd: button,
+    grantMysteryReward: () => { grants++; }, runGiftsEl: { textContent: '+0' }, showToast: () => {}, Math
+  };
+  vm.runInNewContext(handler[0], context, { filename: 'mystery gift handler (single-flight test)' });
+  const first = button.clickHandler();
+  const duplicate = button.clickHandler();
+  assert.equal(requests, 1, 'a repeated click cannot open a second reward prompt while one is pending');
+  assert.equal(button.disabled, true, 'the reward button disables while the prompt is pending');
+  grantReward({ rewarded: true });
+  await Promise.all([first, duplicate]);
+  assert.equal(grants, 1, 'one confirmed prompt grants exactly one mystery reward');
+  assert.equal(context.mysteryAdUsed, true, 'a successful reward remains limited to once per run');
+  assert.equal(context.mysteryAdInFlight, false, 'the in-flight lock clears after completion');
+  assert.equal(button.disabled, true, 'the already-claimed reward button remains disabled');
+  assert.equal(runGiftsText(context), '+1', 'the visible gift count increments only once');
+
+  let skippedToast = '';
+  const skipButton = { disabled: false, textContent: '', addEventListener(event, callback) { this.clickHandler = callback; } };
+  const skipContext = {
+    Ads: { isDemoMode: () => true, showRewarded: async () => ({ rewarded: false }) },
+    mysteryAdUsed: false, mysteryAdInFlight: false, state: 'dead', btnMysteryAd: skipButton,
+    grantMysteryReward: () => { throw new Error('a skipped reward must not grant'); }, runGiftsEl: { textContent: '+0' },
+    showToast: (message) => { skippedToast = message; }, Math
+  };
+  vm.runInNewContext(handler[0], skipContext, { filename: 'mystery gift handler (skip test)' });
+  await skipButton.clickHandler();
+  assert.equal(skipContext.mysteryAdInFlight, false, 'skipping releases the in-flight lock');
+  assert.equal(skipButton.disabled, false, 'skipping re-enables the demo reward button');
+  assert.equal(skippedToast, 'Gift skipped', 'skipping keeps the existing feedback');
+}
+
+function runGiftsText(context) {
+  return context.runGiftsEl.textContent;
+}
+
 async function main() {
   testGameplayRules();
   testPowerIndicators();
   testSavedProgress();
   testProgressBackupRollback();
+  await testMysteryRewardSingleFlight();
   await testMagicAdsUnavailableWithoutSdk();
   await testOfflineAssetFallback();
 

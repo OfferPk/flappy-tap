@@ -191,6 +191,7 @@
   let weatherDynId = null; // dynamic weather override during run
   let lastAreaMusic = null;
   let mysteryAdUsed = false;
+  let mysteryAdInFlight = false;
   var lastHitCause = 'pipe'; // pipe | ground | ceiling | traffic (3.17 death tip)
   let nextWeatherAt = 90;
   let runStartTs = 0;
@@ -2304,7 +2305,7 @@ function updateComboMeter(visible) {
     if (btnMysteryAd) {
       var demoGiftAds = !!(Ads && Ads.isDemoMode && Ads.isDemoMode());
       btnMysteryAd.hidden = isPractice() || !demoGiftAds;
-      btnMysteryAd.disabled = mysteryAdUsed || !demoGiftAds;
+      btnMysteryAd.disabled = mysteryAdUsed || mysteryAdInFlight || !demoGiftAds;
       btnMysteryAd.textContent = mysteryAdUsed ? 'Gift claimed' : 'DEMO · Simulate +1 gift';
     }
     // One-time spin unlock popup at run end if threshold crossed mid-run
@@ -2626,6 +2627,7 @@ function updateComboMeter(visible) {
       nextBossAt = BOSS_EVERY_M;
       weatherDynId = null;
       mysteryAdUsed = false;
+      mysteryAdInFlight = false;
       nextWeatherAt = 90;
       runStartTs = performance.now();
       luckyCooldownUntil = 0;
@@ -8015,18 +8017,24 @@ function updateComboMeter(visible) {
     if (mysteryOverlay) mysteryOverlay.hidden = true;
   });
   if (btnMysteryAd) btnMysteryAd.addEventListener('click', async function () {
-    if (!Ads || !Ads.isDemoMode || !Ads.isDemoMode() || mysteryAdUsed || state !== 'dead') return;
-    var res = await Ads.showRewarded('mystery-box');
-    if (res && res.rewarded) {
-      mysteryAdUsed = true;
-      btnMysteryAd.disabled = true;
-      btnMysteryAd.textContent = 'Gift claimed';
-      grantMysteryReward(Math.random);
-      if (runGiftsEl) {
-        var cur = parseInt(runGiftsEl.textContent.replace(/\D/g, ''), 10) || 0;
-        runGiftsEl.textContent = '+' + (cur + 1);
-      }
-    } else showToast('Gift skipped');
+    if (!Ads || !Ads.isDemoMode || !Ads.isDemoMode() || mysteryAdUsed || mysteryAdInFlight || state !== 'dead') return;
+    mysteryAdInFlight = true;
+    btnMysteryAd.disabled = true;
+    try {
+      var res = await Ads.showRewarded('mystery-box');
+      if (res && res.rewarded) {
+        mysteryAdUsed = true;
+        btnMysteryAd.textContent = 'Gift claimed';
+        grantMysteryReward(Math.random);
+        if (runGiftsEl) {
+          var cur = parseInt(runGiftsEl.textContent.replace(/\D/g, ''), 10) || 0;
+          runGiftsEl.textContent = '+' + (cur + 1);
+        }
+      } else showToast('Gift skipped');
+    } finally {
+      mysteryAdInFlight = false;
+      btnMysteryAd.disabled = mysteryAdUsed || !Ads.isDemoMode();
+    }
   });
     var btnClearSpinHistory = document.getElementById('btn-clear-spin-history');
   if (btnClearSpinHistory) {

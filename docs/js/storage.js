@@ -1433,7 +1433,7 @@
   function isBackupCsv(value, allowed, maxCount) {
     if (value === '') return true;
     const items = value.split(',');
-    return items.length <= maxCount && new Set(items).size === items.length && items.every((id) => !!allowed[id]);
+    return items.length <= maxCount && new Set(items).size === items.length && items.every((id) => Object.prototype.hasOwnProperty.call(allowed, id));
   }
   function validBackupMissionProgress(value) {
     const record = parseBackupJson(value);
@@ -1445,14 +1445,14 @@
     const kinds = { bird: BIRDS, vehicle: VEHICLES, env: ENVS, accessory: HATS, trail: TRAILS, seasonal: SEASONALS };
     return isPlainRecord(record) && Object.keys(record).length <= 6 && Object.keys(record).every((kind) => {
       const items = record[kind];
-      return kinds[kind] && isPlainRecord(items) && Object.keys(items).length <= Object.keys(kinds[kind]).length &&
-        Object.keys(items).every((id) => kinds[kind][id] && items[id] === true);
+      return Object.prototype.hasOwnProperty.call(kinds, kind) && isPlainRecord(items) && Object.keys(items).length <= Object.keys(kinds[kind]).length &&
+        Object.keys(items).every((id) => Object.prototype.hasOwnProperty.call(kinds[kind], id) && items[id] === true);
     });
   }
   function validBackupTopRuns(value) {
     const list = parseBackupJson(value);
     return Array.isArray(list) && list.length <= TOP_RUNS_MAX && list.every((entry) => isPlainRecord(entry) &&
-      isBackupInt(String(entry.score), 1000000000) && BACKUP_MODES[entry.mode] && isBackupDate(entry.date) &&
+      isBackupInt(String(entry.score), 1000000000) && Object.prototype.hasOwnProperty.call(BACKUP_MODES, entry.mode) && isBackupDate(entry.date) &&
       isBackupInt(String(entry.perfects), 1000000000) && isBackupInt(String(entry.combo), 1000000000));
   }
   function validBackupDateList(value, maxCount) {
