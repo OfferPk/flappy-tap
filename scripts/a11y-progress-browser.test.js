@@ -1007,6 +1007,11 @@ class DevTools {
     await cdp.press('Enter', 'Enter', 13);
     const pauseAnnouncement = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent.includes('Game paused') && document.getElementById('game-announcer').textContent"), 'pause announcement');
     assert.match(pauseAnnouncement, /Score \d+/);
+    const pauseLiveDetails = await cdp.evaluate("(() => {const s=document.querySelector('.pause-stats');return {statsLive:s.getAttribute('aria-live'),score:document.getElementById('pause-score').textContent,mode:document.getElementById('pause-mode').textContent,focus:document.activeElement.id};})()");
+    assert.equal(pauseLiveDetails.statsLive,'off','pause stats remain readable on demand without duplicating the concise pause announcement');
+    assert.ok(pauseAnnouncement.includes('Score ' + pauseLiveDetails.score + '.'),'the dedicated pause announcement still includes the current score');
+    assert.equal(pauseLiveDetails.focus,'btn-resume','suppressing the duplicate stats announcement does not change pause focus');
+    assert.ok(pauseLiveDetails.score.length > 0 && pauseLiveDetails.mode.length > 0,'score and mode remain available to read in the Pause panel');
     const pausePanelVisible = await cdp.evaluate("!document.getElementById('screen-pause').hidden && document.activeElement.id === 'btn-resume'");
     assert.equal(pausePanelVisible, true, 'keyboard activation of the visible pause control opens the pause panel and focuses Resume');
     async function enableScaledLandscape(width,height,insets) {
