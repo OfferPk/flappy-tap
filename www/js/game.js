@@ -291,6 +291,8 @@
   const replayVizCanvas = document.getElementById('replay-viz-canvas');
   const deathFreezeWrap = document.getElementById('death-freeze-wrap');
   const replayPathDescriptionEl = document.getElementById('replay-path-description');
+  const replayPathDetailsEl = document.getElementById('replay-path-details');
+  const replayPathExpandedEl = document.getElementById('replay-path-expanded');
   const deathFreezeBadge = document.getElementById('death-freeze-badge');
   const dailyCountdownEl = document.getElementById('daily-reset-countdown');
   const dailyCountdownModesEl = document.getElementById('daily-reset-countdown-modes');
@@ -2598,6 +2600,8 @@ function updateComboMeter(visible) {
     if (deathFreezeBadge) deathFreezeBadge.hidden = true;
     if (deathFreezeWrap) deathFreezeWrap.hidden = true;
     if (replayPathDescriptionEl) replayPathDescriptionEl.textContent = '';
+    if (replayPathDetailsEl) { replayPathDetailsEl.open = false; replayPathDetailsEl.hidden = true; }
+    if (replayPathExpandedEl) replayPathExpandedEl.textContent = '';
     hitFlash = 0;
     deathFreezeUntil = 0;
     flapCooldown = 0;
@@ -3969,6 +3973,12 @@ function updateComboMeter(visible) {
     return true;
   }
 
+  function replayDurationLabel(buf) {
+    var start = Number(buf[0].t), end = Number(buf[buf.length - 1].t);
+    var durationMs = Number.isFinite(start) && Number.isFinite(end) ? Math.max(0, end - start) : 0;
+    return durationMs < 750 ? 'less than a second' : 'about ' + Math.max(1, Math.round(durationMs / 1000)) + ' seconds';
+  }
+
   function describeReplayPath(buf) {
     if (!buf || !buf.length) return 'No saved flight path is available for this run.';
     if (buf.length < 2) return 'Only one flight position was saved, so there is not enough movement to summarize the path.';
@@ -3980,8 +3990,6 @@ function updateComboMeter(visible) {
       minY = Math.min(minY, buf[i].y);
       maxY = Math.max(maxY, buf[i].y);
     }
-    var durationMs = Math.max(0, (buf[buf.length - 1].t || 0) - (buf[0].t || 0));
-    var durationLabel = durationMs < 750 ? 'less than a second' : 'about ' + Math.max(1, Math.round(durationMs / 1000)) + ' seconds';
     var movementThreshold = Math.max(12, H * 0.025);
     var trend = maxY - minY < movementThreshold ? 'stayed nearly level'
       : upward > downward * 1.25 ? 'mostly rose'
@@ -3989,13 +3997,45 @@ function updateComboMeter(visible) {
     var endDelta = buf[buf.length - 1].y - buf[0].y;
     var endHeight = Math.abs(endDelta) <= Math.max(12, H * 0.03) ? 'near'
       : endDelta < 0 ? 'above' : 'below';
-    return 'Vertical path over ' + durationLabel + ': the bird ' + trend + ' and finished ' + endHeight + ' its starting height.';
+    return 'Vertical path over ' + replayDurationLabel(buf) + ': the bird ' + trend + ' and finished ' + endHeight + ' its starting height.';
+  }
+
+  function describeReplayPathDetails(buf) {
+    if (!buf || !buf.length) return '';
+    if (buf.length < 2) return 'Only one position was recorded, so there is not enough movement to describe a range.';
+    var minY = buf[0].y, maxY = buf[0].y, previousDirection = 0, directionChanges = 0;
+    var movementThreshold = Math.max(2, H * 0.004);
+    for (var i = 1; i < buf.length; i++) {
+      var y = buf[i].y, dy = y - buf[i - 1].y;
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      if (Math.abs(dy) < movementThreshold) continue;
+      var direction = dy < 0 ? -1 : 1;
+      if (previousDirection && direction !== previousDirection) directionChanges++;
+      previousDirection = direction;
+    }
+    var rangeRatio = (maxY - minY) / Math.max(1, H);
+    var rangeLabel = rangeRatio < 0.15 ? 'narrow' : rangeRatio < 0.35 ? 'moderate' : 'wide';
+    var movementText = directionChanges
+      ? 'The bird changed vertical direction ' + directionChanges + (directionChanges === 1 ? ' time.' : ' times.')
+      : 'The path kept one vertical trend.';
+    return 'Captured ' + buf.length + ' positions over ' + replayDurationLabel(buf) + '. ' + movementText + ' It covered a ' + rangeLabel + ' vertical range.';
   }
 
   function startReplayVizAnim() {
     if (replayVizRaf) { cancelAnimationFrame(replayVizRaf); replayVizRaf = 0; }
     var buf = replaySnapshot.length ? replaySnapshot : replayBuf;
     if (replayPathDescriptionEl) replayPathDescriptionEl.textContent = describeReplayPath(buf);
+    if (replayPathDetailsEl) {
+      if (buf.length) {
+        if (replayPathExpandedEl) replayPathExpandedEl.textContent = describeReplayPathDetails(buf);
+        replayPathDetailsEl.hidden = false;
+      } else {
+        replayPathDetailsEl.open = false;
+        replayPathDetailsEl.hidden = true;
+        if (replayPathExpandedEl) replayPathExpandedEl.textContent = '';
+      }
+    }
     if (!buf.length) {
       showToast('No path to replay yet', 1200);
       return;

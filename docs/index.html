@@ -312,6 +312,10 @@
         <figcaption class="hint">Saved path from the last five seconds of flight.</figcaption>
       </figure>
       <p id="replay-path-description" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+      <details id="replay-path-details" class="replay-path-details" hidden>
+        <summary>More flight details</summary>
+        <p id="replay-path-expanded" class="replay-path-expanded"></p>
+      </details>
       <p class="score-big">Score: <span id="final-score">0</span></p>
       <button id="btn-retry" class="btn primary run-retry-primary" type="button">RETRY</button>
       <div class="grade-wrap" aria-label="Run grade">
@@ -333,7 +337,7 @@
         <button id="btn-continue" class="btn reward continue-ready" type="button" hidden>DEMO · Simulate rewarded revive</button>
         <p id="continue-hint" class="hint continue-hint" hidden>Local demo only: no real ad is shown or verified.</p>
         <button id="btn-mystery-ad" class="btn reward" type="button" hidden>DEMO · Simulate +1 gift</button>
-        <button id="btn-replay-stub" class="btn secondary btn-sm" type="button" aria-controls="replay-viz-canvas replay-path-description">▶ Replay path (last 5s)</button>
+        <button id="btn-replay-stub" class="btn secondary btn-sm" type="button" aria-controls="replay-viz-canvas replay-path-description replay-path-details">▶ Replay path (last 5s)</button>
         <button id="btn-share" class="btn secondary" type="button">📤 Share</button>
         <div class="btn-row">
           <button id="btn-death-collection" class="btn secondary btn-sm" type="button">COLLECTION</button>
