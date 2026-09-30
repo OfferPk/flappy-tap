@@ -236,7 +236,60 @@ class DevTools {
     await waitFor(() => cdp.evaluate(`performance.timeOrigin > ${oldTimeOrigin} && localStorage.getItem('flappy-tap:best') === '47' && localStorage.getItem('flappy-tap:coins') === '123'`), 'reload with imported save', 10000);
     await waitFor(() => cdp.evaluate("document.getElementById('boot-splash').hidden"), 'post-import boot completion');
 
+    // Negative UI paths must leave the current local save untouched and must not reload.
+    current = await activeId();
+    for (let i = 0; i < 20 && current !== 'btn-settings'; i++) {
+      await cdp.press('Tab', 'Tab', 9);
+      current = await activeId();
+    }
+    assert.equal(current, 'btn-settings', 'Settings remains reachable after the import reload');
+    await cdp.press('Enter', 'Enter', 13);
+    await waitFor(() => cdp.evaluate("document.activeElement.tagName === 'H2' && !!document.activeElement.closest('#screen-settings')"), 'settings focus for negative imports');
+
+    async function verifyRejectedImport(label, fileText, confirmDecision, expectedStatus, expectedConfirmCalls) {
+      await cdp.evaluate("localStorage.setItem('flappy-tap:best','209'); localStorage.setItem('flappy-tap:coins','51'); true");
+      const before = await cdp.evaluate("({timeOrigin:performance.timeOrigin,best:localStorage.getItem('flappy-tap:best'),coins:localStorage.getItem('flappy-tap:coins')})");
+      const encoded = JSON.stringify(fileText);
+      await cdp.evaluate(`(() => {
+        const input = document.getElementById('progress-import-file');
+        window.__importConfirmMessage = '';
+        window.__importConfirmCalls = 0;
+        window.__importChooserRequests = 0;
+        window.__importConfirmDecision = ${JSON.stringify(confirmDecision)};
+        window.confirm = (message) => {
+          window.__importConfirmCalls++;
+          window.__importConfirmMessage = message;
+          return window.__importConfirmDecision;
+        };
+        input.click = function () {
+          window.__importChooserRequests++;
+          const transfer = new DataTransfer();
+          transfer.items.add(new File([${encoded}], 'test-progress-backup.json', { type: 'application/json' }));
+          this.files = transfer.files;
+          this.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        return true;
+      })()`);
+      await cdp.evaluate("document.getElementById('btn-import-progress').focus(); true");
+      await cdp.press('Enter', 'Enter', 13);
+      await waitFor(() => cdp.evaluate(`document.getElementById('progress-transfer-status').textContent.includes(${JSON.stringify(expectedStatus)})`), label);
+      const after = await cdp.evaluate("({timeOrigin:performance.timeOrigin,best:localStorage.getItem('flappy-tap:best'),coins:localStorage.getItem('flappy-tap:coins'),confirmCalls:window.__importConfirmCalls,chooserRequests:window.__importChooserRequests})");
+      assert.equal(after.confirmCalls, expectedConfirmCalls, label + ' confirmation count');
+      assert.equal(after.chooserRequests, 1, label + ' opened the import picker');
+      assert.equal(after.best, before.best, label + ' preserves the saved best score');
+      assert.equal(after.coins, before.coins, label + ' preserves the saved coins');
+      assert.equal(after.timeOrigin, before.timeOrigin, label + ' does not reload the page');
+    }
+
+    await verifyRejectedImport('cancelled backup import', backupText, false, 'Import cancelled. Nothing was changed.', 1);
+    await verifyRejectedImport('malformed JSON backup', '{"format":"flappy-tap-progress",', true, 'Could not read that backup file.', 0);
+    const malformedSchema = JSON.stringify({ format: backup.format, version: backup.version, exportedAt: backup.exportedAt, data: { best: 'not-a-number' } });
+    await verifyRejectedImport('malformed backup data', malformedSchema, true, 'Invalid, unsupported, or damaged backup.', 1);
+    const unsupportedVersion = Object.assign({}, backup, { version: backup.version + 1 });
+    await verifyRejectedImport('unsupported backup version', JSON.stringify(unsupportedVersion), true, 'Unsupported or invalid progress backup.', 0);
+
     // The real live region is checked after keyboard-triggered gameplay events, with no frame-by-frame score narration.
+    await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); true");
     await cdp.evaluate("document.getElementById('btn-play').focus(); true");
     await cdp.press('Enter', 'Enter', 13);
     const gameEntry = await cdp.evaluate("({active:document.activeElement.id,startHidden:document.getElementById('screen-start').hidden,hudHidden:document.getElementById('hud').hidden,playDisabled:document.getElementById('btn-play').disabled,bootHidden:document.getElementById('boot-splash').hidden,settingsHidden:document.getElementById('screen-settings').hidden})");
@@ -256,7 +309,7 @@ class DevTools {
     const resumeAnnouncement = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'resume announcement');
     assert.equal(resumeAnnouncement, 'Game resumed.');
 
-    console.log('BROWSER A11Y/PROGRESS OK · Tab/Enter/Escape focus · run/pause/resume live region · versioned JSON export/import and reload');
+    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · event announcements · valid/cancelled/malformed/unsupported backup flows');
   } finally {
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
     if (browser && browser.exitCode === null) {
