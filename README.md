@@ -75,7 +75,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Weather | Clear · Rain · Fog · Storm · Night · Sunset (light speed/visibility) |
 | Boss/Chase | Every ~180m · DANGER 30–60s · truck/eagle/police/storm/giant |
 | Daily Missions | 3/day from pool · coins / mystery / skin fragments |
-| Run Summary | Score · Best · Distance · Coins · Near Misses · Combo · Perfects · **Share** · RETRY/COLLECTION/HOME |
+| Run Summary | Score with quick **RETRY** · Best · Distance · Coins · Near Misses · Combo · Perfects · **Share** · COLLECTION/HOME |
 | A2HS tip | Soft home tip (EN + Roman Urdu); session dismiss |
 | Missions XSS | Allowlisted ids + textContent cards (F1 closed) |
 | Collection | Birds · Vehicles · Accessories · Trails · Areas · Challenges · 25–100% rewards |

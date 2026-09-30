@@ -701,6 +701,7 @@ html.reduce-motion #score-display.score-bump { animation: none; }
   gap: 6px;
   margin: 8px 0 14px;
 }
+#screen-death .run-retry-primary { width: min(100%, 280px); min-height: 48px; flex: 0 0 auto; }
 .sum-row {
   display: flex;
   justify-content: space-between;

@@ -1020,6 +1020,22 @@ class DevTools {
     const resultRegion = await cdp.evaluate("(() => { const el=document.getElementById('run-result-announcement'); return {role:el.getAttribute('role'),live:el.getAttribute('aria-live'),atomic:el.getAttribute('aria-atomic')}; })()");
     assert.deepEqual(resultRegion, { role: 'status', live: 'polite', atomic: 'true' }, 'the final result uses one polite atomic screen-reader status region');
 
+    async function checkRunEndPortraitRetry(width,height) {
+      const insets={top:24,left:0,bottom:20,right:0};
+      await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true,screenOrientation:{type:'portraitPrimary',angle:0}});
+      await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets});
+      await waitFor(()=>cdp.evaluate(`innerWidth===${width}&&innerHeight===${height}`),`${width}×${height} run-summary portrait viewport`);
+      await delay(200);
+      const retry=await cdp.evaluate("(() => {const s=document.getElementById('screen-death');s.scrollTop=0;const e=document.getElementById('btn-retry'),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {top:r.top,bottom:r.bottom,height:r.height,visible:r.top>=24&&r.bottom<=innerHeight-20,hit:!!h&&(h===e||e.contains(h)),scrollTop:s.scrollTop,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight};})()");
+      assert.ok(retry.visible&&retry.hit&&retry.height>=44,`${width}×${height} RETRY is visible and hit-testable without scrolling: ${JSON.stringify(retry)}`);
+      await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{}});
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
+      await waitFor(()=>cdp.evaluate('innerWidth>320&&innerHeight>400'),'restore desktop after portrait Retry audit');
+      console.log(`RUN END QUICK RETRY OK · ${width}×${height} portrait`);
+    }
+    await checkRunEndPortraitRetry(320,480);
+    await checkRunEndPortraitRetry(320,568);
+
     async function checkRunEndLandscape(width,height,insets) {
       await enableScaledLandscape(width,height,insets);
       const layout=await cdp.evaluate("(() => {const s=document.getElementById('screen-death');s.scrollTop=0;const r=e=>{const b=e.getBoundingClientRect();return {top:b.top,bottom:b.bottom,left:b.left,right:b.right,width:b.width,height:b.height};};const safe=getComputedStyle(document.documentElement),close=s.querySelector('.panel-close'),c=close.getBoundingClientRect(),hit=document.elementFromPoint(c.left+c.width/2,c.top+c.height/2);const overflow=[];['.run-summary','.sum-row','.score-big','.new-record-banner','.grade-wrap','.btn-row'].forEach(q=>s.querySelectorAll(q).forEach(e=>{if(e.getClientRects().length&&e.scrollWidth>e.clientWidth+1)overflow.push({selector:q,text:(e.textContent||'').trim().slice(0,60),width:e.clientWidth,scrollWidth:e.scrollWidth});}));return {font:getComputedStyle(document.documentElement).fontSize,safe:['--safe-top','--safe-left','--safe-bottom','--safe-right'].map(k=>safe.getPropertyValue(k).trim()),overflowY:getComputedStyle(s).overflowY,scrollWidth:s.scrollWidth,clientWidth:s.clientWidth,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight,overflow,heading:r(s.querySelector('h2')),summary:r(s.querySelector('#run-summary')),close:r(close),closeHit:!!hit&&(hit===close||close.contains(hit))};})()");
