@@ -1100,6 +1100,12 @@ class DevTools {
 
     const firstRunResult = await waitFor(() => cdp.evaluate("!document.getElementById('screen-death').hidden && document.getElementById('run-result-announcement').textContent"), 'new-record run-end announcement', 15000);
     assert.equal(firstRunResult, 'Run complete. Score 0. New personal record.', 'run end announces the final score and new record once in concise text');
+    const resultTipState = await cdp.evaluate("(() => {const result=document.getElementById('run-result-announcement'),tip=document.getElementById('death-tip');return {resultRole:result.getAttribute('role'),resultLive:result.getAttribute('aria-live'),resultText:result.textContent,tipRole:tip.getAttribute('role'),tipLive:tip.getAttribute('aria-live'),tipHidden:tip.hidden,tipText:tip.textContent,focus:document.activeElement.id};})()");
+    assert.deepEqual({resultRole:resultTipState.resultRole,resultLive:resultTipState.resultLive,tipRole:resultTipState.tipRole,tipLive:resultTipState.tipLive,tipHidden:resultTipState.tipHidden,focus:resultTipState.focus},
+      {resultRole:'status',resultLive:'polite',tipRole:null,tipLive:'off',tipHidden:false,focus:'run-summary-heading'},
+      'the final result is the only live announcement while the visible tip stays readable and focus lands on Run Summary');
+    assert.equal(resultTipState.resultText,firstRunResult,'the final score and record announcement remains unchanged');
+    assert.match(resultTipState.tipText,/New best/,'the visible new-record encouragement remains present after removing its duplicate live announcement');
     const gameOverAnnouncement = await cdp.evaluate("document.getElementById('run-result-announcement').textContent");
     await changePageVisibility(true);
     await changePageVisibility(false);
