@@ -7670,6 +7670,7 @@ function updateComboMeter(visible) {
       challengeStagePanel.hidden = false;
       refreshChallengeStageSelect();
       focusPanelHeading(challengeStagePanel);
+      challengeStagePanel.scrollIntoView({ block: 'nearest' });
     }
   }
 

@@ -443,6 +443,24 @@ class DevTools {
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 320, height: 480, deviceScaleFactor: 1, mobile: true });
     await waitFor(() => cdp.evaluate('innerWidth === 320 && innerHeight === 480'), '320×480 A2HS Play hit test viewport');
     await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
+    const compactChallengeBefore = await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),stage:window.FTStorage.getChallengeStage()})");
+    await cdp.evaluate("document.getElementById('btn-modes').click(); true");
+    await waitFor(() => cdp.evaluate("!document.getElementById('screen-modes').hidden"), 'open Modes for compact Challenge picker check');
+    await cdp.evaluate("document.getElementById('btn-open-challenge').click(); true");
+    await waitFor(() => cdp.evaluate("!document.getElementById('challenge-stage-panel').hidden"), 'open compact Challenge picker');
+    const compactChallengeLayout = await cdp.evaluate("(() => {const p=document.getElementById('challenge-stage-panel'),h=p.querySelector('h3'),card=p.querySelector('.challenge-stage-card'),cancel=document.getElementById('btn-challenge-cancel'),box=e=>{const r=e.getBoundingClientRect(),x=(r.left+r.right)/2,y=(r.top+r.bottom)/2,hit=document.elementFromPoint(x,y);return {top:r.top,bottom:r.bottom,visible:r.top>=0&&r.bottom<=innerHeight,hit:!!hit&&(hit===e||e.contains(hit))};};return {viewport:[innerWidth,innerHeight],focusHeading:document.activeElement===h,heading:box(h),firstStage:box(card),cancel:box(cancel)};})()");
+    assert.deepEqual(compactChallengeLayout.viewport, [320,480], 'compact Challenge picker check uses the 320×480 viewport');
+    assert.equal(compactChallengeLayout.focusHeading, true, 'opening the compact picker retains its heading focus');
+    assert.ok(compactChallengeLayout.heading.visible && compactChallengeLayout.firstStage.visible && compactChallengeLayout.firstStage.hit && compactChallengeLayout.cancel.visible && compactChallengeLayout.cancel.hit,
+      `320×480 Challenge heading, unlocked stage, and Cancel are visible and hit-testable: ${JSON.stringify(compactChallengeLayout)}`);
+    await clickElementAt('#btn-challenge-cancel');
+    await waitFor(() => cdp.evaluate("document.getElementById('challenge-stage-panel').hidden&&document.activeElement.id==='btn-open-challenge'"), 'compact Challenge Cancel restores its trigger');
+    await cdp.press('Escape','Escape',27);
+    await waitFor(() => cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('screen-modes').hidden"), 'compact Challenge check returns to menu');
+    const compactChallengeAfter = await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),stage:window.FTStorage.getChallengeStage(),focus:document.activeElement.id})");
+    assert.deepEqual(compactChallengeAfter,{runs:compactChallengeBefore.runs,best:compactChallengeBefore.best,coins:compactChallengeBefore.coins,stage:compactChallengeBefore.stage,focus:'btn-modes'},'the compact picker view/cancel leaves runs, records, coins, unlocks, and focus-return behavior intact');
+    console.log('CHALLENGE PICKER COMPACT VIEW OK · 320×480 · choices visible · Cancel returns without progress changes');
+    await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
     await clickElementAt('#btn-play');
     await waitFor(() => cdp.evaluate("document.getElementById('screen-start').hidden"), 'Play tap starts a run while the A2HS prompt is present');
     console.log('A2HS PLAY HIT TEST OK · 320×480');
