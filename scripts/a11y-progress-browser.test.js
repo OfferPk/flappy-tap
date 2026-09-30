@@ -1223,11 +1223,14 @@ class DevTools {
     console.log('MODES FOCUS OK · heading on open · X/Escape restore trigger · run/record preserved');
 
     const oneLifeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
-    await cdp.evaluate("document.getElementById('btn-modes').click(); true");
+    await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
+    await cdp.press('Enter','Enter',13);
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden"),'open modes for One Life regression');
     await cdp.evaluate("document.querySelector('[data-mode=\"onelife\"]').focus(); true");
     await cdp.press('Enter','Enter',13);
     await waitFor(()=>cdp.evaluate("document.getElementById('screen-modes').hidden&&!document.getElementById('hud').hidden"),'start a real One Life run');
+    const oneLifeStart=await cdp.evaluate("({modesHidden:document.getElementById('screen-modes').hidden,hudVisible:!document.getElementById('hud').hidden,focus:document.activeElement.id,canvasTabIndex:document.getElementById('game').tabIndex,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    assert.deepEqual(oneLifeStart,{modesHidden:true,hudVisible:true,focus:'game',canvasTabIndex:0,runs:oneLifeRulesBefore.runs+1,best:oneLifeRulesBefore.best},'keyboard mode selection focuses the playable canvas and starts exactly one run without changing the best');
     const oneLifeResult=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('screen-death'),a=document.getElementById('run-result-announcement');return !d.hidden&&a.textContent?{mode:document.getElementById('mode-death-value').textContent,button:document.getElementById('btn-retry').textContent.trim(),continueHidden:document.getElementById('btn-continue').hidden,focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()}:null;})()"),'One Life run-end Results',20000);
     assert.equal(oneLifeResult.mode,'One Life','the observed Results screen belongs to One Life mode');
     assert.deepEqual({button:oneLifeResult.button,continueHidden:oneLifeResult.continueHidden,focus:oneLifeResult.focus,runs:oneLifeResult.runs,best:oneLifeResult.best},
