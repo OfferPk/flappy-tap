@@ -2580,7 +2580,7 @@ function updateComboMeter(visible) {
 
   /* ——— 3.24 first-run coach marks ——— */
   var COACH_STEPS = [
-    { id: 'flap', text: '👆 Tap or press Space to flap — keep flapping!' },
+    { id: 'flap', text: '👆 Click, tap, or press Space to flap — keep flapping!' },
     { id: 'pipes', text: '🕊 Fly through the gaps between pipes' },
     { id: 'coins', text: '🪙 Grab coins & power-ups in the gaps' },
     { id: 'hud', text: '⏸ Pause & 🔊 Mute live in the top corners' }
@@ -2675,7 +2675,7 @@ function updateComboMeter(visible) {
     }
     setupRngForMode();
     state = 'playing';
-    if (!fromContinue) announceGameEvent((MODE_SHARE_LABELS[playMode] || playMode) + ' run started. Tap or press Space to flap.');
+    if (!fromContinue) announceGameEvent((MODE_SHARE_LABELS[playMode] || playMode) + ' run started. Click, tap, or press Space to flap.');
     hideAllScreens();
     hud.hidden = false;
     if (replayVizRaf) { cancelAnimationFrame(replayVizRaf); replayVizRaf = 0; }

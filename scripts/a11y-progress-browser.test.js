@@ -523,6 +523,7 @@ class DevTools {
     await cdp.send('Emulation.clearDeviceMetricsOverride');
     await waitFor(() => cdp.evaluate('innerWidth > 320 && innerHeight > 400'), 'restore desktop viewport');
     const menuHint = await cdp.evaluate("document.getElementById('controls-hint').textContent");
+    assert.match(menuHint, /Click \/ tap \/ Space/i, 'desktop and touch players are both shown how to flap');
     assert.match(menuHint, /Pause: ⏸ or Esc/i, 'the main-menu hint names the touch-accessible pause button and keyboard shortcut');
 
     await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
@@ -1506,7 +1507,7 @@ class DevTools {
     const firstCoach=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('coach-marks');return !d.hidden;})()"),'eligible first-run coach appears');
     const coachStart=await cdp.evaluate("(() => {const d=document.getElementById('coach-marks'),t=document.getElementById('coach-text'),g=document.getElementById('game');return {visible:!d.hidden,role:d.getAttribute('role'),description:d.getAttribute('aria-describedby'),textRole:t.getAttribute('role'),textLive:t.getAttribute('aria-live'),text:t.textContent,focus:document.activeElement.id,canvasTabIndex:g.tabIndex};})()");
     assert.equal(firstCoach,true,'first-run coaching begins on an eligible run');
-    assert.deepEqual(coachStart,{visible:true,role:'dialog',description:'coach-text',textRole:'status',textLive:'polite',text:'👆 Tap or press Space to flap — keep flapping!',focus:'game',canvasTabIndex:0},'coach instructions are announced while Space remains ready to flap');
+    assert.deepEqual(coachStart,{visible:true,role:'dialog',description:'coach-text',textRole:'status',textLive:'polite',text:'👆 Click, tap, or press Space to flap — keep flapping!',focus:'game',canvasTabIndex:0},'coach instructions advertise mouse, touch, and keyboard input while Space remains ready to flap');
     const coachMagicAction=await cdp.evaluate("(() => {const b=document.getElementById('btn-magic-action'),c=document.querySelector('#coach-marks .coach-card'),br=b.getBoundingClientRect(),cr=c.getBoundingClientRect(),x=(br.left+br.right)/2,y=(br.top+br.bottom)/2,hit=document.elementFromPoint(x,y),overlap=cr.left<br.right&&cr.right>br.left&&cr.top<br.bottom&&cr.bottom>br.top;return {visible:!b.hidden,enabled:!b.disabled,overlap,hit:hit&&hit.closest('button')?hit.closest('button').id:''};})()");
     assert.deepEqual(coachMagicAction,{visible:true,enabled:true,overlap:false,hit:'btn-magic-action'},'first-run coach leaves the available MAGIC action visible and directly hit-testable at 320×568');
     console.log('COACH / MAGIC TARGET OK · 320×568 · both actions unobstructed');
