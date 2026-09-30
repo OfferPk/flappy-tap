@@ -56,6 +56,7 @@ html, body {
   object-fit: contain;
   background: #87ceeb;
 }
+#game:focus-visible { outline: 3px solid var(--gold); outline-offset: -5px; }
 
 @keyframes ft-shake {
   0%, 100% { transform: translate(0, 0); }

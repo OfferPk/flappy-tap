@@ -2048,6 +2048,7 @@ function updateComboMeter(visible) {
     if (typeof closeGarageLongPreview === 'function') closeGarageLongPreview();
     if (typeof clearEquipUndoStack === 'function') clearEquipUndoStack({ silent: true });
     setPauseBlur(false);
+    if (canvas) canvas.tabIndex = -1;
     state = 'menu';
     if (appEl) appEl.classList.remove('sukoon-mode');
     hideCoach();
@@ -2235,6 +2236,7 @@ function updateComboMeter(visible) {
     hideAllScreens();
     screenDeath.hidden = false;
     hud.hidden = true;
+    if (canvas) canvas.tabIndex = -1;
     // Calibration: last 5 run durations (forgiving modes only)
     if (runStartTs && isForgivingMode() && !isPractice() && FTStorage.pushRunDuration) {
       FTStorage.pushRunDuration((performance.now() - runStartTs) / 1000);
@@ -2379,7 +2381,7 @@ function updateComboMeter(visible) {
     state = 'paused';
     announceGameEvent('Game paused. Score ' + score + '.');
     if (screenPause) screenPause.hidden = false;
-    pauseReturnFocus = btnPause;
+    pauseReturnFocus = canvas;
     setPauseBlur(true);
     var pauseScore = document.getElementById('pause-score');
     var pauseMode = document.getElementById('pause-mode');
@@ -2523,7 +2525,7 @@ function updateComboMeter(visible) {
     coachTextEl.textContent = COACH_STEPS[coachStep].text;
     renderCoachDots();
     if (btnCoachNext) btnCoachNext.textContent = coachStep >= COACH_STEPS.length - 1 ? 'Finish' : 'Got it';
-    if (btnCoachNext) btnCoachNext.focus();
+    if (canvas) focusElementSafely(canvas);
   }
 
   function hideCoach() {
@@ -2536,7 +2538,7 @@ function updateComboMeter(visible) {
     if (FTStorage.setCoachDone) FTStorage.setCoachDone(true);
     if (FTStorage.setCoachStep) FTStorage.setCoachStep(COACH_STEPS.length);
     showToast("You're ready — Urr Jaa!", 1400);
-    if (btnPause && hud && !hud.hidden) btnPause.focus();
+    if (canvas && hud && !hud.hidden) focusElementSafely(canvas);
   }
 
   function advanceCoach(fromFlap) {
@@ -2689,6 +2691,10 @@ function updateComboMeter(visible) {
     updatePowerHud();
     updateCoinHud();
     refreshMagicUI();
+    if (canvas) {
+      canvas.tabIndex = 0;
+      focusElementSafely(canvas);
+    }
     maybeStartCoach(fromContinue);
     if (!animId) loop(performance.now());
   }

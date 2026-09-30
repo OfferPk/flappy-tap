@@ -36,7 +36,7 @@
     📡 You&apos;re offline — Urr Jaa! still plays from cache.
   </div>
   <div id="app">
-    <canvas id="game" width="400" height="600" aria-label="Urr Jaa! game"></canvas>
+    <canvas id="game" width="400" height="600" tabindex="-1" aria-label="Urr Jaa! game"></canvas>
 
     <div id="hud" class="overlay-layer" hidden>
       <div id="score-display">0</div>
@@ -59,7 +59,7 @@
     <!-- 3.24 first-run coach marks -->
     <div id="coach-marks" class="coach-marks" hidden role="dialog" aria-label="Quick tips" aria-describedby="coach-text">
       <div class="coach-card">
-        <p id="coach-text" class="coach-text">Tap to flap!</p>
+        <p id="coach-text" class="coach-text" role="status" aria-live="polite" aria-atomic="true">Tap to flap!</p>
         <div id="coach-dots" class="coach-dots" aria-hidden="true"></div>
         <div class="coach-actions">
           <button id="btn-coach-skip" class="btn ghost btn-sm" type="button">Skip</button>
