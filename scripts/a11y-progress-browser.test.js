@@ -1122,6 +1122,28 @@ class DevTools {
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('hud').hidden&&document.getElementById('game').tabIndex===-1&&document.activeElement.id==='btn-play'"),'quitting to menu removes the canvas tab stop and restores Play focus');
     console.log('GAMEPLAY KEYBOARD FOCUS OK · Space flap · coach actions · Pause/Resume · menu return');
 
+    await cdp.evaluate("localStorage.setItem('flappy-tap:reduce-motion','1'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:resume-countdown','0'); true");
+    await cdp.send('Page.reload',{ignoreCache:true});
+    await waitFor(()=>cdp.evaluate("document.readyState==='complete'&&!!window.FTStorage&&document.getElementById('boot-splash').hidden&&document.documentElement.classList.contains('reduce-motion')&&!document.getElementById('screen-start').hidden"),'reduced-motion menu for replay regression');
+    await clickElementAt('#btn-play');
+    await waitFor(()=>cdp.evaluate("document.getElementById('screen-start').hidden&&!document.getElementById('hud').hidden"),'reduced-motion run starts');
+    await cdp.press(' ','Space',32);
+    await delay(180);
+    await cdp.press(' ','Space',32);
+    await delay(180);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-death').hidden&&document.getElementById('run-result-announcement').textContent"),'reduced-motion run-end for replay regression',15000);
+    await cdp.evaluate("document.getElementById('btn-replay-stub').scrollIntoView({block:'center'}); true");
+    const replayBefore=await cdp.evaluate("(() => {const c=document.getElementById('replay-viz-canvas');return {visible:!c.hidden,data:c.toDataURL()};})()");
+    assert.equal(replayBefore.visible,false,'the replay canvas stays hidden until the player requests it');
+    await clickElementAt('#btn-replay-stub');
+    const replayShown=await cdp.evaluate("(() => {const c=document.getElementById('replay-viz-canvas');return {visible:!c.hidden,data:c.toDataURL()};})()");
+    assert.equal(replayShown.visible,true,'tapping Replay reveals the recorded flight path');
+    await delay(250);
+    const replayAfter=await cdp.evaluate("document.getElementById('replay-viz-canvas').toDataURL()");
+    assert.equal(replayAfter,replayShown.data,'reduced motion keeps the revealed replay canvas static rather than animating the cursor');
+    assert.ok((await cdp.evaluate("document.getElementById('toast').textContent")).includes('Static replay'),'reduced-motion feedback explains that the path is being shown without animation');
+    console.log('REDUCED-MOTION REPLAY OK · static path · no animated cursor');
+
     console.log('BROWSER A11Y/PROGRESS OK · gameplay focus/Space controls · first-run coaching · background pause/recovery · menu/pause/game-over preservation · event/run-end announcements · backup flows');
   } finally {
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();

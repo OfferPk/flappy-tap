@@ -3969,6 +3969,11 @@ function updateComboMeter(visible) {
       showToast('No path to replay yet', 1200);
       return;
     }
+    if (reduceMotion) {
+      paintReplayViz(1);
+      showToast('Static replay · reduced motion is on', 1200);
+      return;
+    }
     var t0 = performance.now();
     var dur = 2000;
     function tick(now) {

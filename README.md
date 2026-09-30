@@ -35,7 +35,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 
 - **Soft collision dust** · **area/menu music stub** · **collection % meter** · **mystery jackpot juice**
 - Changelog · flap whoosh · guide refresh · perf · haptic intensity · boss warn · gift→spin toast
-- Death freeze · path replay · env fade · coin popup · coach · share card · reduced-motion
+- Death freeze · path replay that respects reduced-motion settings · env fade · coin popup · coach · share card
 - **Mystery wheel 15s** Spin once (KEEP) · Close (X) · tips · fireworks · pipes · safe-area
 - Power VFX clarity (Slow-mo / Ghost / Turbo) · Challenge stage picker · One Life heart HUD
 - Coin economy balance · Bird unlock teasers · Gift haptic · Landscape safe-area
@@ -87,7 +87,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v87-20260930** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
+| PWA | `sw.js` cache **urrjaa-v88-20260930** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)
