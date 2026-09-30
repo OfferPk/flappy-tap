@@ -235,9 +235,9 @@ class DevTools {
         const x = (rect.left + rect.right) / 2;
         const y = (rect.top + rect.bottom) / 2;
         const target = document.elementFromPoint(x, y);
-        return { x, y, hidden: element.hidden, hit: !!target && (target === element || element.contains(target)) };
+        return { x, y, hidden: element.hidden, hit: !!target && (target === element || element.contains(target)), target: target ? { tag: target.tagName, id: target.id, className: String(target.className || '') } : null };
       })()`);
-      assert.ok(point && !point.hidden && point.hit, `${selector} center is visible and receives pointer hits`);
+      assert.ok(point && !point.hidden && point.hit, `${selector} center is visible and receives pointer hits: ${JSON.stringify(point)}`);
       await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
       await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
       await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
@@ -251,6 +251,50 @@ class DevTools {
         return { hidden: document.hidden, visibilityState: document.visibilityState };
       })()`);
       assert.deepEqual(actual, { hidden, visibilityState: state }, 'dispatch a coherent page visibilitychange transition');
+    }
+    async function checkTablistKeyboardNavigation() {
+      const progressBefore = await cdp.evaluate("({best:localStorage.getItem('flappy-tap:best'),coins:localStorage.getItem('flappy-tap:coins'),runs:localStorage.getItem('flappy-tap:runs')})");
+      await cdp.evaluate("document.getElementById('btn-guide').scrollIntoView({block:'center',inline:'nearest'}); true");
+      await clickElementAt('#btn-guide');
+      const guideState = () => cdp.evaluate("(() => {const tabs=[...document.querySelectorAll('#screen-guide [role=tab]')];const selected=tabs.find(t=>t.getAttribute('aria-selected')==='true');return {focus:document.activeElement.dataset.guideLang||'',selected:selected&&selected.dataset.guideLang,tabStops:tabs.filter(t=>t.tabIndex===0).length,visible:[...document.querySelectorAll('#screen-guide [data-guide-panel]')].filter(p=>!p.hidden).map(p=>p.dataset.guidePanel)};})()");
+      await clickElementAt('#screen-guide [data-guide-lang="en"]');
+      const expectGuide = async (language, label) => {
+        const state = await guideState();
+        assert.deepEqual(state, {focus:language,selected:language,tabStops:1,visible:[language]}, label);
+      };
+      await expectGuide('en', 'Guide starts with one selected, tabbable language');
+      await cdp.press('ArrowRight', 'ArrowRight', 39);
+      await expectGuide('ru', 'Right Arrow moves focus and activates Roman Urdu');
+      await cdp.press('ArrowRight', 'ArrowRight', 39);
+      await expectGuide('ur', 'Right Arrow moves focus and activates Urdu');
+      await cdp.press('ArrowRight', 'ArrowRight', 39);
+      await expectGuide('en', 'Right Arrow wraps to English');
+      await cdp.press('ArrowLeft', 'ArrowLeft', 37);
+      await expectGuide('ur', 'Left Arrow wraps to Urdu');
+      await cdp.press('Home', 'Home', 36);
+      await expectGuide('en', 'Home moves to the first language');
+      await cdp.press('End', 'End', 35);
+      await expectGuide('ur', 'End moves to the last language');
+      await cdp.press('ArrowLeft', 'ArrowLeft', 37);
+      await cdp.press('ArrowLeft', 'ArrowLeft', 37);
+      await expectGuide('en', 'Guide returns to its original language');
+      await clickElementAt('#screen-guide .panel-close');
+
+      await cdp.evaluate("document.getElementById('btn-garage').scrollIntoView({block:'center',inline:'nearest'}); true");
+      await clickElementAt('#btn-garage');
+      const garageState = () => cdp.evaluate("(() => {const tabs=[...document.querySelectorAll('#garage-filters [role=tab]')];const selected=tabs.find(t=>t.getAttribute('aria-selected')==='true');return {focus:document.activeElement.dataset.garageFilter||'',selected:selected&&selected.dataset.garageFilter,tabStops:tabs.filter(t=>t.tabIndex===0).length};})()");
+      await clickElementAt('#garage-filters [data-garage-filter="all"]');
+      await cdp.press('ArrowRight', 'ArrowRight', 39);
+      assert.deepEqual(await garageState(), {focus:'fav',selected:'fav',tabStops:1}, 'Right Arrow moves Garage focus and applies Favs');
+      await cdp.press('End', 'End', 35);
+      assert.deepEqual(await garageState(), {focus:'seasonal',selected:'seasonal',tabStops:1}, 'End selects the last Garage filter');
+      await cdp.press('Home', 'Home', 36);
+      assert.deepEqual(await garageState(), {focus:'all',selected:'all',tabStops:1}, 'Home restores All as the Garage filter');
+      await clickElementAt('#screen-garage .panel-close');
+      await cdp.evaluate("document.getElementById('screen-start').scrollTop=0;document.documentElement.scrollTop=0;document.body.scrollTop=0;window.scrollTo(0,0);true");
+      const progressAfter = await cdp.evaluate("({best:localStorage.getItem('flappy-tap:best'),coins:localStorage.getItem('flappy-tap:coins'),runs:localStorage.getItem('flappy-tap:runs')})");
+      assert.deepEqual(progressAfter, progressBefore, 'Guide and Garage keyboard navigation leaves saved gameplay progress unchanged');
+      console.log('TABLIST KEYBOARD OK · Guide and Garage · saved progress unchanged');
     }
     async function checkShortMenuViewport(width, height) {
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
@@ -295,7 +339,7 @@ class DevTools {
         `${width}×${height} controls hint can be fully viewed: ${JSON.stringify(bottom.hint)}`);
       assert.ok(bottom.hint.bottom <= bottom.guide.top, `${width}×${height} hint does not overlap the guide link`);
       assert.ok(bottom.runs.top >= bottom.app.top && bottom.runs.bottom <= bottom.app.bottom,
-        `${width}×${height} final menu row is reachable: ${JSON.stringify(bottom.runs)}`);
+        `${width}×${height} final menu row is reachable: ${JSON.stringify(bottom)}`);
       await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
       console.log(`MENU VIEWPORT OK · ${width}×${height}`);
     }
@@ -439,6 +483,7 @@ class DevTools {
     await checkScaledMenuViewport(390, 844, true);
     await checkLandscapeSafeAreaViewport(568, 320);
     await checkLandscapeSafeAreaViewport(844, 390);
+    await checkTablistKeyboardNavigation();
     await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: {} });
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 320, height: 480, deviceScaleFactor: 1, mobile: true });
     await waitFor(() => cdp.evaluate('innerWidth === 320 && innerHeight === 480'), '320×480 A2HS Play hit test viewport');

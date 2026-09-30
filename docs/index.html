@@ -176,10 +176,10 @@
       <h2>Garage</h2>
       <p class="coins-line">🪙 <span id="garage-coins">0</span></p>
       <div class="garage-filters" id="garage-filters" role="tablist" aria-label="Garage filter">
-        <button type="button" class="garage-filter active" data-garage-filter="all" role="tab" aria-selected="true">All</button>
-        <button type="button" class="garage-filter" data-garage-filter="fav" role="tab" aria-selected="false">★ Favs</button>
-        <button type="button" class="garage-filter" data-garage-filter="theme" role="tab" aria-selected="false">🌿 Themes</button>
-        <button type="button" class="garage-filter" data-garage-filter="seasonal" role="tab" aria-selected="false">📅 Seasonals</button>
+        <button type="button" class="garage-filter active" data-garage-filter="all" role="tab" aria-selected="true" tabindex="0">All</button>
+        <button type="button" class="garage-filter" data-garage-filter="fav" role="tab" aria-selected="false" tabindex="-1">★ Favs</button>
+        <button type="button" class="garage-filter" data-garage-filter="theme" role="tab" aria-selected="false" tabindex="-1">🌿 Themes</button>
+        <button type="button" class="garage-filter" data-garage-filter="seasonal" role="tab" aria-selected="false" tabindex="-1">📅 Seasonals</button>
       </div>
       <div class="garage-search-wrap">
         <label class="sr-only" for="garage-search">Search skins</label>
@@ -567,9 +567,9 @@
       <button type="button" class="panel-close" data-panel-close="guide" aria-label="Close">X</button>
       <h2>Guide · How to Play</h2>
       <div class="guide-tabs" role="tablist" aria-label="Guide language">
-        <button type="button" class="guide-tab active" data-guide-lang="en" role="tab" aria-selected="true">English</button>
-        <button type="button" class="guide-tab" data-guide-lang="ru" role="tab" aria-selected="false">Roman Urdu</button>
-        <button type="button" class="guide-tab" data-guide-lang="ur" role="tab" aria-selected="false">اردو</button>
+        <button type="button" class="guide-tab active" data-guide-lang="en" role="tab" aria-selected="true" tabindex="0">English</button>
+        <button type="button" class="guide-tab" data-guide-lang="ru" role="tab" aria-selected="false" tabindex="-1">Roman Urdu</button>
+        <button type="button" class="guide-tab" data-guide-lang="ur" role="tab" aria-selected="false" tabindex="-1">اردو</button>
       </div>
       <div id="guide-panel-en" class="guide-panel" data-guide-panel="en">
         <ul class="guide-list">

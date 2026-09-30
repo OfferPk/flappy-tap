@@ -8306,6 +8306,35 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
       setGuideLang(t.getAttribute('data-guide-lang') || 'en', true);
     });
   });
+  function syncTablistRovingFocus() {
+    document.querySelectorAll('[role="tablist"]').forEach(function (list) {
+      var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+      var selected = tabs.find(function (tab) { return tab.getAttribute('aria-selected') === 'true'; }) || tabs[0];
+      tabs.forEach(function (tab) { tab.tabIndex = tab === selected ? 0 : -1; });
+    });
+  }
+  document.querySelectorAll('[role="tablist"]').forEach(function (list) {
+    list.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var current = e.target && e.target.closest ? e.target.closest('[role="tab"]') : null;
+      if (!current || !list.contains(current)) return;
+      var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]:not([disabled])'));
+      var index = tabs.indexOf(current);
+      if (index < 0 || !tabs.length) return;
+      var direction = getComputedStyle(list).direction === 'rtl' ? -1 : 1;
+      var next = -1;
+      if (e.key === 'ArrowRight') next = (index + direction + tabs.length) % tabs.length;
+      else if (e.key === 'ArrowLeft') next = (index - direction + tabs.length) % tabs.length;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = tabs.length - 1;
+      if (next < 0) return;
+      e.preventDefault();
+      tabs[next].focus();
+      tabs[next].click();
+    });
+  });
+  document.addEventListener('click', syncTablistRovingFocus);
+  syncTablistRovingFocus();
   document.querySelectorAll('[data-close="guide"]').forEach(function (b) {
     b.addEventListener('click', function () { showMenu(); });
   });
