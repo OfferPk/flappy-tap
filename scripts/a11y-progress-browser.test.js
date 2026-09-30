@@ -249,6 +249,31 @@ class DevTools {
     async function snapshotLocalStorage() {
       return cdp.evaluate("(() => { const entries=[]; for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);entries.push([key,localStorage.getItem(key)]);} return entries.sort((a,b)=>a[0].localeCompare(b[0])); })()");
     }
+    async function verifyFilePickerCancel() {
+      await cdp.evaluate("localStorage.setItem('flappy-tap:best','209'); localStorage.setItem('flappy-tap:coins','51'); true");
+      const beforeTimeOrigin = await cdp.evaluate('performance.timeOrigin');
+      const beforeSnapshot = await snapshotLocalStorage();
+      await cdp.evaluate(`(() => {
+        const input = document.getElementById('progress-import-file');
+        window.__importConfirmCalls = 0;
+        window.__importChooserRequests = 0;
+        window.confirm = () => { window.__importConfirmCalls++; return true; };
+        input.click = function () {
+          window.__importChooserRequests++;
+          this.dispatchEvent(new Event('cancel'));
+        };
+        return true;
+      })()`);
+      await cdp.evaluate("document.getElementById('btn-import-progress').focus(); true");
+      await cdp.press('Enter', 'Enter', 13);
+      await waitFor(() => cdp.evaluate("document.getElementById('progress-transfer-status').textContent.includes('No new backup selected.')"), 'file-picker cancellation status');
+      const state = await cdp.evaluate("({timeOrigin:performance.timeOrigin,confirmCalls:window.__importConfirmCalls,chooserRequests:window.__importChooserRequests,status:document.getElementById('progress-transfer-status').textContent})");
+      assert.equal(state.chooserRequests, 1, 'Import opens the native file chooser');
+      assert.equal(state.confirmCalls, 0, 'file-picker cancellation never reaches import confirmation');
+      assert.equal(state.timeOrigin, beforeTimeOrigin, 'file-picker cancellation does not reload the page');
+      assert.match(state.status, /Saved progress was not changed/i);
+      assert.deepEqual(await snapshotLocalStorage(), beforeSnapshot, 'file-picker cancellation preserves every saved localStorage entry');
+    }
     async function verifyRejectedImport(label, fileText, confirmDecision, expectedStatus, expectedConfirmCalls, fileSizeBytes) {
       await cdp.evaluate("localStorage.setItem('flappy-tap:best','209'); localStorage.setItem('flappy-tap:coins','51'); true");
       const before = await cdp.evaluate("({timeOrigin:performance.timeOrigin,best:localStorage.getItem('flappy-tap:best'),coins:localStorage.getItem('flappy-tap:coins')})");
@@ -286,6 +311,7 @@ class DevTools {
       assert.deepEqual(await snapshotLocalStorage(), beforeSnapshot, label + ' preserves every saved localStorage entry');
     }
 
+    await verifyFilePickerCancel();
     await verifyRejectedImport('cancelled backup import', backupText, false, 'Import cancelled. Nothing was changed.', 1);
     await verifyRejectedImport('malformed JSON backup', '{"format":"flappy-tap-progress",', true, 'Could not read that backup file.', 0);
     const malformedSchema = JSON.stringify({ format: backup.format, version: backup.version, exportedAt: backup.exportedAt, data: { best: 'not-a-number' } });
