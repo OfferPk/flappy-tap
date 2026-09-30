@@ -316,8 +316,8 @@ async function testOfflineAssetFallback() {
   const cached = await warmWorker.fetch({ method: 'GET', url: 'https://game.test/app/js/game.js', mode: 'cors' });
   assert.equal(cached.body, 'cached game code', 'a precached game script remains available');
 
-  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v78-20260930', 'another-app-cache', 'urrjaa-v79-20260930', 'urrjaa-v80-20260930', 'urrjaa-v81-20260930', 'urrjaa-v82-20260930', 'urrjaa-v83-20260930']);
-  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v78-20260930', 'urrjaa-v79-20260930', 'urrjaa-v80-20260930', 'urrjaa-v81-20260930', 'urrjaa-v82-20260930'], 'activation deletes this app’s old named caches and preserves unrelated/current caches');
+  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v78-20260930', 'another-app-cache', 'urrjaa-v79-20260930', 'urrjaa-v80-20260930', 'urrjaa-v81-20260930', 'urrjaa-v82-20260930', 'urrjaa-v83-20260930', 'urrjaa-v84-20260930']);
+  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v78-20260930', 'urrjaa-v79-20260930', 'urrjaa-v80-20260930', 'urrjaa-v81-20260930', 'urrjaa-v82-20260930', 'urrjaa-v83-20260930'], 'activation deletes this app’s old named caches and preserves unrelated/current caches');
 }
 
 async function testMagicAdsUnavailableWithoutSdk() {

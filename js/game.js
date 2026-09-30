@@ -2523,6 +2523,7 @@ function updateComboMeter(visible) {
     coachTextEl.textContent = COACH_STEPS[coachStep].text;
     renderCoachDots();
     if (btnCoachNext) btnCoachNext.textContent = coachStep >= COACH_STEPS.length - 1 ? 'Finish' : 'Got it';
+    if (btnCoachNext) btnCoachNext.focus();
   }
 
   function hideCoach() {
@@ -2535,6 +2536,7 @@ function updateComboMeter(visible) {
     if (FTStorage.setCoachDone) FTStorage.setCoachDone(true);
     if (FTStorage.setCoachStep) FTStorage.setCoachStep(COACH_STEPS.length);
     showToast("You're ready — Urr Jaa!", 1400);
+    if (btnPause && hud && !hud.hidden) btnPause.focus();
   }
 
   function advanceCoach(fromFlap) {
@@ -2687,6 +2689,7 @@ function updateComboMeter(visible) {
     updatePowerHud();
     updateCoinHud();
     refreshMagicUI();
+    maybeStartCoach(fromContinue);
     if (!animId) loop(performance.now());
   }
 
@@ -6190,9 +6193,16 @@ function updateComboMeter(visible) {
       return;
     }
     if (e.code === 'Space' || e.key === ' ') {
+      var focusedControl = e.target && e.target.closest
+        ? e.target.closest('button, a, input, select, textarea, summary, [role="button"], [contenteditable="true"]')
+        : null;
+      if (focusedControl) return;
       e.preventDefault();
       if (state === 'menu') startRun(false, 'classic');
-      else if (state === 'playing') flap();
+      else if (state === 'playing') {
+        flap();
+        if (coachActive) advanceCoach(true);
+      }
       else if (state === 'paused') resumeGame();
       else if (state === 'dead') {
         if (isOneLife()) showMenu();

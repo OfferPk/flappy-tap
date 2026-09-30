@@ -1050,7 +1050,30 @@ class DevTools {
     const secondRunResult = await waitFor(() => cdp.evaluate("!document.getElementById('screen-death').hidden && document.getElementById('run-result-announcement').textContent"), 'no-new-record run-end announcement', 15000);
     assert.equal(secondRunResult, 'Run complete. Score 0. No new record.', 'run end explicitly announces when the score is not a new record');
 
-    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · background pause/recovery · menu/pause/game-over preservation · event/run-end announcements · backup flows');
+    await cdp.evaluate("(() => {localStorage.clear();localStorage.setItem('flappy-tap:best','0');localStorage.setItem('flappy-tap:coins','0');localStorage.setItem('flappy-tap:runs','0');localStorage.setItem('flappy-tap:coach-done','0');localStorage.setItem('flappy-tap:coach-step','0');localStorage.setItem('flappy-tap:mute','1');localStorage.setItem('flappy-tap:resume-countdown','0');return true;})()");
+    await cdp.send('Page.reload',{ignoreCache:true});
+    await waitFor(()=>cdp.evaluate("document.readyState==='complete'&&!!window.FTStorage&&document.getElementById('boot-splash').hidden&&!document.getElementById('screen-start').hidden"),'fresh first-run menu for coach-flow regression');
+    await cdp.evaluate("document.getElementById('btn-play').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    const firstCoach=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('coach-marks');return !d.hidden;})()"),'eligible first-run coach appears');
+    const coachStart=await cdp.evaluate("(() => {const d=document.getElementById('coach-marks');return {visible:!d.hidden,role:d.getAttribute('role'),description:d.getAttribute('aria-describedby'),text:document.getElementById('coach-text').textContent,focus:document.activeElement.id};})()");
+    assert.equal(firstCoach,true,'first-run coaching begins on an eligible run');
+    assert.deepEqual(coachStart,{visible:true,role:'dialog',description:'coach-text',text:'👆 Tap or press Space to flap — keep flapping!',focus:'btn-coach-next'},'coach text is described and keyboard focus enters its primary action');
+    await cdp.press(' ','Space',32);
+    const nextCoach=await waitFor(()=>cdp.evaluate("document.getElementById('coach-text').textContent.includes('Fly through')&&document.getElementById('coach-text').textContent"),'Space advances the focused coach button');
+    assert.equal(nextCoach,'🕊 Fly through the gaps between pipes','Space activates the coach Next button instead of being swallowed as a flap');
+    assert.equal(await cdp.evaluate("document.activeElement.id"),'btn-coach-next','focus remains on the updated coach action');
+    await cdp.evaluate("document.getElementById('btn-coach-skip').focus(); true");
+    await cdp.press(' ','Space',32);
+    await waitFor(()=>cdp.evaluate("document.getElementById('coach-marks').hidden&&document.activeElement.id==='btn-pause'"),'Space dismisses coach and returns focus to the Pause control');
+    assert.equal(await cdp.evaluate("localStorage.getItem('flappy-tap:coach-done')"),'1','coach skip persists completion');
+    await cdp.press(' ','Space',32);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-pause').hidden&&document.activeElement.id==='btn-resume'"),'Space activates the focused Pause button');
+    await cdp.press(' ','Space',32);
+    await waitFor(()=>cdp.evaluate("document.getElementById('screen-pause').hidden&&!document.getElementById('hud').hidden"),'Space activates the focused Resume button');
+    console.log('FIRST-RUN COACH KEYBOARD FLOW OK · launch · focus · Space advance/skip · Pause/Resume');
+
+    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · first-run coaching · background pause/recovery · menu/pause/game-over preservation · event/run-end announcements · backup flows');
   } finally {
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
     if (browser && browser.exitCode === null) {
