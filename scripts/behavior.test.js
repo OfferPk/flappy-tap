@@ -192,6 +192,55 @@ function testSavedProgress() {
   assert.equal(storage.isDailyMagicClaimed(day2), true, 'the latest daily claim date persists locally');
   assert.equal(storage.getMagicAdStatus(adTime + 20 * 60 * 60 * 1000, day1).count, 2, 'ad count persists locally');
   assert.equal(storage.claimMagicAdReward, undefined, 'production storage exposes no user-callable ad grant path');
+
+  const exported = JSON.parse(JSON.stringify(storage.exportProgress()));
+  assert.equal(exported.format, 'flappy-tap-progress', 'backup has an explicit format identifier');
+  assert.equal(exported.version, 1, 'backup carries a schema version');
+  assert.equal(exported.data.coins, '15', 'backup exports a recognized local progress value');
+  assert.equal(exported.data.best, '12', 'backup exports saved scores');
+  storage.addCoins(100);
+  const validImport = storage.importProgress(exported);
+  assert.equal(validImport.ok, true, 'valid backup restores whitelisted fields');
+  assert.equal(validImport.imported, Object.keys(exported.data).length);
+  assert.equal(storage.getCoins(), 15, 'import replaces the coin value from backup');
+  assert.equal(storage.getBest(), 12, 'import restores the saved best');
+  const beforeInvalidImport = Array.from(values.entries());
+  const invalidCoin = JSON.parse(JSON.stringify(exported));
+  invalidCoin.data.best = '900';
+  invalidCoin.data.coins = '-1';
+  assert.equal(storage.importProgress(invalidCoin).ok, false, 'negative currency fails strict validation');
+  assert.deepEqual(Array.from(values.entries()), beforeInvalidImport, 'invalid backup makes no partial writes');
+  const futureVersion = Object.assign({}, exported, { version: 2 });
+  assert.equal(storage.importProgress(futureVersion).ok, false, 'unsupported future versions are rejected');
+  const futureCooldown = JSON.parse(JSON.stringify(exported));
+  futureCooldown.data.magicLastAdAt = String(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  assert.equal(storage.importProgress(futureCooldown).ok, false, 'implausible future cooldown timestamps are rejected');
+  const unknownKey = Object.assign({}, exported, { data: Object.assign({}, exported.data, { admin: '1' }) });
+  assert.equal(storage.importProgress(unknownKey).ok, false, 'unknown keys are rejected');
+  const emptyBackup = Object.assign({}, exported, { data: {} });
+  assert.equal(storage.importProgress(emptyBackup).ok, false, 'empty backups cannot overwrite state');
+}
+
+function testProgressBackupRollback() {
+  const values = new Map([['flappy-tap:best', '4'], ['flappy-tap:coins', '9']]);
+  let writeCount = 0;
+  const localStorage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) {
+      writeCount += 1;
+      if (writeCount === 2) throw new Error('quota');
+      values.set(String(key), String(value));
+    },
+    removeItem(key) { values.delete(key); }
+  };
+  const context = { window: {}, localStorage, Date, Math, Object, Array, String, Number, parseInt, isFinite, Set };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'js/storage.js'), 'utf8'), context, { filename: 'js/storage.js (rollback test)' });
+  const bundle = { format: 'flappy-tap-progress', version: 1, exportedAt: new Date().toISOString(), data: { best: '44', coins: '99' } };
+  const failedImport = context.window.FTStorage.importProgress(bundle);
+  assert.equal(failedImport.ok, false, 'storage failure is reported');
+  assert.equal(failedImport.error, 'storage-unavailable');
+  assert.equal(values.get('flappy-tap:best'), '4', 'a failed import rolls back values already written');
+  assert.equal(values.get('flappy-tap:coins'), '9', 'a failed import preserves the failing key value');
 }
 
 function serviceWorkerHarness(fetchImpl, seededCache, seededCacheNames) {
@@ -257,8 +306,8 @@ async function testOfflineAssetFallback() {
   const cached = await warmWorker.fetch({ method: 'GET', url: 'https://game.test/app/js/game.js', mode: 'cors' });
   assert.equal(cached.body, 'cached game code', 'a precached game script remains available');
 
-  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v72-20260929', 'another-app-cache', 'urrjaa-v73-20260929']);
-  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v72-20260929'], 'activation deletes only this app’s older named cache and preserves unrelated/current caches');
+  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v73-20260929', 'another-app-cache', 'urrjaa-v74-20260930']);
+  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v73-20260929'], 'activation deletes only this app’s older named cache and preserves unrelated/current caches');
 }
 
 async function testMagicAdsUnavailableWithoutSdk() {
@@ -270,12 +319,23 @@ async function testMagicAdsUnavailableWithoutSdk() {
   assert.equal(result.reason, 'no-plugin');
   const genericMagic = await context.window.Ads.showRewarded('magic');
   assert.equal(genericMagic.rewarded, false, 'the generic stub cannot grant MAGIC either');
+  assert.equal(context.window.Ads.isDemoMode(), false, 'demo rewards are disabled without an explicit local demo URL');
+  const productionStub = await context.window.Ads.showRewarded('continue');
+  assert.equal(productionStub.rewarded, false, 'a deployed/default build cannot grant a simulated revive');
+  assert.equal(productionStub.reason, 'demo-disabled');
+  const remoteDemo = { window: { location: { hostname: 'game.example', search: '?demoAds=1' } }, Promise };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'js/ads.js'), 'utf8'), remoteDemo, { filename: 'js/ads.js (remote demo guard)' });
+  assert.equal(remoteDemo.window.Ads.isDemoMode(), false, 'the demo query flag never enables rewards on a remote host');
+  const localDemo = { window: { location: { hostname: 'localhost', search: '?demoAds=1' } }, Promise };
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'js/ads.js'), 'utf8'), localDemo, { filename: 'js/ads.js (local demo)' });
+  assert.equal(localDemo.window.Ads.isDemoMode(), true, 'explicit demo mode can be used on localhost only');
 }
 
 async function main() {
   testGameplayRules();
   testPowerIndicators();
   testSavedProgress();
+  testProgressBackupRollback();
   await testMagicAdsUnavailableWithoutSdk();
   await testOfflineAssetFallback();
 
@@ -297,7 +357,16 @@ async function main() {
     'indicators are exposed in a labeled, non-spamming screen-reader group');
   assert.match(html, /id="btn-magic-action" class="magic-game-button" type="button" disabled/, 'gameplay MAGIC control starts disabled until inventory is available');
   assert.match(html, /id="screen-magic"[^>]*hidden/, 'MAGIC menu is a separate screen');
+  assert.match(html, /name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/, 'viewport remains user-zoomable');
+  assert.match(html, /id="game-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"/, 'important game events have a dedicated polite live region');
+  assert.match(html, /id="btn-export-progress"/, 'settings expose a progress backup export action');
+  assert.match(html, /id="btn-import-progress"/, 'settings expose a progress backup import action');
+  assert.match(html, /id="btn-continue"[^>]*hidden/, 'demo revive starts hidden outside the explicit local demo');
+  assert.match(html, /id="magic-ad-action-group" hidden/, 'MAGIC ad controls start hidden until a real ad provider exists');
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'js/game.js'), 'utf8'), /preventDoubleTapZoom|gesturestart|gesturechange/,
+    'game scripts no longer cancel user zoom gestures');
   const css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
+  assert.match(css, /#game, canvas\s*\{\s*touch-action:\s*manipulation;/, 'canvas tap input preserves browser pinch zoom');
   assert.match(css, /#power-hud\[hidden\]\s*\{\s*display:\s*none\s*!important;/,
     'inactive indicator row is explicitly hidden despite flex layout');
   console.log('BEHAVIOR TESTS OK · gameplay · timer display/expiry/multiple effects · local saves · offline assets');

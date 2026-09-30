@@ -50,7 +50,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 - **Near-miss camera** kick toward graze edge
 - **Medal gallery** on Boards · share score-card preview
 - **Night city** window lights + neon pipes · magnet aura/trail
-- **Continue revive** stub UX · A2HS after 2 runs · a11y contrast/focus
+- **Local demo-only revive/gift simulations** · hidden on hosted builds · A2HS after 2 runs · accessible zoom/focus
 - **≤3.12 systems kept** (missions, weather FX, garage filters, Classic feel, 3D, Mystery…)
 
 - **Polish 3.6.0:** richer bird/vehicle art · juice/toasts · Mystery progress · voice variety · Guide/menu polish
@@ -78,13 +78,14 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | A2HS tip | Soft home tip (EN + Roman Urdu); session dismiss |
 | Missions XSS | Allowlisted ids + textContent cards (F1 closed) |
 | Collection | Birds · Vehicles · Accessories · Trails · Areas · Challenges · 25–100% rewards |
-| Ads stubs | Continue once / Mystery Box — never mid-flight |
+| Ad actions | Demo-only on localhost with `?demoAds=1`; hidden on hosted builds until a real provider is connected |
+| Progress backup | Versioned JSON export/import · strict validation · explicit overwrite confirmation · local-only |
 | MAGIC 🪄 | Persistent inventory · daily +1 · 10-second guided safe flight · rewarded ads unavailable without SDK |
 | Feel / forgiveness | Smaller hitbox · corner grace · **LUCKY** · first-10s ease · Classic curve · first-run protect |
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v73-20260929** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
+| PWA | `sw.js` cache **urrjaa-v74-20260930** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)
@@ -125,4 +126,4 @@ flappy-tap/          # repo path kept
 
 ## Monetization
 
-Stubs only in `js/ads.js`. No secrets / AdMob IDs. Core play free offline. Continue + Mystery Box rewarded stubs never interrupt mid-flight.
+No live ad provider or ad IDs are connected. Simulated revive/gift prompts are available only on localhost with `?demoAds=1`; hosted builds hide those actions. Core play stays free and offline-capable.

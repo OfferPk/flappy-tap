@@ -1373,6 +1373,185 @@
   }
 
 
+  const BACKUP_FORMAT = 'flappy-tap-progress';
+  const BACKUP_VERSION = 1;
+  const BACKUP_MAX_CHARS = 256 * 1024;
+  const BACKUP_INT_KEYS = {
+    best: 1000000000, coins: 1000000000, runs: 1000000000, dailyBest: 1000000000, todayBest: 1000000000,
+    allTimeBest: 1000000000, bestCombo: 1000000000, streakDay: 7, oneLifeBest: 1000000000,
+    timeAttackBest: 1000000000, noCoinBest: 1000000000, hardBest: 1000000000,
+    challengeStage: 1000, metersBest: 1000000000, cleanRuns: 1000000000, fragments: 1000000000,
+    bestPerfect: 1000000000, nearMissTotal: 1000000000, perfectTotal: 1000000000,
+    giftBoxes: 1000000000, magicCount: 1000000000, magicAdCount: 2,
+    magicLastAdAt: 9007199254740991, coachStep: 1000000000
+  };
+  const BACKUP_BOOL_KEYS = {
+    mute: 1, quietNight: 1, areaMusic: 1, swipeDismiss: 1, resumeCountdown: 1,
+    reduceMotion: 1, largeButtons: 1, coachDone: 1, haptics: 1, voicePack: 1, streakClaimed: 1
+  };
+  const BACKUP_DATE_KEYS = { dailyDate: 1, todayBestDate: 1, streakDate: 1, missionsDate: 1, magicDailyDate: 1, magicAdDate: 1 };
+  const BACKUP_ENUMS = {
+    skin: Object.assign({ bird: 1, bike: 1, rickshaw: 1, rocket: 1 }, BIRDS),
+    bird: BIRDS, vehicle: VEHICLES, env: ENVS,
+    weather: { clear: 1, sunny: 1, rain: 1, fog: 1, night: 1, storm: 1, sunset: 1 },
+    hat: HATS, trail: TRAILS, mascotSelection: Object.assign({ '': 1 }, MASCOT_SELECTIONS),
+    medal: Object.assign({ '': 1 }, VALID_MEDALS), oneLifeMedal: Object.assign({ '': 1 }, VALID_MEDALS),
+    confettiIntensity: { off: 1, low: 1, normal: 1, high: 1 }, nightAmbVol: { off: 1, low: 1, normal: 1, high: 1 },
+    guideLang: { en: 1, ru: 1, ur: 1 }, garageSort: { owned: 1, name: 1, cost: 1 },
+    hapticIntensity: { low: 1, normal: 1, high: 1 }
+  };
+  const BACKUP_SETS = {
+    unlockedSkins: Object.assign({ bird: 1, bike: 1, rickshaw: 1, rocket: 1 }, BIRDS),
+    unlockedBirds: BIRDS, unlockedVehicles: VEHICLES, unlockedEnvs: ENVS,
+    unlockedHats: HATS, unlockedTrails: TRAILS, unlockedSeasonals: SEASONALS,
+    albumClaimed: { '25': 1, '50': 1, '75': 1, '100': 1 }
+  };
+  const BACKUP_MISSION_IDS = Object.create(null);
+  MISSION_POOL.forEach((mission) => { BACKUP_MISSION_IDS[mission.id] = 1; });
+  ['score', 'combo', 'perfect', 'm', 'nearmiss'].forEach((id) => { BACKUP_MISSION_IDS[id] = 1; });
+  const BACKUP_MODES = { classic: 1, timeattack: 1, hard: 1, nocoin: 1, challenge: 1, onelife: 1, daily: 1, practice: 1, relax: 1 };
+
+  function isPlainRecord(value) {
+    if (!value || Object.prototype.toString.call(value) !== '[object Object]') return false;
+    const proto = Object.getPrototypeOf(value);
+    return proto === null || Object.getPrototypeOf(proto) === null;
+  }
+  function isBackupDate(value) {
+    if (value === '') return true;
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(value + 'T00:00:00Z');
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }
+  function isBackupInt(value, max) {
+    if (typeof value !== 'string' || !/^(0|[1-9]\d{0,15})$/.test(value)) return false;
+    const number = Number(value);
+    return Number.isSafeInteger(number) && number >= 0 && number <= max;
+  }
+  function parseBackupJson(value) {
+    try { return JSON.parse(value); } catch (_) { return null; }
+  }
+  function isBackupCsv(value, allowed, maxCount) {
+    if (value === '') return true;
+    const items = value.split(',');
+    return items.length <= maxCount && new Set(items).size === items.length && items.every((id) => !!allowed[id]);
+  }
+  function validBackupMissionProgress(value) {
+    const record = parseBackupJson(value);
+    return isPlainRecord(record) && Object.keys(record).length <= 64 && Object.keys(record).every((id) =>
+      BACKUP_MISSION_IDS[id] && Number.isSafeInteger(record[id]) && record[id] >= 0 && record[id] <= 1000000000);
+  }
+  function validBackupCollection(value) {
+    const record = parseBackupJson(value);
+    const kinds = { bird: BIRDS, vehicle: VEHICLES, env: ENVS, accessory: HATS, trail: TRAILS, seasonal: SEASONALS };
+    return isPlainRecord(record) && Object.keys(record).length <= 6 && Object.keys(record).every((kind) => {
+      const items = record[kind];
+      return kinds[kind] && isPlainRecord(items) && Object.keys(items).length <= Object.keys(kinds[kind]).length &&
+        Object.keys(items).every((id) => kinds[kind][id] && items[id] === true);
+    });
+  }
+  function validBackupTopRuns(value) {
+    const list = parseBackupJson(value);
+    return Array.isArray(list) && list.length <= TOP_RUNS_MAX && list.every((entry) => isPlainRecord(entry) &&
+      isBackupInt(String(entry.score), 1000000000) && BACKUP_MODES[entry.mode] && isBackupDate(entry.date) &&
+      isBackupInt(String(entry.perfects), 1000000000) && isBackupInt(String(entry.combo), 1000000000));
+  }
+  function validBackupDateList(value, maxCount) {
+    const list = parseBackupJson(value);
+    return Array.isArray(list) && list.length <= maxCount && list.every(isBackupDate);
+  }
+  function validBackupDurations(value) {
+    const list = parseBackupJson(value);
+    return Array.isArray(list) && list.length <= 5 && list.every((n) => Number.isFinite(n) && n >= 0 && n <= 86400);
+  }
+  function validBackupFavorites(value) {
+    const list = parseBackupJson(value);
+    return Array.isArray(list) && list.length <= 64 && list.every((item) => typeof item === 'string' && /^[a-z][a-z0-9_-]{0,23}:[a-z0-9_-]{1,48}$/.test(item));
+  }
+  function validBackupSpinHistory(value) {
+    const list = parseBackupJson(value);
+    return Array.isArray(list) && list.length <= SPIN_HISTORY_MAX && list.every((entry) => isPlainRecord(entry) &&
+      WHEEL_REWARDS.indexOf(entry.coins) >= 0 && Number.isSafeInteger(entry.ts) && entry.ts >= 0 && entry.ts <= 9007199254740991 &&
+      Number.isSafeInteger(entry.n) && entry.n >= 0 && entry.n <= 1000000000);
+  }
+  function isValidBackupValue(name, value) {
+    if (typeof value !== 'string' || value.length > 65536 || /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(value)) return false;
+    if (Object.prototype.hasOwnProperty.call(BACKUP_INT_KEYS, name)) {
+      if (!isBackupInt(value, BACKUP_INT_KEYS[name])) return false;
+      if (name === 'magicLastAdAt') return Number(value) <= Date.now() + 30 * 24 * 60 * 60 * 1000;
+      return true;
+    }
+    if (Object.prototype.hasOwnProperty.call(BACKUP_BOOL_KEYS, name)) return value === '0' || value === '1';
+    if (Object.prototype.hasOwnProperty.call(BACKUP_DATE_KEYS, name)) return isBackupDate(value);
+    if (name === 'sensitivity' || name === 'practiceGhostOpacity') {
+      const n = Number(value);
+      const min = name === 'sensitivity' ? 0.7 : 0.15;
+      const max = name === 'sensitivity' ? 1.3 : 0.85;
+      return Number.isFinite(n) && n >= min && n <= max && /^\d+(?:\.\d{1,2})?$/.test(value);
+    }
+    if (Object.prototype.hasOwnProperty.call(BACKUP_ENUMS, name)) return Object.prototype.hasOwnProperty.call(BACKUP_ENUMS[name], value);
+    if (Object.prototype.hasOwnProperty.call(BACKUP_SETS, name)) return isBackupCsv(value, BACKUP_SETS[name], Object.keys(BACKUP_SETS[name]).length);
+    if (name === 'missionsActive' || name === 'missionsClaimed') return isBackupCsv(value, BACKUP_MISSION_IDS, 64);
+    if (name === 'collection') return validBackupCollection(value);
+    if (name === 'missionsProgress') return validBackupMissionProgress(value);
+    if (name === 'topRuns') return validBackupTopRuns(value);
+    if (name === 'streakLog') return validBackupDateList(value, 90);
+    if (name === 'missionDays') return validBackupDateList(value, 120);
+    if (name === 'runDurations') return validBackupDurations(value);
+    if (name === 'garageFavorites') return validBackupFavorites(value);
+    if (name === 'spinHistory') return validBackupSpinHistory(value);
+    return false;
+  }
+  function exportProgress() {
+    try {
+      const data = {};
+      Object.keys(KEYS).forEach((name) => {
+        const value = localStorage.getItem(KEYS[name]);
+        if (value !== null && isValidBackupValue(name, value)) data[name] = value;
+      });
+      return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), data: data };
+    } catch (_) {
+      return null;
+    }
+  }
+  function validateProgressImport(bundle) {
+    if (!isPlainRecord(bundle) || Object.keys(bundle).length !== 4 || bundle.format !== BACKUP_FORMAT ||
+        bundle.version !== BACKUP_VERSION || typeof bundle.exportedAt !== 'string' || !Number.isFinite(Date.parse(bundle.exportedAt)) ||
+        !isPlainRecord(bundle.data)) return { ok: false, error: 'invalid-backup' };
+    let serialized;
+    try { serialized = JSON.stringify(bundle); } catch (_) { return { ok: false, error: 'invalid-backup' }; }
+    if (serialized.length > BACKUP_MAX_CHARS) return { ok: false, error: 'backup-too-large' };
+    const names = Object.keys(bundle.data);
+    if (!names.length || names.length > Object.keys(KEYS).length) return { ok: false, error: 'empty-backup' };
+    for (const name of names) {
+      if (!Object.prototype.hasOwnProperty.call(KEYS, name) || !isValidBackupValue(name, bundle.data[name])) {
+        return { ok: false, error: 'invalid-backup' };
+      }
+    }
+    return { ok: true, values: bundle.data };
+  }
+  function importProgress(bundle) {
+    const validation = validateProgressImport(bundle);
+    if (!validation.ok) return validation;
+    const changed = [];
+    try {
+      Object.keys(validation.values).forEach((name) => {
+        const key = KEYS[name];
+        const previous = localStorage.getItem(key);
+        changed.push({ key: key, value: previous });
+        localStorage.setItem(key, validation.values[name]);
+      });
+      return { ok: true, imported: changed.length };
+    } catch (_) {
+      for (let i = changed.length - 1; i >= 0; i--) {
+        try {
+          if (changed[i].value === null) localStorage.removeItem(changed[i].key);
+          else localStorage.setItem(changed[i].key, changed[i].value);
+        } catch (_) { /* best-effort rollback if local storage becomes unavailable */ }
+      }
+      return { ok: false, error: 'storage-unavailable' };
+    }
+  }
+
   /** 3.28: reset Feel/Audio prefs only — keeps coins, unlocks, scores, gifts. */
   function resetPreferences() {
     set(KEYS.sensitivity, '1.00');
@@ -1401,7 +1580,7 @@
     getEnv, setEnv, getWeather, setWeather, getHat, setHat, getTrail, setTrail,
     isMuted, setMuted, isQuietNight, setQuietNight, isAreaMusic, setAreaMusic, getNightAmbVol, setNightAmbVol, isSwipeDismiss, setSwipeDismiss, isResumeCountdown, setResumeCountdown, getGuideLang, setGuideLang, getRunCount, bumpRunCount, getBestMedal, setBestMedal,
     getSensitivity, setSensitivity, getReduceMotion, setReduceMotion, isLargeButtons, setLargeButtons,
-    msUntilDailyReset, formatDailyCountdown, resetPreferences,
+    msUntilDailyReset, formatDailyCountdown, resetPreferences, exportProgress, importProgress,
     getPracticeGhostOpacity, setPracticeGhostOpacity, isCoachDone, setCoachDone, getCoachStep, setCoachStep,
     getGarageSort, setGarageSort, getGarageFavorites, isGarageFavorite, toggleGarageFavorite, garageFavKey,
     getHaptics, setHaptics, getHapticIntensity, setHapticIntensity, getVoicePack, setVoicePack,

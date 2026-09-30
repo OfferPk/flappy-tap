@@ -214,6 +214,7 @@
   const magicAvailableEl = document.getElementById('magic-available-count');
   const magicDailyStatusEl = document.getElementById('magic-daily-status');
   const magicAdStatusEl = document.getElementById('magic-ad-status');
+  const magicAdActionGroup = document.getElementById('magic-ad-action-group');
   const resumeCountdownEl = document.getElementById('resume-countdown');
   const resumeCountdownNumEl = document.getElementById('resume-countdown-num');
   const resumeCountdownChk = document.getElementById('resume-countdown-toggle');
@@ -295,6 +296,10 @@
   const resetPrefsConfirmEl = document.getElementById('reset-prefs-confirm');
   const btnResetPrefsYes = document.getElementById('btn-reset-prefs-yes');
   const btnResetPrefsNo = document.getElementById('btn-reset-prefs-no');
+  const btnExportProgress = document.getElementById('btn-export-progress');
+  const btnImportProgress = document.getElementById('btn-import-progress');
+  const progressImportFile = document.getElementById('progress-import-file');
+  const progressTransferStatus = document.getElementById('progress-transfer-status');
   const btnVoicePreview = document.getElementById('btn-voice-preview');
   const toastEl = document.getElementById('toast');
   const medalEl = document.getElementById('medal-display');
@@ -342,6 +347,24 @@
   const btnSpinUnlockDismiss = document.getElementById('btn-spin-unlock-dismiss');
   let pendingSpinUnlockPopup = false;
   let spinUnlockShownThisUnlock = false;
+
+  var lastGameAnnouncement = '';
+  var lastGameAnnouncementAt = 0;
+  var gameAnnouncementTimer = 0;
+  function announceGameEvent(message) {
+    var live = document.getElementById('game-announcer');
+    if (!live || !message) return;
+    var now = performance.now();
+    if (message === lastGameAnnouncement && now - lastGameAnnouncementAt < 3000) return;
+    lastGameAnnouncement = message;
+    lastGameAnnouncementAt = now;
+    if (gameAnnouncementTimer) clearTimeout(gameAnnouncementTimer);
+    live.textContent = '';
+    gameAnnouncementTimer = setTimeout(function () {
+      live.textContent = message;
+      gameAnnouncementTimer = 0;
+    }, 40);
+  }
 
   function showToast(msg, ms, kind) {
     if (!toastEl) return;
@@ -471,6 +494,7 @@
     var per = (FTStorage.GIFTS_PER_SPIN || 10);
     var toward = total % per;
     if (afterSpins > beforeSpins) {
+      announceGameEvent('Mystery spin ready. ' + afterSpins + ' available.');
       pendingSpinUnlockPopup = true;
       spinUnlockShownThisUnlock = false;
       if (state === 'playing') {
@@ -1550,6 +1574,7 @@ function updateComboMeter(visible) {
     if (magicAdStatusEl && FTStorage.getMagicAdStatus) {
       var ad = FTStorage.getMagicAdStatus();
       var adAvailable = !!(Ads && Ads.isMagicRewardAvailable && Ads.isMagicRewardAvailable());
+      if (magicAdActionGroup) magicAdActionGroup.hidden = !adAvailable;
       if (!adAvailable) magicAdStatusEl.textContent = 'Rewarded ads are unavailable · no ad SDK connected.';
       else if (ad.count >= ad.maxPerDay) magicAdStatusEl.textContent = '2/2 ad rewards claimed today.';
       else if (ad.cooldownRemainingMs > 0) magicAdStatusEl.textContent = 'Next reward in ' + FTStorage.formatDailyCountdown(ad.cooldownRemainingMs) + '.';
@@ -2247,17 +2272,18 @@ function updateComboMeter(visible) {
     refreshDeathTip(isRecord);
     if (btnContinue) {
       var allow = !isPractice() && !isChallenge() && !isOneLife() && !isTimeAttack();
-      btnContinue.hidden = !allow;
-      btnContinue.disabled = continuedThisRun || !allow || oneLifeLocked;
+      var demoAds = !!(Ads && Ads.isDemoMode && Ads.isDemoMode());
+      btnContinue.hidden = !allow || !demoAds;
+      btnContinue.disabled = continuedThisRun || !allow || oneLifeLocked || !demoAds;
       btnContinue.classList.toggle('continue-used', !!continuedThisRun);
-      btnContinue.classList.toggle('continue-ready', allow && !continuedThisRun && !oneLifeLocked);
-      btnContinue.textContent = continuedThisRun ? '✓ Continue used this run' : '▶ Revive · Continue (Ad stub)';
+      btnContinue.classList.toggle('continue-ready', allow && demoAds && !continuedThisRun && !oneLifeLocked);
+      btnContinue.textContent = continuedThisRun ? '✓ Continue used this run' : 'DEMO · Simulate rewarded revive';
       var contHint = document.getElementById('continue-hint');
       if (contHint) {
-        contHint.hidden = !allow;
+        contHint.hidden = !allow || !demoAds;
         contHint.textContent = continuedThisRun
           ? 'Revive already used — retry for a fresh run.'
-          : 'Watch a short stub ad to revive at your score (once per run).';
+          : 'Local demo only: no real ad is shown or verified. Enable demoAds=1 on localhost.';
       }
     }
     if (runGiftsEl) runGiftsEl.textContent = runBoxes > 0 ? ('+' + runBoxes) : '0';
@@ -2276,9 +2302,10 @@ function updateComboMeter(visible) {
       gradeEl.title = g.tip;
     }
     if (btnMysteryAd) {
-      btnMysteryAd.hidden = isPractice();
-      btnMysteryAd.disabled = mysteryAdUsed;
-      btnMysteryAd.textContent = mysteryAdUsed ? 'Gift claimed' : '🎁 +1 Gift (Ad)';
+      var demoGiftAds = !!(Ads && Ads.isDemoMode && Ads.isDemoMode());
+      btnMysteryAd.hidden = isPractice() || !demoGiftAds;
+      btnMysteryAd.disabled = mysteryAdUsed || !demoGiftAds;
+      btnMysteryAd.textContent = mysteryAdUsed ? 'Gift claimed' : 'DEMO · Simulate +1 gift';
     }
     // One-time spin unlock popup at run end if threshold crossed mid-run
     if (pendingSpinUnlockPopup) {
@@ -2334,6 +2361,7 @@ function updateComboMeter(visible) {
     magicPauseAt = magicStartedAt ? performance.now() : 0;
     if (magicStartedAt) updateMagicTimer(magicPauseAt);
     state = 'paused';
+    announceGameEvent('Game paused. Score ' + score + '.');
     if (screenPause) screenPause.hidden = false;
     pauseReturnFocus = btnPause;
     setPauseBlur(true);
@@ -2371,6 +2399,7 @@ function updateComboMeter(visible) {
       magicPauseAt = 0;
     }
     state = 'playing';
+    announceGameEvent('Game resumed.');
     if (screenPause) screenPause.hidden = true;
     setPauseBlur(false);
     lastTs = 0;
@@ -2536,6 +2565,7 @@ function updateComboMeter(visible) {
     }
     setupRngForMode();
     state = 'playing';
+    if (!fromContinue) announceGameEvent((MODE_SHARE_LABELS[playMode] || playMode) + ' run started. Tap or press Space to flap.');
     hideAllScreens();
     hud.hidden = false;
     hitFlash = 0;
@@ -3220,6 +3250,7 @@ function updateComboMeter(visible) {
     else if (pu.type === 'magnet') { magnetUntil = now + 4000; showToast(labels.magnet, 1200); }
     else if (pu.type === 'turbo') { turboUntil = now + TURBO_MS; FTAudio.turbo(); showToast(labels.turbo, 1200, 'medal'); showBanner('TURBO!', 800); }
     else if (pu.type === 'ghost') { ghostUntil = now + GHOST_MS; FTAudio.ghost(); showToast(labels.ghost, 1200); }
+    announceGameEvent((labels[pu.type] || 'Power-up collected.') + '.');
     showBanner(labels[pu.type] || 'Power!', 700);
     updatePowerHud();
     updateComboUI();
@@ -3302,6 +3333,7 @@ function updateComboMeter(visible) {
     voiceGiftCue();
     spawnGiftPop(box.x, box.y);
     popScore('📦', box.x, box.y - 10);
+    announceGameEvent('Gift collected.');
   }
 
   function refreshGiftsUI() {
@@ -4096,7 +4128,13 @@ function updateComboMeter(visible) {
     }
     // The pure scoring rule keeps normal / PERFECT / CLOSE awards stable and testable.
     var gained = award.gained;
+    var previousScore = score;
     setScore(score + gained);
+    var crossedMilestone = 0;
+    [10, 25, 50, 100].forEach(function (milestone) {
+      if (previousScore < milestone && score >= milestone) crossedMilestone = milestone;
+    });
+    if (crossedMilestone) announceGameEvent('Score milestone: ' + crossedMilestone + ' points.');
     // 3.51–3.58: soft pipe-clear SFX/mix; tinted ring; soft squash; micro cam on clear
     var juiceKind = tag === 'PERFECT!' ? 'perfect' : (tag.indexOf('CLOSE') === 0 ? 'close' : 'clear');
     if (!reduceMotion) {
@@ -5926,11 +5964,11 @@ function updateComboMeter(visible) {
     var block = (state === 'playing') ? FLAP_UI_BLOCK : FLAP_UI_BLOCK_MENU;
     if (e.target && e.target.closest && e.target.closest(block)) return false;
     if (state !== 'playing' && state !== 'menu') return false;
+    if (e.type === 'touchstart' && e.touches && e.touches.length !== 1) return false;
     var now = performance.now();
     // 18ms debounce: blocks touch+pointer double-fire without delaying first tap
     if (now - lastFlapTouchTs < 18) return false;
     lastFlapTouchTs = now;
-    if (e.cancelable) e.preventDefault();
     flap();
     if (coachActive) advanceCoach(true);
     return true;
@@ -5955,46 +5993,23 @@ function updateComboMeter(visible) {
   })();
 
 
-  // 3.22: prevent iOS/Android double-tap zoom (viewport + gesture + dblclick)
-  (function preventDoubleTapZoom() {
-    try {
-      document.addEventListener('gesturestart', function (e) {
-        if (e.cancelable) e.preventDefault();
-      }, { passive: false });
-      document.addEventListener('gesturechange', function (e) {
-        if (e.cancelable) e.preventDefault();
-      }, { passive: false });
-      var lastTouchEnd = 0;
-      document.addEventListener('touchend', function (e) {
-        var now = Date.now();
-        if (now - lastTouchEnd <= 320) {
-          if (e.cancelable) e.preventDefault();
-        }
-        lastTouchEnd = now;
-      }, { passive: false });
-      document.addEventListener('dblclick', function (e) {
-        if (e.cancelable) e.preventDefault();
-      }, { passive: false });
-    } catch (errZ) { /* ignore */ }
-  })();
-
-  canvas.style.touchAction = 'none';
+  canvas.style.touchAction = 'manipulation';
   var appElTouch = document.getElementById('app');
-  if (appElTouch) appElTouch.style.touchAction = 'none';
+  if (appElTouch) appElTouch.style.touchAction = 'manipulation';
   // 3.18/3.35: touchstart before pointerdown; #app catches letterbox dead-zones
   canvas.addEventListener('touchstart', function (e) {
     if (state === 'playing' || state === 'menu') tryFlapFromInput(e);
-  }, { passive: false });
-  canvas.addEventListener('pointerdown', onPointer, { passive: false });
+  }, { passive: true });
+  canvas.addEventListener('pointerdown', onPointer, { passive: true });
   if (appElTouch) {
     appElTouch.addEventListener('touchstart', function (e) {
       if (e.target === canvas || (canvas.contains && canvas.contains(e.target))) return;
       if (state === 'playing' || state === 'menu') tryFlapFromInput(e);
-    }, { passive: false });
+    }, { passive: true });
     appElTouch.addEventListener('pointerdown', function (e) {
       if (e.target === canvas || (canvas.contains && canvas.contains(e.target))) return;
       if (state === 'playing' || state === 'menu') tryFlapFromInput(e);
-    }, { passive: false });
+    }, { passive: true });
   }
 
   function closePanelByKey(key) {
@@ -6282,7 +6297,7 @@ function updateComboMeter(visible) {
     });
   }
   btnContinue.addEventListener('click', async function () {
-    if (continuedThisRun || isPractice() || isOneLife()) return;
+    if (!Ads || !Ads.isDemoMode || !Ads.isDemoMode() || continuedThisRun || isPractice() || isOneLife()) return;
     btnContinue.disabled = true;
     btnContinue.textContent = 'Loading revive…';
     var res = await Ads.showRewarded('continue');
@@ -6293,7 +6308,7 @@ function updateComboMeter(visible) {
     } else {
       showToast('Revive skipped');
       btnContinue.disabled = false;
-      btnContinue.textContent = '▶ Revive · Continue (Ad stub)';
+      btnContinue.textContent = 'DEMO · Simulate rewarded revive';
     }
   });
 
@@ -6423,6 +6438,69 @@ function updateComboMeter(visible) {
   });
   if (btnResetPrefsNo) btnResetPrefsNo.addEventListener('click', function () {
     if (resetPrefsConfirmEl) resetPrefsConfirmEl.hidden = true;
+  });
+
+  function setProgressTransferStatus(message) {
+    if (progressTransferStatus) progressTransferStatus.textContent = message;
+  }
+  if (btnExportProgress) btnExportProgress.addEventListener('click', function () {
+    var backup = FTStorage.exportProgress ? FTStorage.exportProgress() : null;
+    if (!backup) {
+      setProgressTransferStatus('Could not read saved progress from this browser.');
+      return;
+    }
+    try {
+      var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      var day = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = 'flappy-tap-progress-' + day + '.json';
+      link.hidden = true;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      setProgressTransferStatus('Progress backup downloaded. Store the JSON file somewhere safe.');
+    } catch (_) {
+      setProgressTransferStatus('Could not create a download. Try again in a browser.');
+    }
+  });
+  if (btnImportProgress && progressImportFile) btnImportProgress.addEventListener('click', function () {
+    setProgressTransferStatus('Choose a Flappy Tap progress backup JSON file.');
+    progressImportFile.click();
+  });
+  if (progressImportFile) progressImportFile.addEventListener('change', async function () {
+    var file = progressImportFile.files && progressImportFile.files[0];
+    progressImportFile.value = '';
+    if (!file) return;
+    if (file.size > 256 * 1024) {
+      setProgressTransferStatus('That file is too large to be a valid progress backup.');
+      return;
+    }
+    try {
+      var raw = await file.text();
+      var backup = JSON.parse(raw);
+      if (!backup || backup.format !== 'flappy-tap-progress' || backup.version !== 1 || !FTStorage.importProgress) {
+        setProgressTransferStatus('Unsupported or invalid progress backup. Nothing was changed.');
+        return;
+      }
+      if (!window.confirm('Import this Flappy Tap backup? Matching saved progress and settings on this device will be replaced. Other saved fields will stay unchanged.')) {
+        setProgressTransferStatus('Import cancelled. Nothing was changed.');
+        return;
+      }
+      var result = FTStorage.importProgress(backup);
+      if (!result || !result.ok) {
+        setProgressTransferStatus(result && result.error === 'storage-unavailable'
+          ? 'Browser storage could not save the backup. Existing progress was restored where possible.'
+          : 'Invalid, unsupported, or damaged backup. Nothing was changed.');
+        return;
+      }
+      setProgressTransferStatus('Imported ' + result.imported + ' saved fields. Reloading to apply the restored progress…');
+      setTimeout(function () { window.location.reload(); }, 900);
+    } catch (_) {
+      setProgressTransferStatus('Could not read that backup file. Nothing was changed.');
+    }
   });
 
   if (btnSettings) btnSettings.addEventListener('click', function () {
@@ -7934,7 +8012,7 @@ function updateComboMeter(visible) {
     if (mysteryOverlay) mysteryOverlay.hidden = true;
   });
   if (btnMysteryAd) btnMysteryAd.addEventListener('click', async function () {
-    if (mysteryAdUsed || state !== 'dead') return;
+    if (!Ads || !Ads.isDemoMode || !Ads.isDemoMode() || mysteryAdUsed || state !== 'dead') return;
     var res = await Ads.showRewarded('mystery-box');
     if (res && res.rewarded) {
       mysteryAdUsed = true;

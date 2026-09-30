@@ -2445,7 +2445,7 @@ html.large-buttons .chip {
 }
 
 #game, canvas {
-  touch-action: none;
+  touch-action: manipulation;
 }
 
 

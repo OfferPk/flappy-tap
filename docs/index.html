@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#4ecdc4" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#1a1a2e" />
@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="has-notch-pad">
+  <div id="game-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="notch-pad" class="notch-pad" aria-hidden="true"></div>
   <div id="boot-splash" class="boot-splash" role="status" aria-live="polite">
     <div class="splash-inner">
@@ -160,9 +161,11 @@
       <div class="btn-col magic-actions">
         <button id="btn-use-magic" class="btn primary" type="button" disabled>USE MAGIC</button>
         <p class="hint">Starts a Classic flight with 10 seconds of MAGIC 🪄. Control returns at 3.</p>
-        <p id="magic-ad-status" class="hint" role="status"></p>
-        <button id="btn-magic-watch-ad" class="btn reward" type="button">Watch Ad → +1 MAGIC 🪄</button>
-        <p class="hint">Up to 2 ad rewards per day · 10-hour cooldown · ad SDK not connected</p>
+        <div id="magic-ad-action-group" hidden>
+          <p id="magic-ad-status" class="hint" role="status"></p>
+          <button id="btn-magic-watch-ad" class="btn reward" type="button">Watch Ad → +1 MAGIC 🪄</button>
+          <p class="hint">Rewarded ad availability depends on a verified ad SDK.</p>
+        </div>
         <button class="btn ghost" type="button" data-panel-close="magic">Back</button>
       </div>
     </div>
@@ -325,9 +328,9 @@
         <div class="sum-row muted-row"><span id="mode-death-label">Mode</span><strong id="mode-death-value">Classic</strong></div>
       </div>
       <div class="btn-col">
-        <button id="btn-continue" class="btn reward continue-ready" type="button">▶ Revive · Continue (Ad stub)</button>
-        <p id="continue-hint" class="hint continue-hint">Watch a short stub ad to revive at your score (once per run).</p>
-        <button id="btn-mystery-ad" class="btn reward" type="button">🎁 +1 Gift (Ad)</button>
+        <button id="btn-continue" class="btn reward continue-ready" type="button" hidden>DEMO · Simulate rewarded revive</button>
+        <p id="continue-hint" class="hint continue-hint" hidden>Local demo only: no real ad is shown or verified.</p>
+        <button id="btn-mystery-ad" class="btn reward" type="button" hidden>DEMO · Simulate +1 gift</button>
         <button id="btn-replay-stub" class="btn secondary btn-sm" type="button">▶ Replay path (last 5s)</button>
         <button id="btn-retry" class="btn primary" type="button">RETRY</button>
         <button id="btn-share" class="btn secondary" type="button">📤 Share</button>
@@ -481,6 +484,11 @@
         <details class="settings-section" id="settings-sec-data" open>
         <summary class="settings-group">Data</summary>
         <div class="settings-section-body">
+        <button id="btn-export-progress" class="btn secondary btn-sm" type="button">Export saved progress</button>
+        <button id="btn-import-progress" class="btn ghost btn-sm" type="button">Import progress backup</button>
+        <input id="progress-import-file" class="sr-only" type="file" accept="application/json,.json" aria-label="Choose a Flappy Tap progress backup JSON file" />
+        <p class="setting-hint">Backups stay on this device until you move the JSON file. Import replaces matching saved fields; other fields stay unchanged.</p>
+        <p id="progress-transfer-status" class="setting-hint" role="status" aria-live="polite" aria-atomic="true"></p>
         <button id="btn-reset-prefs" class="btn ghost btn-sm" type="button">Reset settings…</button>
         <p class="setting-hint">Restores Feel/Audio prefs · keeps coins, unlocks, scores &amp; gifts</p>
         <div id="reset-prefs-confirm" class="reset-prefs-confirm" hidden role="alertdialog" aria-label="Confirm reset">

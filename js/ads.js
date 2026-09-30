@@ -11,9 +11,19 @@
 
   const CONFIG = global.ADMOB_CONFIG || {
     enabled: false,
+    demoMode: false,
     interstitialId: null,
     rewardedId: null
   };
+
+  function isDemoMode() {
+    const location = global.location;
+    if (!location) return false;
+    const host = String(location.hostname || '').toLowerCase();
+    const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+    if (!isLocalHost) return false;
+    return CONFIG.demoMode === true || /(?:^|[?&])demoAds=1(?:&|$)/.test(String(location.search || ''));
+  }
 
   function ensureModal() {
     let el = document.getElementById('ad-stub-modal');
@@ -24,7 +34,7 @@
     el.innerHTML =
       '<div class="ad-stub-card" role="dialog" aria-modal="true">' +
       '<button type="button" class="panel-close" data-panel-close="ad-stub" aria-label="Close">X</button>' +
-      '<h3 class="ad-stub-title">Ad (stub)</h3>' +
+      '<h3 class="ad-stub-title">Demo only · simulated ad</h3>' +
       '<p class="ad-stub-body"></p>' +
       '<div class="ad-stub-actions">' +
       '<button type="button" class="btn primary" data-ad-yes>Grant</button>' +
@@ -73,17 +83,21 @@
         resolve({ rewarded: false, stub: false, reason: 'no-plugin' });
         return;
       }
+      if (!isDemoMode()) {
+        resolve({ rewarded: false, stub: false, reason: 'demo-disabled' });
+        return;
+      }
       const r = reason || 'continue';
       let body;
-      let title = 'Rewarded Ad (stub)';
+      let title = 'Demo only · simulated rewarded ad';
       if (r === 'magic') {
         resolve({ rewarded: false, stub: false, reason: 'no-plugin' });
         return;
       } else if (r === 'mystery' || r === 'mystery-box') {
-        body = 'Open a bonus Mystery Box?\n\nNo AdMob ID configured. Grant reward for this session?\n(mystery-box)\n\nNever shown mid-flight.';
+        body = 'This local demo does not show or verify a real ad.\n\nSimulate the +1 gift reward for this session?\n(mystery-box)\n\nNever shown mid-flight.';
       } else {
-        title = 'Revive · Continue (stub)';
-        body = 'Revive at your current score?\n\nOnce per run · stub only (no AdMob ID).\nGrant revive for this session?\n(' +
+        title = 'Demo only · simulate revive';
+        body = 'This local demo does not show or verify a real ad.\n\nSimulate a revive at your current score?\nOnce per run · demo only.\n(' +
           r + ')\n\nNever interrupts mid-flight.';
       }
       const ok = await promptStub(title, body);
@@ -100,10 +114,14 @@
         resolve({ shown: false, stub: false, reason: 'no-plugin' });
         return;
       }
+      if (!isDemoMode()) {
+        resolve({ shown: false, stub: false, reason: 'demo-disabled' });
+        return;
+      }
       // Soft stub: quick toast-style confirm, skippable
       const ok = await promptStub(
-        'Interstitial (stub)',
-        'Between-runs ad placeholder.\n\nSimulate watching? Core play continues either way.\n(' +
+        'Demo only · simulated interstitial',
+        'This local demo does not show or verify a real ad.\n\nSimulate between-runs ad flow? Core play continues either way.\n(' +
           (reason || 'between-runs') +
           ')'
       );
@@ -116,5 +134,5 @@
   function showMagicReward() {
     return Promise.resolve({ rewarded: false, stub: false, reason: 'no-plugin' });
   }
-  global.Ads = { showRewarded, showMagicReward, isMagicRewardAvailable, showInterstitial, CONFIG };
+  global.Ads = { showRewarded, showMagicReward, isMagicRewardAvailable, isDemoMode, showInterstitial, CONFIG };
 })(window);

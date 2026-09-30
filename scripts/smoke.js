@@ -51,7 +51,7 @@ const need = [
   'spawnCoinRain', 'setPauseBlur', 'clearMysteryHistoryUI', 'life-break', 'coin_rain',
   'btn-clear-spin-history',
   'runBootSequence', 'setBootProgress', 'refreshSeasonalHint', 'applyLargeButtons',
-  'preventDoubleTapZoom', 'large-buttons-toggle', 'seasonal-hint', 'splash-progress-fill',
+  'large-buttons-toggle', 'seasonal-hint', 'splash-progress-fill', 'announceGameEvent', 'isDemoMode', 'exportProgress', 'importProgress',
   'buildShareCardCanvas', 'shareScoreCardImage', 'spawnLandingDust', 'syncPrefersReducedMotion',
   'shadowProx',
   'COACH_STEPS', 'maybeStartCoach', 'advanceCoach', 'finishCoach', 'showCoachStep',
@@ -107,7 +107,7 @@ for (const n of ['BIRD_PASSIVES', 'weatherMods', 'sunset', 'pickBossKind', 'SEAS
   if (!skins.includes(n)) { console.error('MISSING in skins.js:', n); ok = false; }
 }
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-if (!sw.includes('urrjaa-v73-20260929')) { console.error('SW cache not bumped'); ok = false; }
+if (!sw.includes('urrjaa-v74-20260930')) { console.error('SW cache not bumped'); ok = false; }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (pkg.version !== '3.58.5-urrjaa') { console.error('package version', pkg.version); ok = false; }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -132,7 +132,7 @@ if (!html.includes('pause-score') || !html.includes('pause-tip')) { console.erro
 if (!html.includes('settings-group') || !html.includes('btn-haptic-preview')) { console.error('settings polish missing'); ok = false; }
 if (!html.includes('Daily missions')) { console.error('guide daily missions missing'); ok = false; }
 if (!html.includes('share-preview') || !html.includes('btn-share-confirm')) { console.error('share preview missing'); ok = false; }
-if (!html.includes('continue-hint') || !html.includes('Revive')) { console.error('continue UX missing'); ok = false; }
+if (!html.includes('id="continue-hint"') || !html.includes('DEMO · Simulate rewarded revive')) { console.error('demo-only continue UX missing'); ok = false; }
 if (!html.includes('Install Urr Jaa!') && !html.includes('Install for offline play')) { console.error('a2hs polish missing'); ok = false; }
 if (!html.includes('Chase events')) { console.error('guide chase missing'); ok = false; }
 if (!html.includes('boot-splash') || !html.includes('offline-banner')) { console.error('splash/offline missing'); ok = false; }
@@ -156,7 +156,8 @@ if (!html.includes('apple-mobile-web-app-title')) { console.error('iOS PWA title
 if (!html.includes('3.21:')) { console.error('guide 3.21 missing'); ok = false; }
 if (!html.includes('large-buttons-toggle') || !html.includes('Larger buttons')) { console.error('3.22 large buttons missing'); ok = false; }
 if (!html.includes('seasonal-hint') || !html.includes('splash-progress-fill')) { console.error('3.22 splash/seasonal missing'); ok = false; }
-if (!html.includes('minimum-scale=1')) { console.error('viewport zoom harden missing'); ok = false; }
+if (!html.includes('name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"')) { console.error('user-zoomable viewport missing'); ok = false; }
+if (!html.includes('id="game-announcer"') || !html.includes('id="btn-export-progress"') || !html.includes('id="btn-import-progress"')) { console.error('accessibility/data-transfer controls missing'); ok = false; }
 if (!html.includes('3.22:')) { console.error('guide 3.22 missing'); ok = false; }
 if (!html.includes('btn-share-image') || !html.includes('Share score card')) { console.error('3.23 share image missing'); ok = false; }
 if (!html.includes('settings-credits') || !html.includes('v3.58.5-urrjaa')) { console.error('3.23 credits missing'); ok = false; }
