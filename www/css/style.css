@@ -206,6 +206,12 @@ html.reduce-motion #app.shake { animation: none; }
 }
 .screen[hidden] { display: none !important; }
 
+#screen-start {
+  justify-content: safe center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .panel-screen, .settings-screen, .pause-screen {
   z-index: 20;
   background: linear-gradient(180deg, rgba(26,26,46,.78) 0%, rgba(26,26,46,.94) 100%);
@@ -1212,7 +1218,7 @@ html.reduce-motion .spin-result.win-flash { animation: none !important; }
   #screen-start { gap: 7px; padding-top: calc(10px + var(--safe-top)); padding-bottom: calc(10px + var(--safe-bottom)); }
   #screen-start .btn-col { gap: 6px; }
   #screen-start .btn { padding-top: 9px; padding-bottom: 9px; }
-  #screen-start .logo { font-size: 2.4rem; }
+  #screen-start .logo { font-size: clamp(1.5rem, 9vh, 2.4rem); }
   #screen-start .hint, #screen-start .runs-line { font-size: .72rem; }
   .wheel-wrap { transform: scale(.88); margin: -4px auto -16px; }
 }
@@ -2907,14 +2913,28 @@ html.reduce-motion .wheel-wrap.wheel-jackpot .wheel-rim { animation: none; }
   font-size: 1.35rem;
   line-height: 1;
   margin-top: 2px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
-.a2hs-copy { flex: 1; line-height: 1.35; }
+.a2hs-copy { flex: 1 1 0%; min-width: 0; line-height: 1.35; }
 .a2hs-actions {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+}
+@media (max-width: 400px) {
+  #screen-start.a2hs-prompt-visible > .a2hs {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+  #screen-start.a2hs-prompt-visible > .a2hs .a2hs-copy { grid-column: 2; }
+  #screen-start.a2hs-prompt-visible > .a2hs .a2hs-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }
 .a2hs-install-btn {
   background: linear-gradient(135deg, #4ecdc4, #44a08d) !important;

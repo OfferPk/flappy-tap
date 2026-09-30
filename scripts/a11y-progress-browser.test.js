@@ -254,8 +254,120 @@ class DevTools {
       assert.equal(layout.playHit, true, `${width}×${height} Play receives a real pointer hit`);
       console.log(`A2HS VIEWPORT OK · ${width}×${height}`);
     }
+    async function checkScaledMenuViewport(width, height, promptExpected) {
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
+      await waitFor(() => cdp.evaluate(`innerWidth === ${width} && innerHeight === ${height}`), `${width}×${height} 200% text-scale viewport`);
+      await cdp.evaluate("document.documentElement.style.fontSize = '200%'; document.getElementById('screen-start').scrollTop = 0; true");
+      const layout = await cdp.evaluate(`(() => {
+        const menu = document.getElementById('screen-start');
+        const prompt = document.getElementById('a2hs');
+        const logo = document.querySelector('#screen-start .logo');
+        const tagline = document.querySelector('#screen-start .tagline');
+        const coins = document.querySelector('#screen-start .coins-line');
+        const play = document.getElementById('btn-play');
+        const copy = document.querySelector('#a2hs .a2hs-copy');
+        const actions = document.querySelector('#a2hs .a2hs-actions');
+        const rect = (element) => { const r = element.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
+        const appRect = rect(document.getElementById('app'));
+        const playRect = rect(play);
+        const hit = document.elementFromPoint((playRect.left + playRect.right) / 2, (playRect.top + playRect.bottom) / 2);
+        return { rootFont: getComputedStyle(document.documentElement).fontSize, overflowY: getComputedStyle(menu).overflowY,
+          clientHeight: menu.clientHeight, scrollHeight: menu.scrollHeight, app: appRect, logo: rect(logo), tagline: rect(tagline),
+          coins: rect(coins), play: playRect, prompt: rect(prompt), promptHidden: prompt.hidden,
+          promptPosition: getComputedStyle(prompt).position, promptFont: getComputedStyle(copy).fontSize,
+          logoOverflow: logo.scrollWidth > logo.clientWidth + 1, taglineOverflow: tagline.scrollWidth > tagline.clientWidth + 1,
+          coinsOverflow: coins.scrollWidth > coins.clientWidth + 1, promptCopyOverflow: copy.scrollWidth > copy.clientWidth + 1,
+          actions: rect(actions), playHit: !!(hit && hit.closest('#btn-play')) };
+      })()`);
+      assert.equal(layout.rootFont, '32px', `${width}×${height} test actually applies 200% text scaling`);
+      assert.equal(layout.promptHidden, !promptExpected, `${width}×${height} prompt visibility matches its test state`);
+      assert.ok(layout.logo.left >= layout.app.left && layout.logo.right <= layout.app.right,
+        `${width}×${height} scaled title stays within the app width: ${JSON.stringify(layout.logo)}`);
+      assert.ok(!layout.logoOverflow && !layout.taglineOverflow && !layout.coinsOverflow,
+        `${width}×${height} scaled menu text wraps without horizontal clipping: ${JSON.stringify(layout)}`);
+      assert.ok(layout.play.top >= layout.app.top && layout.play.bottom <= layout.app.bottom,
+        `${width}×${height} scaled Play button remains in the first view: ${JSON.stringify(layout.play)}`);
+      assert.ok(layout.logo.bottom <= layout.play.top,
+        `${width}×${height} scaled title does not collide with Play: ${JSON.stringify(layout)}`);
+      assert.equal(layout.playHit, true, `${width}×${height} scaled Play remains the pointer target`);
+      if (layout.scrollHeight > layout.clientHeight) {
+        assert.equal(layout.overflowY, 'auto', `${width}×${height} overflowing scaled menu remains scrollable`);
+      }
+      if (!promptExpected && layout.scrollHeight > layout.clientHeight) {
+        await cdp.evaluate("(() => { const menu=document.getElementById('screen-start'); menu.scrollTop=menu.scrollHeight; return menu.scrollTop; })()");
+        const footer = await cdp.evaluate("(() => { const r=document.querySelector('#screen-start .runs-line').getBoundingClientRect(); const a=document.getElementById('app').getBoundingClientRect(); return {top:r.top,bottom:r.bottom,appTop:a.top,appBottom:a.bottom}; })()");
+        assert.ok(footer.top >= footer.appTop && footer.bottom <= footer.appBottom,
+          `${width}×${height} scaled menu footer stays reachable after scrolling: ${JSON.stringify(footer)}`);
+        await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
+      }
+      if (promptExpected) {
+        assert.equal(layout.promptPosition, 'static', `${width}×${height} scaled prompt remains in menu flow`);
+        assert.ok(layout.prompt.left >= layout.app.left && layout.prompt.right <= layout.app.right,
+          `${width}×${height} scaled prompt stays within app bounds: ${JSON.stringify(layout.prompt)}`);
+        assert.ok(layout.prompt.bottom <= layout.play.top || layout.prompt.top >= layout.play.bottom,
+          `${width}×${height} scaled prompt does not overlap Play: ${JSON.stringify(layout)}`);
+        assert.ok(Number.parseFloat(layout.promptFont) >= 25,
+          `${width}×${height} prompt copy visibly scales with text: ${layout.promptFont}`);
+        assert.ok(!layout.promptCopyOverflow && layout.actions.left >= layout.prompt.left && layout.actions.right <= layout.prompt.right,
+          `${width}×${height} prompt copy and actions fit inside the scaled card: ${JSON.stringify(layout)}`);
+        await cdp.evaluate("(() => { const menu=document.getElementById('screen-start'); menu.scrollTop=menu.scrollHeight; return menu.scrollTop; })()");
+        const dismiss = await cdp.evaluate("(() => { const e=document.getElementById('a2hs-ok'); const r=e.getBoundingClientRect(); const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); return {top:r.top,bottom:r.bottom,visible:r.top>=0&&r.bottom<=innerHeight,hit:!!hit&&(hit===e||e.contains(hit))}; })()");
+        assert.ok(dismiss.visible && dismiss.hit, `${width}×${height} scaled prompt can scroll fully into view with a tappable dismiss control: ${JSON.stringify(dismiss)}`);
+      }
+      await cdp.evaluate("document.documentElement.style.fontSize = ''; document.getElementById('screen-start').scrollTop = 0; true");
+      console.log(`TEXT SCALE OK · ${width}×${height} · 200% · prompt ${promptExpected ? 'visible' : 'dismissed'}`);
+    }
+    async function checkLandscapeSafeAreaViewport(width, height) {
+      const insets = { top: 8, left: 44, bottom: 21, right: 44 };
+      await cdp.send('Emulation.setDeviceMetricsOverride', {
+        width, height, deviceScaleFactor: 2, mobile: true,
+        screenOrientation: { type: 'landscapePrimary', angle: 90 }
+      });
+      await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets });
+      await waitFor(() => cdp.evaluate(`innerWidth === ${width} && innerHeight === ${height}`), `${width}×${height} landscape safe-area viewport`);
+      const layout = await cdp.evaluate(`(() => {
+        const menu = document.getElementById('screen-start');
+        const prompt = document.getElementById('a2hs');
+        const logo = document.querySelector('#screen-start .logo');
+        const play = document.getElementById('btn-play');
+        const rect = (element) => { const r = element.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
+        const appRect = rect(document.getElementById('app'));
+        const playRect = rect(play);
+        const hit = document.elementFromPoint((playRect.left + playRect.right) / 2, (playRect.top + playRect.bottom) / 2);
+        const rootStyle = getComputedStyle(document.documentElement);
+        return { app: appRect, logo: rect(logo), play: playRect, prompt: rect(prompt), promptHidden: prompt.hidden,
+          promptPosition: getComputedStyle(prompt).position, overflowY: getComputedStyle(menu).overflowY,
+          safe: ['--safe-top','--safe-left','--safe-bottom','--safe-right'].map((name) => rootStyle.getPropertyValue(name).trim()),
+          playHit: !!(hit && hit.closest('#btn-play')) };
+      })()`);
+      assert.deepEqual(layout.safe, ['8px', '44px', '21px', '44px'], `${width}×${height} native safe-area insets reach the game CSS`);
+      assert.ok(layout.logo.top >= insets.top && layout.logo.left >= insets.left && layout.logo.right <= width - insets.right,
+        `${width}×${height} title stays in the safe app area: ${JSON.stringify(layout.logo)}`);
+      assert.ok(layout.play.left >= insets.left && layout.play.right <= width - insets.right,
+        `${width}×${height} Play stays between landscape side insets: ${JSON.stringify(layout.play)}`);
+      assert.ok(layout.play.top >= layout.app.top && layout.play.bottom <= layout.app.bottom,
+        `${width}×${height} Play remains visible: ${JSON.stringify(layout.play)}`);
+      assert.equal(layout.playHit, true, `${width}×${height} Play receives pointer hits inside safe area`);
+      assert.equal(layout.promptHidden, false, `${width}×${height} install tip remains present`);
+      assert.equal(layout.promptPosition, 'static', `${width}×${height} install tip follows the safe-area-aware menu flow`);
+      assert.equal(layout.overflowY, 'auto', `${width}×${height} short landscape menu can scroll`);
+      assert.ok(layout.prompt.left >= insets.left && layout.prompt.right <= width - insets.right,
+        `${width}×${height} install tip stays within safe-area width: ${JSON.stringify(layout.prompt)}`);
+      assert.ok(layout.prompt.bottom <= layout.play.top || layout.prompt.top >= layout.play.bottom,
+        `${width}×${height} install tip does not overlap Play: ${JSON.stringify(layout)}`);
+      await cdp.evaluate("(() => { const menu=document.getElementById('screen-start'); menu.scrollTop=menu.scrollHeight; return menu.scrollTop; })()");
+      const dismiss = await cdp.evaluate("(() => { const e=document.getElementById('a2hs-ok'); const r=e.getBoundingClientRect(); const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,visible:r.top>=0&&r.bottom<=innerHeight&&r.bottom<=innerHeight-21,hit:!!hit&&(hit===e||e.contains(hit))}; })()");
+      assert.ok(dismiss.visible && dismiss.hit, `${width}×${height} dismiss action remains tappable above the bottom safe area: ${JSON.stringify(dismiss)}`);
+      await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
+      console.log(`LANDSCAPE SAFE AREA OK · ${width}×${height} · insets ${insets.left}/${insets.top}/${insets.right}/${insets.bottom}`);
+    }
     for (const [width, height] of [[320, 568], [320, 480], [320, 400]]) await checkShortMenuViewport(width, height);
     await checkA2hsPromptViewport(390, 844);
+    await checkScaledMenuViewport(320, 480, true);
+    await checkScaledMenuViewport(390, 844, true);
+    await checkLandscapeSafeAreaViewport(568, 320);
+    await checkLandscapeSafeAreaViewport(844, 390);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: {} });
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 320, height: 480, deviceScaleFactor: 1, mobile: true });
     await waitFor(() => cdp.evaluate('innerWidth === 320 && innerHeight === 480'), '320×480 A2HS Play hit test viewport');
     await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
@@ -272,6 +384,7 @@ class DevTools {
     await clickElementAt('#a2hs-ok');
     await waitFor(() => cdp.evaluate("document.getElementById('a2hs').hidden && !document.getElementById('screen-start').classList.contains('a2hs-prompt-visible')"), 'dismissed A2HS prompt restores normal menu layout');
     console.log('A2HS DISMISS HIT TEST OK · 320×480');
+    await checkScaledMenuViewport(390, 844, false);
     await cdp.send('Emulation.clearDeviceMetricsOverride');
     await waitFor(() => cdp.evaluate('innerWidth > 320 && innerHeight > 400'), 'restore desktop viewport');
     const menuHint = await cdp.evaluate("document.getElementById('controls-hint').textContent");
