@@ -6370,7 +6370,7 @@ function updateComboMeter(visible) {
       btnMute.innerHTML = m ? MUTE_SVG_OFF : MUTE_SVG_ON;
       btnMute.classList.toggle('is-muted', !!m);
       btnMute.setAttribute('aria-pressed', m ? 'true' : 'false');
-      btnMute.setAttribute('aria-label', m ? 'Unmute sound' : 'Mute sound');
+      btnMute.setAttribute('aria-label', 'Mute sound');
       btnMute.title = m ? 'Unmute' : 'Mute';
     }
     if (soundToggleChk) soundToggleChk.checked = !m;

@@ -927,6 +927,19 @@ class DevTools {
     await delay(250);
     assert.equal(await cdp.evaluate("document.getElementById('game-announcer').textContent"), stableAnnouncement,
       'the polite live region remains quiet between meaningful events');
+    const muteBefore=await cdp.evaluate("(() => {const b=document.getElementById('btn-mute');return {label:b.getAttribute('aria-label'),pressed:b.getAttribute('aria-pressed'),muted:window.FTStorage.isMuted(),title:b.title};})()");
+    await cdp.evaluate("document.getElementById('btn-mute').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    const muteToggled=await cdp.evaluate("(() => {const b=document.getElementById('btn-mute');return {label:b.getAttribute('aria-label'),pressed:b.getAttribute('aria-pressed'),muted:window.FTStorage.isMuted(),title:b.title};})()");
+    await cdp.press('Enter','Enter',13);
+    const muteRestored=await cdp.evaluate("(() => {const b=document.getElementById('btn-mute');return {label:b.getAttribute('aria-label'),pressed:b.getAttribute('aria-pressed'),muted:window.FTStorage.isMuted(),title:b.title};})()");
+    assert.equal(muteBefore.label,'Mute sound','mute toggle has a stable accessible name in its initial state');
+    assert.equal(muteToggled.label,muteBefore.label,'accessible name does not switch from Mute to Unmute when pressed');
+    assert.notEqual(muteToggled.pressed,muteBefore.pressed,'keyboard activation changes the explicit pressed state');
+    assert.equal(muteBefore.pressed,muteBefore.muted?'true':'false','initial pressed state matches the saved sound setting');
+    assert.equal(muteToggled.pressed,muteToggled.muted?'true':'false','toggled pressed state matches the saved sound setting');
+    assert.equal(muteToggled.title,muteToggled.muted?'Unmute':'Mute','sighted tooltip describes the next available action');
+    assert.deepEqual(muteRestored,muteBefore,'a second keyboard activation restores both sound and its accessible state');
     const pauseControl = await cdp.evaluate("(() => { const button=document.getElementById('btn-pause'); return {visible:!!button && button.getClientRects().length > 0, label:button && button.getAttribute('aria-label')}; })()");
     assert.deepEqual(pauseControl, { visible: true, label: 'Pause' }, 'the on-screen pause button is visible and named for assistive technology');
     await cdp.evaluate("document.getElementById('btn-pause').focus(); true");

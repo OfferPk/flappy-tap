@@ -70,6 +70,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Spin unlock popup | One-time when a new ×10 threshold is crossed (not spam on menu open) |
 | **Guide** | Menu → Guide · **English / Roman Urdu / اردو** |
 | First-run coach | Live-announced tips for flapping, pipe gaps, coins/power-ups, and HUD · Space stays on the flap surface through coach and Pause/Resume |
+| Sound toggle | Stable accessible name · explicit muted/unmuted pressed state · tooltip describes the next action |
 | Power-ups | Compact active chips show live remaining time and disappear on expiry; Shield accurately shows its existing one-hit protection · Turbo · Coin Magnet · Slow-mo 3s · Ghost |
 | Bird passives | Sparrow control · Parrot +5% coin · Owl night · Eagle near-miss (mild, free) |
 | Weather | Clear · Rain · Fog · Storm · Night · Sunset (light speed/visibility) |
@@ -86,7 +87,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v86-20260930** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
+| PWA | `sw.js` cache **urrjaa-v87-20260930** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)
