@@ -306,8 +306,8 @@ async function testOfflineAssetFallback() {
   const cached = await warmWorker.fetch({ method: 'GET', url: 'https://game.test/app/js/game.js', mode: 'cors' });
   assert.equal(cached.body, 'cached game code', 'a precached game script remains available');
 
-  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v74-20260930', 'another-app-cache', 'urrjaa-v75-20260930']);
-  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v74-20260930'], 'activation deletes only this app’s older named cache and preserves unrelated/current caches');
+  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v75-20260930', 'another-app-cache', 'urrjaa-v76-20260930']);
+  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v75-20260930'], 'activation deletes only this app’s older named cache and preserves unrelated/current caches');
 }
 
 async function testMagicAdsUnavailableWithoutSdk() {

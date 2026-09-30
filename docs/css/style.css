@@ -1191,6 +1191,11 @@ html.reduce-motion .spin-result.win-flash { animation: none !important; }
 .skin-card { box-shadow: 0 4px 12px rgba(0,0,0,.2), inset 0 1px rgba(255,255,255,.06); }
 .skin-card canvas { image-rendering: auto; filter: drop-shadow(0 2px 2px rgba(0,0,0,.25)); }
 @media (max-height: 700px) {
+  #screen-start {
+    justify-content: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   #screen-start { gap: 7px; padding-top: calc(10px + var(--safe-top)); padding-bottom: calc(10px + var(--safe-bottom)); }
   #screen-start .btn-col { gap: 6px; }
   #screen-start .btn { padding-top: 9px; padding-bottom: 9px; }

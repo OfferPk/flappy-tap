@@ -155,6 +155,42 @@ class DevTools {
     await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); true");
     await cdp.send('Page.reload', { ignoreCache: true });
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden"), 'menu after boot');
+    async function checkShortMenuViewport(width, height) {
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
+      await waitFor(() => cdp.evaluate(`innerWidth === ${width} && innerHeight === ${height}`), `${width}×${height} menu viewport`);
+      const initial = await cdp.evaluate(`(() => {
+        const rect = (selector) => { const r = document.querySelector(selector).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
+        const menu = document.getElementById('screen-start');
+        return { viewport: [innerWidth, innerHeight], overflowY: getComputedStyle(menu).overflowY,
+          clientHeight: menu.clientHeight, scrollHeight: menu.scrollHeight,
+          app: rect('#app'), title: rect('#screen-start .logo'), play: rect('#btn-play') };
+      })()`);
+      assert.deepEqual(initial.viewport, [width, height], 'requested narrow viewport is active');
+      assert.equal(initial.overflowY, 'auto', `${width}×${height} menu remains scrollable`);
+      assert.ok(initial.scrollHeight > initial.clientHeight, `${width}×${height} menu overflow is scrollable rather than clipped`);
+      assert.ok(initial.title.top >= initial.app.top && initial.title.bottom <= initial.app.bottom,
+        `${width}×${height} title stays inside the first view: ${JSON.stringify(initial.title)}`);
+      assert.ok(initial.play.top >= initial.app.top && initial.play.bottom <= initial.app.bottom,
+        `${width}×${height} Play button stays inside the first view: ${JSON.stringify(initial.play)}`);
+
+      await cdp.evaluate("(() => { const menu=document.getElementById('screen-start'); menu.scrollTop=menu.scrollHeight; return menu.scrollTop; })()");
+      const bottom = await cdp.evaluate(`(() => {
+        const rect = (selector) => { const r = document.querySelector(selector).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
+        const menu = document.getElementById('screen-start');
+        return { scrollTop: menu.scrollTop, app: rect('#app'), hint: rect('#controls-hint'), guide: rect('.guide-quick-link-wrap'), runs: rect('.runs-line') };
+      })()`);
+      assert.ok(bottom.scrollTop > 0, `${width}×${height} menu scrolls to its lower content`);
+      assert.ok(bottom.hint.top >= bottom.app.top && bottom.hint.bottom <= bottom.app.bottom,
+        `${width}×${height} controls hint can be fully viewed: ${JSON.stringify(bottom.hint)}`);
+      assert.ok(bottom.hint.bottom <= bottom.guide.top, `${width}×${height} hint does not overlap the guide link`);
+      assert.ok(bottom.runs.top >= bottom.app.top && bottom.runs.bottom <= bottom.app.bottom,
+        `${width}×${height} final menu row is reachable: ${JSON.stringify(bottom.runs)}`);
+      await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
+      console.log(`MENU VIEWPORT OK · ${width}×${height}`);
+    }
+    for (const [width, height] of [[320, 568], [320, 480], [320, 400]]) await checkShortMenuViewport(width, height);
+    await cdp.send('Emulation.clearDeviceMetricsOverride');
+    await waitFor(() => cdp.evaluate('innerWidth > 320 && innerHeight > 400'), 'restore desktop viewport');
     const menuHint = await cdp.evaluate("document.getElementById('controls-hint').textContent");
     assert.match(menuHint, /Pause: ⏸ or Esc/i, 'the main-menu hint names the touch-accessible pause button and keyboard shortcut');
 
