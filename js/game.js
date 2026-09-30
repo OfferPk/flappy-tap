@@ -8298,15 +8298,21 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
     var fill = document.getElementById('splash-progress-fill');
     var pctEl = document.getElementById('splash-progress-pct');
     var hint = document.querySelector('.splash-hint');
+    var progress = document.getElementById('splash-progress-bar');
     pct = Math.max(0, Math.min(100, pct | 0));
     if (fill) fill.style.width = pct + '%';
     if (pctEl) pctEl.textContent = pct + '%';
     if (hint && label) hint.textContent = label;
+    if (progress) {
+      progress.setAttribute('aria-valuenow', String(pct));
+      progress.setAttribute('aria-valuetext', (label ? label + ' · ' : '') + pct + '%');
+    }
   }
   function hideBootSplash() {
     var splash = document.getElementById('boot-splash');
     if (!splash || splash.hidden) return;
     setBootProgress(100, 'Ready — Urr Jao!');
+    announceGameEvent('Game ready.');
     splash.classList.add('splash-hide');
     setTimeout(function () {
       splash.hidden = true;
@@ -8314,6 +8320,7 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
     }, 450);
   }
   function runBootSequence() {
+    announceGameEvent('Loading game.');
     setBootProgress(12, 'Warming engines…');
     setTimeout(function () { setBootProgress(38, 'Loading skins…'); }, 90);
     setTimeout(function () { setBootProgress(62, 'Tuning audio…'); }, 180);

@@ -107,7 +107,7 @@ for (const n of ['BIRD_PASSIVES', 'weatherMods', 'sunset', 'pickBossKind', 'SEAS
   if (!skins.includes(n)) { console.error('MISSING in skins.js:', n); ok = false; }
 }
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-if (!sw.includes('urrjaa-v93-20260930')) { console.error('SW cache not bumped'); ok = false; }
+if (!sw.includes('urrjaa-v94-20260930')) { console.error('SW cache not bumped'); ok = false; }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (pkg.version !== '3.58.5-urrjaa') { console.error('package version', pkg.version); ok = false; }
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -156,6 +156,7 @@ if (!html.includes('apple-mobile-web-app-title')) { console.error('iOS PWA title
 if (!html.includes('3.21:')) { console.error('guide 3.21 missing'); ok = false; }
 if (!html.includes('large-buttons-toggle') || !html.includes('Larger buttons')) { console.error('3.22 large buttons missing'); ok = false; }
 if (!html.includes('seasonal-hint') || !html.includes('splash-progress-fill')) { console.error('3.22 splash/seasonal missing'); ok = false; }
+if (!html.includes('id="boot-splash" class="boot-splash" aria-live="off"') || !html.includes('id="splash-progress-bar"') || !html.includes('aria-valuetext="0%"')) { console.error('accessible boot progress semantics missing'); ok = false; }
 if (!html.includes('name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"')) { console.error('user-zoomable viewport missing'); ok = false; }
 if (!html.includes('id="game-announcer"') || !html.includes('id="btn-export-progress"') || !html.includes('id="btn-import-progress"')) { console.error('accessibility/data-transfer controls missing'); ok = false; }
 if (!html.includes('3.22:')) { console.error('guide 3.22 missing'); ok = false; }

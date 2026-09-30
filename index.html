@@ -21,11 +21,11 @@
 <body class="has-notch-pad">
   <div id="game-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="notch-pad" class="notch-pad" aria-hidden="true"></div>
-  <div id="boot-splash" class="boot-splash" role="status" aria-live="polite">
+  <div id="boot-splash" class="boot-splash" aria-live="off">
     <div class="splash-inner">
       <div class="splash-logo">Urr Jaa!</div>
       <div class="splash-ur">اڑ جا!</div>
-      <div class="splash-bar splash-bar-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading">
+      <div id="splash-progress-bar" class="splash-bar splash-bar-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0%" aria-label="Loading">
         <span id="splash-progress-fill"></span>
       </div>
       <p id="splash-progress-pct" class="splash-pct">0%</p>

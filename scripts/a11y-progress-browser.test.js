@@ -153,8 +153,46 @@ class DevTools {
 
     // Seed a deterministic local save and skip first-run coach marks, then reload so the game initializes from it.
     await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:runs','10'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); localStorage.setItem('flappy-tap:resume-countdown','1'); true");
+    const splashObserverScript = await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+      window.__bootSplashProgressSamples = [];
+      let previous = '';
+      const capture = () => {
+        const splash = document.getElementById('boot-splash');
+        const progress = document.getElementById('splash-progress-bar');
+        const percentage = document.getElementById('splash-progress-pct');
+        const hint = document.querySelector('.splash-hint');
+        const announcer = document.getElementById('game-announcer');
+        if (!splash || !progress || !percentage || !hint || !announcer) return;
+        const sample = {role:splash.getAttribute('role'),live:splash.getAttribute('aria-live'),value:progress.getAttribute('aria-valuenow'),valueText:progress.getAttribute('aria-valuetext'),percentage:percentage.textContent,hint:hint.textContent,announcement:announcer.textContent};
+        const key = JSON.stringify(sample);
+        if (key !== previous) { window.__bootSplashProgressSamples.push(sample); previous = key; }
+      };
+      const observer = new MutationObserver(capture);
+      observer.observe(document, {subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['aria-valuenow','aria-valuetext']});
+      window.__stopBootSplashProgressObserver = () => observer.disconnect();
+      capture();
+    })();` });
     await cdp.send('Page.reload', { ignoreCache: true });
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden"), 'menu after boot');
+    const bootProgressSamples = await cdp.evaluate("window.__bootSplashProgressSamples || []");
+    await cdp.evaluate("window.__stopBootSplashProgressObserver && window.__stopBootSplashProgressObserver()");
+    await cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: splashObserverScript.result.identifier });
+    const bootProgressByValue = Object.fromEntries(bootProgressSamples.filter((sample) => sample.value).map((sample) => [sample.value, sample]));
+    for (const value of ['12', '38', '62', '85', '100']) {
+      const sample = bootProgressByValue[value];
+      assert.ok(sample, `boot progress exposes ${value}% to the browser`);
+      assert.deepEqual({role:sample.role,live:sample.live,percentage:sample.percentage,valueText:sample.valueText},
+        {role:null,live:'off',percentage:`${value}%`,valueText:`${sample.hint} · ${value}%`},
+        `boot progress ${value}% remains available without a live-region announcement`);
+    }
+    for (const value of ['38', '62', '85']) {
+      assert.equal(bootProgressByValue[value].announcement,'Loading game.',`${value}% progress does not replace the single loading announcement`);
+    }
+    assert.ok(bootProgressSamples.some((sample) => sample.value === '100' && sample.announcement === 'Game ready.'),
+      'boot completion is announced once after progress reaches 100%');
+    const bootFinalSemantics = await cdp.evaluate("(() => {const s=document.getElementById('boot-splash'),p=document.getElementById('splash-progress-bar');return {role:s.getAttribute('role'),live:s.getAttribute('aria-live'),progressRole:p.getAttribute('role'),value:p.getAttribute('aria-valuenow'),valueText:p.getAttribute('aria-valuetext'),visiblePercent:document.getElementById('splash-progress-pct').textContent,hint:document.querySelector('.splash-hint').textContent,announcement:document.getElementById('game-announcer').textContent};})()");
+    assert.deepEqual(bootFinalSemantics,{role:null,live:'off',progressRole:'progressbar',value:'100',valueText:'Ready — Urr Jao! · 100%',visiblePercent:'100%',hint:'Ready — Urr Jao!',announcement:'Game ready.'},
+      'the finished splash keeps its final visible and accessible progress and announces readiness');
     const dailyCountdowns = await cdp.evaluate(`(() => {
       const menu = document.getElementById('daily-reset-countdown');
       const modes = document.getElementById('daily-reset-countdown-modes');
