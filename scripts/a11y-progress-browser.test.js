@@ -246,10 +246,14 @@ class DevTools {
     await cdp.press('Enter', 'Enter', 13);
     await waitFor(() => cdp.evaluate("document.activeElement.tagName === 'H2' && !!document.activeElement.closest('#screen-settings')"), 'settings focus for negative imports');
 
-    async function verifyRejectedImport(label, fileText, confirmDecision, expectedStatus, expectedConfirmCalls) {
+    async function snapshotLocalStorage() {
+      return cdp.evaluate("(() => { const entries=[]; for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);entries.push([key,localStorage.getItem(key)]);} return entries.sort((a,b)=>a[0].localeCompare(b[0])); })()");
+    }
+    async function verifyRejectedImport(label, fileText, confirmDecision, expectedStatus, expectedConfirmCalls, fileSizeBytes) {
       await cdp.evaluate("localStorage.setItem('flappy-tap:best','209'); localStorage.setItem('flappy-tap:coins','51'); true");
       const before = await cdp.evaluate("({timeOrigin:performance.timeOrigin,best:localStorage.getItem('flappy-tap:best'),coins:localStorage.getItem('flappy-tap:coins')})");
-      const encoded = JSON.stringify(fileText);
+      const beforeSnapshot = await snapshotLocalStorage();
+      const fileParts = fileSizeBytes ? `new Uint8Array(${fileSizeBytes})` : JSON.stringify(fileText);
       await cdp.evaluate(`(() => {
         const input = document.getElementById('progress-import-file');
         window.__importConfirmMessage = '';
@@ -264,7 +268,7 @@ class DevTools {
         input.click = function () {
           window.__importChooserRequests++;
           const transfer = new DataTransfer();
-          transfer.items.add(new File([${encoded}], 'test-progress-backup.json', { type: 'application/json' }));
+          transfer.items.add(new File([${fileParts}], 'test-progress-backup.json', { type: 'application/json' }));
           this.files = transfer.files;
           this.dispatchEvent(new Event('change', { bubbles: true }));
         };
@@ -279,6 +283,7 @@ class DevTools {
       assert.equal(after.best, before.best, label + ' preserves the saved best score');
       assert.equal(after.coins, before.coins, label + ' preserves the saved coins');
       assert.equal(after.timeOrigin, before.timeOrigin, label + ' does not reload the page');
+      assert.deepEqual(await snapshotLocalStorage(), beforeSnapshot, label + ' preserves every saved localStorage entry');
     }
 
     await verifyRejectedImport('cancelled backup import', backupText, false, 'Import cancelled. Nothing was changed.', 1);
@@ -287,6 +292,49 @@ class DevTools {
     await verifyRejectedImport('malformed backup data', malformedSchema, true, 'Invalid, unsupported, or damaged backup.', 1);
     const unsupportedVersion = Object.assign({}, backup, { version: backup.version + 1 });
     await verifyRejectedImport('unsupported backup version', JSON.stringify(unsupportedVersion), true, 'Unsupported or invalid progress backup.', 0);
+    await verifyRejectedImport('oversized backup file', '', true, 'That file is too large to be a valid progress backup.', 0, 256 * 1024 + 1);
+
+    // Fail once after earlier keys have been written, then allow the transaction's rollback writes to succeed.
+    await cdp.evaluate(`(() => {
+      const input = document.getElementById('progress-import-file');
+      window.__importConfirmCalls = 0;
+      window.__importChooserRequests = 0;
+      window.__storageFailureTriggered = false;
+      window.__importWriteAttempts = [];
+      window.confirm = () => { window.__importConfirmCalls++; return true; };
+      window.__nativeStorageSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key, value) {
+        window.__importWriteAttempts.push(key);
+        if (key === 'flappy-tap:coins' && !window.__storageFailureTriggered) {
+          window.__storageFailureTriggered = true;
+          throw new DOMException('simulated localStorage quota failure', 'QuotaExceededError');
+        }
+        return window.__nativeStorageSetItem.call(this, key, value);
+      };
+      input.click = function () {
+        window.__importChooserRequests++;
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([${JSON.stringify(backupText)}], 'test-progress-backup.json', { type: 'application/json' }));
+        this.files = transfer.files;
+        this.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      return true;
+    })()`);
+    const beforeFailedImport = await snapshotLocalStorage();
+    const failedImportTimeOrigin = await cdp.evaluate('performance.timeOrigin');
+    await cdp.evaluate("document.getElementById('btn-import-progress').focus(); true");
+    await cdp.press('Enter', 'Enter', 13);
+    await waitFor(() => cdp.evaluate("document.getElementById('progress-transfer-status').textContent.includes('Browser storage could not save the backup.')"), 'simulated storage-write failure status');
+    const failedImport = await cdp.evaluate("({timeOrigin:performance.timeOrigin,confirmCalls:window.__importConfirmCalls,chooserRequests:window.__importChooserRequests,failureTriggered:window.__storageFailureTriggered,attempts:window.__importWriteAttempts})");
+    assert.equal(failedImport.confirmCalls, 1, 'storage-write failure import was confirmed');
+    assert.equal(failedImport.chooserRequests, 1, 'storage-write failure import used the UI file picker');
+    assert.equal(failedImport.failureTriggered, true, 'the simulated quota error occurred');
+    assert.ok(failedImport.attempts.indexOf('flappy-tap:best') >= 0 && failedImport.attempts.indexOf('flappy-tap:coins') > failedImport.attempts.indexOf('flappy-tap:best'),
+      'at least one earlier field was written before the simulated failure');
+    assert.equal(failedImport.timeOrigin, failedImportTimeOrigin, 'failed storage import does not reload the page');
+    assert.deepEqual(await snapshotLocalStorage(), beforeFailedImport, 'rollback restores every existing localStorage entry');
+    assert.match(await cdp.evaluate("document.getElementById('progress-transfer-status').textContent"), /Existing progress was restored/i);
+    await cdp.evaluate("Storage.prototype.setItem = window.__nativeStorageSetItem; true");
 
     // The real live region is checked after keyboard-triggered gameplay events, with no frame-by-frame score narration.
     await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); true");
@@ -309,7 +357,7 @@ class DevTools {
     const resumeAnnouncement = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'resume announcement');
     assert.equal(resumeAnnouncement, 'Game resumed.');
 
-    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · event announcements · valid/cancelled/malformed/unsupported backup flows');
+    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · event announcements · valid/rejected/oversized imports · rollback after simulated storage failure');
   } finally {
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
     if (browser && browser.exitCode === null) {
