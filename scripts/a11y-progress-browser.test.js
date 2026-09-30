@@ -1274,13 +1274,26 @@ class DevTools {
       await clickShareControl('#btn-share');
       await waitFor(()=>cdp.evaluate("!document.getElementById('share-preview').hidden"),'share preview opens');
     };
+    const pressShiftTab = async () => {
+      const params={key:'Tab',code:'Tab',windowsVirtualKeyCode:9,nativeVirtualKeyCode:9,modifiers:8};
+      await cdp.send('Input.dispatchKeyEvent',Object.assign({type:'keyDown'},params));
+      await cdp.send('Input.dispatchKeyEvent',Object.assign({type:'keyUp'},params));
+      await delay(35);
+    };
     await cdp.evaluate("window.__shareProbe.errorName='AbortError';document.getElementById('toast').textContent='share cancel baseline';true");
     await openSharePreview();
+    const shareDialogEntry = await cdp.evaluate("(() => {const overlay=document.getElementById('share-preview'),dialog=overlay.querySelector('[role=dialog]');return {open:!overlay.hidden,inside:overlay.contains(document.activeElement),activeClose:document.activeElement===overlay.querySelector('.panel-close'),role:dialog.getAttribute('role'),modal:dialog.getAttribute('aria-modal')};})()");
+    assert.deepEqual(shareDialogEntry,{open:true,inside:true,activeClose:true,role:'dialog',modal:'true'},'opening the modal Share preview moves focus to its Close control');
+    await cdp.evaluate("document.getElementById('btn-share-close').focus(); true");
+    await cdp.press('Tab','Tab',9);
+    assert.equal(await cdp.evaluate("document.activeElement===document.querySelector('#share-preview .panel-close')"),true,'Tab from the final dialog control wraps to its first control');
+    await pressShiftTab();
+    assert.equal(await cdp.evaluate("document.activeElement.id==='btn-share-close'"),true,'Shift+Tab from the first dialog control wraps to its final control');
     await clickShareControl('#btn-share-confirm');
     await waitFor(()=>cdp.evaluate('window.__shareProbe.shareCalls===1'),'text share sheet opens');
     await delay(80);
-    const cancelledTextShare=await cdp.evaluate("({shareCalls:window.__shareProbe.shareCalls,copyCalls:window.__shareProbe.copyCalls,downloads:window.__shareProbe.downloads,toast:document.getElementById('toast').textContent})");
-    assert.deepEqual(cancelledTextShare,{shareCalls:1,copyCalls:0,downloads:0,toast:'share cancel baseline'},'cancelling text sharing does not silently copy text or report a false success');
+    const cancelledTextShare=await cdp.evaluate("({shareCalls:window.__shareProbe.shareCalls,copyCalls:window.__shareProbe.copyCalls,downloads:window.__shareProbe.downloads,toast:document.getElementById('toast').textContent,focus:document.activeElement.id})");
+    assert.deepEqual(cancelledTextShare,{shareCalls:1,copyCalls:0,downloads:0,toast:'share cancel baseline',focus:'btn-share'},'cancelling text sharing avoids surprise fallback and restores focus to the Share trigger');
 
     await cdp.evaluate("document.getElementById('toast').textContent='image cancel baseline';true");
     await openSharePreview();
@@ -1290,7 +1303,14 @@ class DevTools {
     const cancelledImageShare=await cdp.evaluate("({shareCalls:window.__shareProbe.shareCalls,copyCalls:window.__shareProbe.copyCalls,downloads:window.__shareProbe.downloads,toast:document.getElementById('toast').textContent,previewHidden:document.getElementById('share-preview').hidden})");
     assert.deepEqual(cancelledImageShare,{shareCalls:2,copyCalls:0,downloads:0,toast:'image cancel baseline',previewHidden:false},'cancelling image sharing does not start an unrequested download and leaves the share choices available');
     await clickShareControl('#btn-share-close');
-    await waitFor(()=>cdp.evaluate("document.getElementById('share-preview').hidden"),'share preview closes after cancellation');
+    assert.equal(await waitFor(()=>cdp.evaluate("document.getElementById('share-preview').hidden&&document.activeElement.id==='btn-share'"),'Share preview close returns focus after cancellation'),true,'the footer Close button restores focus to its opener');
+
+    await openSharePreview();
+    await cdp.evaluate("document.querySelector('#share-preview .panel-close').click(); true");
+    assert.equal(await waitFor(()=>cdp.evaluate("document.getElementById('share-preview').hidden&&document.activeElement.id==='btn-share'"),'X close restores Share focus'),true,'the dialog X control restores focus to its opener');
+    await openSharePreview();
+    await cdp.press('Escape','Escape',27);
+    assert.equal(await waitFor(()=>cdp.evaluate("document.getElementById('share-preview').hidden&&document.activeElement.id==='btn-share'"),'Escape closes Share dialog and restores focus'),true,'Escape closes the dialog and returns focus to the Share button');
 
     await cdp.evaluate("window.__shareProbe.errorName='NotAllowedError';document.getElementById('toast').textContent='text fallback baseline';true");
     await openSharePreview();

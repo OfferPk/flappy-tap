@@ -1847,6 +1847,46 @@ function updateComboMeter(visible) {
     }
   }
 
+  var sharePreviewReturnFocus = null;
+  function sharePreviewFocusableControls(overlay) {
+    var candidates = overlay.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    var controls = [];
+    for (var i = 0; i < candidates.length; i++) {
+      if (candidates[i].getClientRects().length && candidates[i].getAttribute('aria-hidden') !== 'true') controls.push(candidates[i]);
+    }
+    return controls;
+  }
+
+  function trapSharePreviewTab(event) {
+    if (event.key !== 'Tab') return;
+    var overlay = document.getElementById('share-preview');
+    if (!overlay || overlay.hidden) return;
+    var controls = sharePreviewFocusableControls(overlay);
+    if (!controls.length) { event.preventDefault(); return; }
+    var first = controls[0];
+    var last = controls[controls.length - 1];
+    if (!overlay.contains(document.activeElement)) {
+      event.preventDefault();
+      focusElementSafely(event.shiftKey ? last : first);
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      focusElementSafely(last);
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      focusElementSafely(first);
+    }
+  }
+
+  function closeSharePreview() {
+    var overlay = document.getElementById('share-preview');
+    if (overlay) overlay.hidden = true;
+    document.removeEventListener('keydown', trapSharePreviewTab, true);
+    var returnTarget = sharePreviewReturnFocus;
+    sharePreviewReturnFocus = null;
+    if (returnTarget && returnTarget.isConnected && returnTarget.getClientRects().length) focusElementSafely(returnTarget);
+    else if (btnShare && btnShare.getClientRects().length) focusElementSafely(btnShare);
+  }
+
   function openSharePreview() {
     var overlay = document.getElementById('share-preview');
     var body = document.getElementById('share-preview-body');
@@ -1854,6 +1894,10 @@ function updateComboMeter(visible) {
     if (!overlay || !body) {
       shareRunSummary();
       return;
+    }
+    if (overlay.hidden) {
+      var activeElement = document.activeElement;
+      sharePreviewReturnFocus = activeElement && activeElement !== document.body && !overlay.contains(activeElement) ? activeElement : btnShare;
     }
     var m = medalFor(score);
     var modeLabel = MODE_SHARE_LABELS[playMode] || playMode;
@@ -1886,6 +1930,9 @@ function updateComboMeter(visible) {
     } catch (errImg) { /* ignore */ }
     if (textEl) textEl.textContent = buildShareText();
     overlay.hidden = false;
+    document.addEventListener('keydown', trapSharePreviewTab, true);
+    var firstFocusable = sharePreviewFocusableControls(overlay)[0];
+    if (firstFocusable) focusElementSafely(firstFocusable);
     overlay.classList.remove('share-pop');
     void overlay.offsetWidth;
     overlay.classList.add('share-pop');
@@ -6145,8 +6192,7 @@ function updateComboMeter(visible) {
       return true;
     }
     if (key === 'share') {
-      var ov = document.getElementById('share-preview');
-      if (ov) ov.hidden = true;
+      closeSharePreview();
       return true;
     }
     if (key === 'spin-unlock') { dismissSpinUnlockPopup(); return true; }
@@ -6245,7 +6291,7 @@ function updateComboMeter(visible) {
       return true;
     }
     var share = document.getElementById('share-preview');
-    if (share && !share.hidden) { share.hidden = true; return true; }
+    if (share && !share.hidden) { closeSharePreview(); return true; }
     if (spinUnlockOverlay && !spinUnlockOverlay.hidden) { dismissSpinUnlockPopup(); return true; }
     if (mysteryOverlay && !mysteryOverlay.hidden) { mysteryOverlay.hidden = true; return true; }
     var ad = document.getElementById('ad-stub-modal');
@@ -6327,8 +6373,7 @@ function updateComboMeter(visible) {
   var btnShareCopy = document.getElementById('btn-share-copy');
   var btnShareClose = document.getElementById('btn-share-close');
   if (btnShareConfirm) btnShareConfirm.addEventListener('click', function () {
-    var ov = document.getElementById('share-preview');
-    if (ov) ov.hidden = true;
+    closeSharePreview();
     shareRunSummary();
   });
   var btnShareImage = document.getElementById('btn-share-image');
@@ -6339,8 +6384,7 @@ function updateComboMeter(visible) {
     copyShareText(buildShareText());
   });
   if (btnShareClose) btnShareClose.addEventListener('click', function () {
-    var ov = document.getElementById('share-preview');
-    if (ov) ov.hidden = true;
+    closeSharePreview();
   });
 
 
