@@ -1680,6 +1680,19 @@ class DevTools {
     await waitFor(()=>cdp.evaluate('window.__shareProbe.shareCalls===4&&window.__shareProbe.downloads===1'),'image share failure fallback');
     const imageShareFallback=await cdp.evaluate("({copyCalls:window.__shareProbe.copyCalls,downloads:window.__shareProbe.downloads,toast:document.getElementById('toast').textContent})");
     assert.deepEqual(imageShareFallback,{copyCalls:1,downloads:1,toast:'Score card saved 📷'},'a non-cancellation image-share failure still saves the score card as a fallback');
+    if (!await cdp.evaluate("document.getElementById('share-preview').hidden")) {
+      await cdp.evaluate("document.getElementById('btn-share-close').click(); true");
+    }
+    await waitFor(()=>cdp.evaluate("document.getElementById('share-preview').hidden"),'Share preview closes before menu Space regression');
+    await cdp.evaluate("document.getElementById('btn-menu').click(); true");
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden && document.getElementById('screen-death').hidden"),'return to menu before Space regression');
+    const menuSpaceBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),shareHidden:document.getElementById('share-preview').hidden})");
+    await cdp.evaluate("document.body.tabIndex=-1; document.body.focus(); true");
+    await cdp.press(' ','Space',32);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('hud').hidden && document.getElementById('screen-start').hidden && window.FTStorage.getRunCount()==="+(menuSpaceBefore.runs+1)), 'Space starts Classic from the menu with the nested Share dialog hidden');
+    const menuSpaceAfter=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),shareHidden:document.getElementById('share-preview').hidden,hudVisible:!document.getElementById('hud').hidden})");
+    assert.deepEqual(menuSpaceAfter,{runs:menuSpaceBefore.runs+1,best:menuSpaceBefore.best,coins:menuSpaceBefore.coins,shareHidden:true,hudVisible:true},'a hidden nested Share dialog does not block the menu Space shortcut or change rewards/records');
+    console.log('MENU SPACE OK · hidden Share dialog no longer blocks a new Classic run');
     console.log('SHARE CANCELLATION OK · no surprise copy/download · real failures retain fallbacks');
 
     console.log('BROWSER A11Y/PROGRESS OK · gameplay focus/Space controls · first-run coaching · background pause/recovery · menu/pause/game-over preservation · event/run-end announcements · backup flows');
