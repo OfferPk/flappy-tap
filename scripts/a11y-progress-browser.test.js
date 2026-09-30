@@ -296,10 +296,20 @@ class DevTools {
       await cdp.press('Home', 'Home', 36);
       assert.deepEqual(await garageState(), {focus:'all',selected:'all',tabStops:1}, 'Home restores All as the Garage filter');
       await clickElementAt('#screen-garage .panel-close');
+      await cdp.evaluate("document.getElementById('btn-collection').scrollIntoView({block:'center',inline:'nearest'}); true");
+      await clickElementAt('#btn-collection');
+      const albumState = () => cdp.evaluate("(() => {const tabs=[...document.querySelectorAll('#collection-list [role=tab]')];const selected=tabs.find(t=>t.getAttribute('aria-selected')==='true');return {focus:document.activeElement.dataset.filter||'',selected:selected&&selected.dataset.filter,tabStops:tabs.filter(t=>t.tabIndex===0).length};})()");
+      await cdp.evaluate("document.querySelector('#collection-list [role=tab][data-filter=all]').focus(); true");
+      assert.deepEqual(await albumState(), {focus:'all',selected:'all',tabStops:1}, 'Album starts with All as the focused, selected filter');
+      await cdp.press('ArrowRight', 'ArrowRight', 39);
+      assert.deepEqual(await albumState(), {focus:'owned',selected:'owned',tabStops:1}, 'Right Arrow moves Album focus and selects Owned');
+      await cdp.press('ArrowRight', 'ArrowRight', 39);
+      assert.deepEqual(await albumState(), {focus:'locked',selected:'locked',tabStops:1}, 'Right Arrow continues through the rebuilt Album filter list');
+      await clickElementAt('#screen-collection .panel-close');
       await cdp.evaluate("document.getElementById('screen-start').scrollTop=0;document.documentElement.scrollTop=0;document.body.scrollTop=0;window.scrollTo(0,0);true");
       const progressAfter = await cdp.evaluate("({best:localStorage.getItem('flappy-tap:best'),coins:localStorage.getItem('flappy-tap:coins'),runs:localStorage.getItem('flappy-tap:runs')})");
-      assert.deepEqual(progressAfter, progressBefore, 'Guide and Garage keyboard navigation leaves saved gameplay progress unchanged');
-      console.log('TABLIST KEYBOARD OK · Guide and Garage · saved progress unchanged');
+      assert.deepEqual(progressAfter, progressBefore, 'Guide, Garage, and Album keyboard navigation leaves saved gameplay progress unchanged');
+      console.log('TABLIST KEYBOARD OK · Guide, Garage, and Album · saved progress unchanged');
     }
     async function checkShortMenuViewport(width, height) {
       await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
@@ -1474,12 +1484,12 @@ class DevTools {
       {toast:stageClearMessage,toastHidden:false,toastLive:null,gameAnnouncement:stageClearMessage,gameLiveRole:'status',gameLive:'polite'},
       'stage-clear visual copy names the newly unlocked stage and reward, and the same concise message is announced once through the polite live region');
     console.log('CHALLENGE CLEAR ANNOUNCEMENT OK · Stage 2: Bridge Dash · +40 coins · synchronized toast/live region');
-    const challengeWinResult=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('screen-death');return !d.hidden&&document.activeElement.id==='run-summary-heading'&&window.FTStorage.getRunCount()==="+(challengeWinBefore.runs+1)+"?{mode:document.getElementById('mode-death-value').textContent,stageLabel:document.getElementById('mode-badge').textContent,score:document.getElementById('final-score').textContent,button:document.getElementById('btn-retry').textContent.trim(),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),coins:window.FTStorage.getCoins()}:null;})()"),'Stage 1 clear Run Summary',20000);
+    const challengeWinResult=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('screen-death');return !d.hidden&&document.activeElement.id==='run-summary-heading'&&window.FTStorage.getRunCount()==="+(challengeWinBefore.runs+1)+"?{mode:document.getElementById('mode-death-value').textContent,stageLabel:document.getElementById('mode-badge').textContent,score:document.getElementById('final-score').textContent,button:document.getElementById('btn-retry').textContent.trim(),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),coins:window.FTStorage.getCoins(),runCoins:Number(document.getElementById('run-coins').textContent)}:null;})()"),'Stage 1 clear Run Summary',20000);
     assert.equal(challengeWinResult.mode,'Challenge','the completed stage still identifies its finished run as Challenge');
     assert.ok(Number(challengeWinResult.score)>=1,'the cleared Challenge run retains a positive score');
     assert.ok(challengeWinResult.stageLabel.includes('City Warm-up'),'the stage clear belongs to Stage 1');
     assert.equal(challengeWinResult.best,Math.max(challengeWinBefore.best,Number(challengeWinResult.score)),'the Challenge score updates the best only when it exceeds the prior record');
-    assert.deepEqual({focus:await cdp.evaluate('document.activeElement.id'),runs:challengeWinResult.runs,stage:challengeWinResult.stage,coins:challengeWinResult.coins},
+    assert.deepEqual({focus:await cdp.evaluate('document.activeElement.id'),runs:challengeWinResult.runs,stage:challengeWinResult.stage,coins:challengeWinResult.coins-challengeWinResult.runCoins},
       {focus:'run-summary-heading',runs:challengeWinBefore.runs+1,stage:2,coins:challengeWinBefore.coins+40},
       'stage clear focuses the summary, counts one run, awards the Stage 1 reward once, and unlocks Stage 2');
     assert.equal(challengeWinResult.button,'PLAY CLASSIC','the completed-stage button labels its intentional Classic transition clearly');
@@ -1488,7 +1498,7 @@ class DevTools {
     await waitFor(()=>cdp.evaluate("!document.getElementById('hud').hidden&&document.activeElement.id==='game'&&window.FTStorage.getRunCount()==="+(challengeWinBefore.runs+2)+"&&document.getElementById('game-announcer').textContent.includes('Classic run started')"),'completed-stage action starts Classic');
     const challengeWinRetry=await cdp.evaluate("({focus:document.activeElement.id,announcement:document.getElementById('game-announcer').textContent,score:document.getElementById('score-display').textContent,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),coins:window.FTStorage.getCoins()})");
     assert.deepEqual({focus:challengeWinRetry.focus,score:challengeWinRetry.score,runs:challengeWinRetry.runs,best:challengeWinRetry.best,stage:challengeWinRetry.stage,coins:challengeWinRetry.coins},
-      {focus:'game',score:'0',runs:challengeWinBefore.runs+2,best:challengeWinResult.best,stage:2,coins:challengeWinBefore.coins+40},
+      {focus:'game',score:'0',runs:challengeWinBefore.runs+2,best:challengeWinResult.best,stage:2,coins:challengeWinBefore.coins+40+challengeWinResult.runCoins},
       'the post-clear action starts one Classic run, resets only live score, and preserves the best score, Stage 2 unlock, and one-time reward');
     assert.match(challengeWinRetry.announcement,/Classic run started/,'the started mode is announced as Classic');
     await cdp.evaluate("document.getElementById('btn-pause').focus(); true");

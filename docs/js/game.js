@@ -7991,6 +7991,8 @@ function updateComboMeter(visible) {
       fb.addEventListener('click', function () {
         collectionFilter = f.id;
         refreshCollection();
+        var refreshedTab = collectionList.querySelector('[role="tab"][data-filter="' + f.id + '"]');
+        if (refreshedTab) refreshedTab.focus();
       });
       filterRow.appendChild(fb);
     });
@@ -8326,25 +8328,30 @@ if (btnGifts) btnGifts.addEventListener('click', function () { openGiftsScreen()
       tabs.forEach(function (tab) { tab.tabIndex = tab === selected ? 0 : -1; });
     });
   }
-  document.querySelectorAll('[role="tablist"]').forEach(function (list) {
-    list.addEventListener('keydown', function (e) {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      var current = e.target && e.target.closest ? e.target.closest('[role="tab"]') : null;
-      if (!current || !list.contains(current)) return;
-      var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]:not([disabled])'));
-      var index = tabs.indexOf(current);
-      if (index < 0 || !tabs.length) return;
-      var direction = getComputedStyle(list).direction === 'rtl' ? -1 : 1;
-      var next = -1;
-      if (e.key === 'ArrowRight') next = (index + direction + tabs.length) % tabs.length;
-      else if (e.key === 'ArrowLeft') next = (index - direction + tabs.length) % tabs.length;
-      else if (e.key === 'Home') next = 0;
-      else if (e.key === 'End') next = tabs.length - 1;
-      if (next < 0) return;
-      e.preventDefault();
-      tabs[next].focus();
-      tabs[next].click();
-    });
+  // Delegate so tablists created after startup (such as the Album filters) stay keyboard-accessible.
+  document.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    var current = e.target && e.target.closest ? e.target.closest('[role="tab"]') : null;
+    var list = current && current.closest ? current.closest('[role="tablist"]') : null;
+    if (!current || !list || !list.contains(current)) return;
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]:not([disabled])'));
+    var index = tabs.indexOf(current);
+    if (index < 0 || !tabs.length) return;
+    var direction = getComputedStyle(list).direction === 'rtl' ? -1 : 1;
+    var next = -1;
+    if (e.key === 'ArrowRight') next = (index + direction + tabs.length) % tabs.length;
+    else if (e.key === 'ArrowLeft') next = (index - direction + tabs.length) % tabs.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = tabs.length - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    var nextTab = tabs[next];
+    nextTab.focus();
+    nextTab.click();
+    if (nextTab.dataset.filter) {
+      var refreshedTab = document.querySelector('#collection-list [role="tab"][data-filter="' + nextTab.dataset.filter + '"]');
+      if (refreshedTab) refreshedTab.focus();
+    }
   });
   document.addEventListener('click', syncTablistRovingFocus);
   syncTablistRovingFocus();
