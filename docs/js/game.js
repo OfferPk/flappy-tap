@@ -2197,12 +2197,14 @@ function updateComboMeter(visible) {
         if (state === 'playing') {
           pauseGame();
         } else if (state === 'paused' && resumeCountdownBusy) {
-          hideResumeCountdown();
-          if (screenPause) screenPause.hidden = false;
-          setPauseBlur(true);
-          focusElementSafely(document.getElementById('btn-resume'));
+          resumeCountdownCancelledWhileHidden = cancelResumeCountdown(false, false);
         }
         return;
+      }
+      if (resumeCountdownCancelledWhileHidden) {
+        resumeCountdownCancelledWhileHidden = false;
+        announceGameEvent('Resume cancelled. The game remains paused.');
+        focusElementSafely(document.getElementById('btn-resume'));
       }
       if (state === 'menu') maybePlayShimmer();
     });
@@ -2408,11 +2410,23 @@ function updateComboMeter(visible) {
   }
   var resumeCountdownTimer = 0;
   var resumeCountdownBusy = false;
+  var resumeCountdownCancelledWhileHidden = false;
 
   function hideResumeCountdown() {
     if (resumeCountdownEl) resumeCountdownEl.hidden = true;
     if (resumeCountdownTimer) { clearTimeout(resumeCountdownTimer); resumeCountdownTimer = 0; }
     resumeCountdownBusy = false;
+  }
+
+  function cancelResumeCountdown(announce, restoreFocus) {
+    if (!resumeCountdownBusy) return false;
+    hideResumeCountdown();
+    state = 'paused';
+    if (screenPause) screenPause.hidden = false;
+    setPauseBlur(true);
+    if (announce !== false) announceGameEvent('Resume cancelled. The game remains paused.');
+    if (restoreFocus !== false) focusElementSafely(document.getElementById('btn-resume'));
+    return true;
   }
 
   function finishResumeFromPause() {
@@ -2441,6 +2455,7 @@ function updateComboMeter(visible) {
       return;
     }
     resumeCountdownBusy = true;
+    announceGameEvent('Game resumes in 3 seconds.');
     if (screenPause) screenPause.hidden = true;
     setPauseBlur(false);
     resumeCountdownEl.hidden = false;
@@ -6226,10 +6241,7 @@ function updateComboMeter(visible) {
 
   function closeTopOverlayOrPanel() {
     if (resumeCountdownBusy) {
-      hideResumeCountdown();
-      state = 'paused';
-      if (screenPause) screenPause.hidden = false;
-      setPauseBlur(true);
+      cancelResumeCountdown();
       return true;
     }
     var share = document.getElementById('share-preview');

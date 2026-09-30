@@ -1035,10 +1035,23 @@ class DevTools {
 
     await cdp.press('Enter', 'Enter', 13);
     await waitFor(() => cdp.evaluate("!document.getElementById('resume-countdown').hidden && document.getElementById('screen-pause').hidden"), 'resume countdown begins');
+    const resumeTimerSemantics = await cdp.evaluate("(() => {const e=document.getElementById('resume-countdown');return {role:e.getAttribute('role'),live:e.getAttribute('aria-live'),value:document.getElementById('resume-countdown-num').textContent};})()");
+    assert.deepEqual(resumeTimerSemantics,{role:'timer',live:'off',value:'3'},'the resume digits are available as a timer without a live announcement on each tick');
+    const resumeStartAnnouncement = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumes in 3 seconds.' && document.getElementById('game-announcer').textContent"), 'single resume countdown announcement');
+    assert.equal(resumeStartAnnouncement,'Game resumes in 3 seconds.');
+    assert.equal(await waitFor(() => cdp.evaluate("document.getElementById('resume-countdown-num').textContent === '2' && document.getElementById('resume-countdown-num').textContent"), 'visible resume countdown tick'),'2','visual digits still advance while live announcements stay quiet');
+    assert.equal(await cdp.evaluate("document.getElementById('game-announcer').textContent"),resumeStartAnnouncement,'countdown tick changes do not replace the concise start announcement');
     await changePageVisibility(true);
     await changePageVisibility(false);
+    await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Resume cancelled. The game remains paused.'"), 'resume cancellation announcement after tab return');
     const cancelledCountdownState = await cdp.evaluate("({pause:!document.getElementById('screen-pause').hidden,countdown:!document.getElementById('resume-countdown').hidden,focus:document.activeElement.id,announcement:document.getElementById('game-announcer').textContent})");
-    assert.deepEqual(cancelledCountdownState, { pause: true, countdown: false, focus: 'btn-resume', announcement: backgroundPause }, 'hiding during resume countdown cancels it and restores the explicit Resume control');
+    assert.deepEqual(cancelledCountdownState, { pause: true, countdown: false, focus: 'btn-resume', announcement: 'Resume cancelled. The game remains paused.' }, 'hiding during resume countdown cancels it, explains the paused state, and restores the explicit Resume control');
+    await cdp.press('Enter', 'Enter', 13);
+    assert.equal(await waitFor(() => cdp.evaluate("!document.getElementById('resume-countdown').hidden && document.getElementById('game-announcer').textContent === 'Game resumes in 3 seconds.'"), 'resume countdown restart after returning'), true);
+    await cdp.press('Escape', 'Escape', 27);
+    const escapeCountdownCancel = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Resume cancelled. The game remains paused.' && document.getElementById('game-announcer').textContent"), 'Escape cancels resume countdown');
+    assert.equal(escapeCountdownCancel,'Resume cancelled. The game remains paused.');
+    assert.equal(await cdp.evaluate("!document.getElementById('screen-pause').hidden && document.getElementById('resume-countdown').hidden && document.activeElement.id === 'btn-resume'"),true,'Escape restores the paused panel and Resume focus');
     await cdp.press('Enter', 'Enter', 13);
     assert.equal(await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'explicit resume after returning'), 'Game resumed.');
 
