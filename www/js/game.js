@@ -6322,6 +6322,8 @@ function updateComboMeter(visible) {
     }
     var share = document.getElementById('share-preview');
     if (share && !share.hidden) { closeSharePreview(); return true; }
+    var garagePreview = document.getElementById('garage-lp-preview');
+    if (garagePreview && !garagePreview.hidden) { closeGarageLongPreview(); return true; }
     if (spinUnlockOverlay && !spinUnlockOverlay.hidden) { dismissSpinUnlockPopup(); return true; }
     if (mysteryOverlay && !mysteryOverlay.hidden) { mysteryOverlay.hidden = true; return true; }
     var ad = document.getElementById('ad-stub-modal');
@@ -7439,12 +7441,15 @@ function updateComboMeter(visible) {
   }
   function closeGarageLongPreview() {
     var ov = document.getElementById('garage-lp-preview');
+    var restoreFocus = !!(ov && !ov.hidden && ov.contains(document.activeElement));
+    var focusTarget = garageLpCard;
     if (ov) ov.hidden = true;
     stopGarageLpAnim();
     garageLpOpened = false;
     garageLpCard = null;
     garageLpKind = null;
     garageLpId = null;
+    if (restoreFocus && focusTarget && focusTarget.isConnected) focusElementSafely(focusTarget);
   }
 
   function playEquipFanfareLight() {

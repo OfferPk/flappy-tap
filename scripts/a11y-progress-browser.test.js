@@ -1332,6 +1332,16 @@ class DevTools {
     assert.deepEqual(garageRestored,{query:'',shown:garageFiltered.cardCount,total:garageFiltered.cardCount},'clearing the Garage query restores every bird choice');
     const garageProgressAfter=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),stage:window.FTStorage.getChallengeStage()})");
     assert.deepEqual(garageProgressAfter,garageProgressBefore,'Garage search and clear preserve runs, best, coins, and Challenge unlocks');
+    const garagePreviewPoint=await cdp.evaluate("(()=>{const card=document.querySelector('#garage-birds .skin-card:not(.locked)');card.scrollIntoView({block:'center'});const r=card.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2,id:card.dataset.id};})()");
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:garagePreviewPoint.x,y:garagePreviewPoint.y});
+    await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:garagePreviewPoint.x,y:garagePreviewPoint.y,button:'left',clickCount:1});
+    await waitFor(()=>cdp.evaluate("(() => {const p=document.getElementById('garage-lp-preview');return p&&!p.hidden;})()"),'Garage long-press skin preview opens');
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:garagePreviewPoint.x,y:garagePreviewPoint.y,button:'left',clickCount:1});
+    await cdp.evaluate("document.getElementById('garage-lp-close').focus(); true");
+    await cdp.press('Escape','Escape',27);
+    const garagePreviewAfterEscape=await cdp.evaluate("({garageVisible:!document.getElementById('screen-garage').hidden,previewHidden:document.getElementById('garage-lp-preview').hidden,menuHidden:document.getElementById('screen-start').hidden,focus:document.activeElement.classList.contains('skin-card')?document.activeElement.dataset.id:document.activeElement.id,progress:{runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),stage:window.FTStorage.getChallengeStage()}})");
+    assert.deepEqual(garagePreviewAfterEscape,{garageVisible:true,previewHidden:true,menuHidden:true,focus:garagePreviewPoint.id,progress:garageProgressBefore},'Escape dismisses only the Garage preview, restores focus to its skin card, and preserves saved progress');
+    console.log('GARAGE PREVIEW ESCAPE OK · preview closes · Garage remains open · focus/progress preserved');
     await cdp.evaluate("document.querySelector('#screen-garage .panel-close').click(); true");
     await waitFor(()=>cdp.evaluate("document.getElementById('screen-garage').hidden&&!document.getElementById('screen-start').hidden"),'Garage close returns to menu');
     console.log('GARAGE SEARCH OK · only matching cards render · clear restores all · progress preserved');
