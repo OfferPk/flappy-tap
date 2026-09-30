@@ -2061,6 +2061,7 @@ function updateComboMeter(visible) {
       // Always show Install: native prompt when available, else how-to toast / expand
       installBtn.hidden = !show;
       installBtn.textContent = deferredA2hsPrompt ? 'Install' : (isIosSafari() ? 'How to' : 'How to');
+      installBtn.setAttribute('aria-label', deferredA2hsPrompt ? 'Install app' : 'Show Urr Jaa! install instructions');
       installBtn.classList.toggle('a2hs-howto', !deferredA2hsPrompt);
     }
     var okBtn = document.getElementById('a2hs-ok');

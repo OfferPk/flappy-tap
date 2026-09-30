@@ -28,10 +28,12 @@ const MIME = {
   '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2'
 };
 let challengeTargetOverrideForTests = null;
+let fallbackManifestDisabledForA2hsTest = false;
 const server = http.createServer((request, response) => {
   let pathname;
   try { pathname = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname); }
   catch (_) { response.writeHead(400).end('Bad request'); return; }
+  if (pathname === '/manifest.json' && fallbackManifestDisabledForA2hsTest) { response.writeHead(404).end('Not found'); return; }
   const relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
   let filename = path.resolve(root, relative);
   if (filename !== root && !filename.startsWith(root + path.sep)) { response.writeHead(403).end('Forbidden'); return; }
@@ -188,8 +190,11 @@ class DevTools {
       window.__stopBootSplashProgressObserver = () => observer.disconnect();
       capture();
     })();` });
+    fallbackManifestDisabledForA2hsTest = true;
     await cdp.send('Page.reload', { ignoreCache: true });
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden"), 'menu after boot');
+    const installHelp = await cdp.evaluate("(() => { const panel=document.getElementById('a2hs'), button=document.getElementById('a2hs-install'); return {visible:!!panel&&!panel.hidden&&!!button&&!button.hidden, text:button&&button.textContent.trim(), label:button&&button.getAttribute('aria-label')}; })()");
+    assert.deepEqual(installHelp,{visible:true,text:'How to',label:'Show Urr Jaa! install instructions'},'the fallback install-help button names its actual instructions action for assistive technology');
     const bootProgressSamples = await cdp.evaluate("window.__bootSplashProgressSamples || []");
     await cdp.evaluate("window.__stopBootSplashProgressObserver && window.__stopBootSplashProgressObserver()");
     await cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: splashObserverScript.result.identifier });
