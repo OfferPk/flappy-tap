@@ -1191,6 +1191,10 @@ class DevTools {
       'the final result is the only live announcement while the visible tip stays readable and focus lands on Run Summary');
     assert.equal(resultTipState.resultText,firstRunResult,'the final score and record announcement remains unchanged');
     assert.match(resultTipState.tipText,/New best/,'the visible new-record encouragement remains present after removing its duplicate live announcement');
+    const runSummaryProgressBeforeSpace = await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    await cdp.press(' ','Space',32);
+    const runSummaryAfterSpace = await cdp.evaluate("({visible:!document.getElementById('screen-death').hidden,hudHidden:document.getElementById('hud').hidden,focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    assert.deepEqual(runSummaryAfterSpace,{visible:true,hudHidden:true,focus:'run-summary-heading',runs:runSummaryProgressBeforeSpace.runs,best:runSummaryProgressBeforeSpace.best},'Space while reading the focused Run Summary does not silently abandon it and start another run');
     const gameOverAnnouncement = await cdp.evaluate("document.getElementById('run-result-announcement').textContent");
     await changePageVisibility(true);
     await changePageVisibility(false);
@@ -1305,6 +1309,15 @@ class DevTools {
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('screen-modes').hidden"),'Modes Escape returns to menu');
     const modesEscape=await cdp.evaluate("({menuVisible:!document.getElementById('screen-start').hidden,modesHidden:document.getElementById('screen-modes').hidden,hudHidden:document.getElementById('hud').hidden,focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
     assert.deepEqual(modesEscape,{menuVisible:true,modesHidden:true,hudHidden:true,focus:'btn-modes',runs:modeRulesBefore.runs,best:modeRulesBefore.best},'Escape returns focus to the Modes opener without changing gameplay state');
+    await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden&&document.activeElement===document.querySelector('#screen-modes h2')"),'reopen Modes before Space-shortcut regression');
+    const modesProgressBeforeSpace=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    await cdp.press(' ','Space',32);
+    const modesAfterSpace=await cdp.evaluate("({modesVisible:!document.getElementById('screen-modes').hidden,menuHidden:document.getElementById('screen-start').hidden,hudHidden:document.getElementById('hud').hidden,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    assert.deepEqual(modesAfterSpace,{modesVisible:true,menuHidden:true,hudHidden:true,runs:modesProgressBeforeSpace.runs,best:modesProgressBeforeSpace.best},'Space while reading the Modes panel does not close it and start Classic');
+    await cdp.press('Escape','Escape',27);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('screen-modes').hidden"),'close Modes after Space-shortcut regression');
     console.log('MODES FOCUS OK · heading on open · X/Escape restore trigger · run/record preserved');
 
     const garageProgressBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),stage:window.FTStorage.getChallengeStage()})");

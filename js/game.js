@@ -6372,6 +6372,9 @@ function updateComboMeter(visible) {
         ? e.target.closest('button, a, input, select, textarea, summary, [role="button"], [contenteditable="true"]')
         : null;
       if (focusedControl) return;
+      if (state !== 'playing' && document.querySelector(
+        '.panel-screen:not([hidden]), .settings-screen:not([hidden]), .pause-screen:not([hidden]), [role="dialog"]:not([hidden]), [role="alertdialog"]:not([hidden])'
+      )) return;
       e.preventDefault();
       if (state === 'menu') startRun(false, 'classic');
       else if (state === 'playing') {
