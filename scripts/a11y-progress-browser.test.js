@@ -336,6 +336,37 @@ class DevTools {
     assert.match(await cdp.evaluate("document.getElementById('progress-transfer-status').textContent"), /Existing progress was restored/i);
     await cdp.evaluate("Storage.prototype.setItem = window.__nativeStorageSetItem; true");
 
+    // A valid file exactly at the documented 256 KiB ceiling must still pass the UI size gate.
+    const maxBackupBytes = 256 * 1024;
+    const paddingBytes = maxBackupBytes - Buffer.byteLength(backupText);
+    assert.ok(paddingBytes > 0, 'the exported fixture leaves room for the size-boundary padding');
+    await cdp.evaluate("localStorage.setItem('flappy-tap:best','209'); localStorage.setItem('flappy-tap:coins','51'); true");
+    const beforeBoundaryImport = await cdp.evaluate('performance.timeOrigin');
+    await cdp.evaluate(`(() => {
+      const input = document.getElementById('progress-import-file');
+      window.__importConfirmCalls = 0;
+      window.__selectedBackupSize = 0;
+      window.confirm = () => { window.__importConfirmCalls++; return true; };
+      input.click = function () {
+        const transfer = new DataTransfer();
+        const file = new File([${JSON.stringify(backupText)}, ' '.repeat(${paddingBytes})], 'limit-progress-backup.json', { type: 'application/json' });
+        window.__selectedBackupSize = file.size;
+        transfer.items.add(file);
+        this.files = transfer.files;
+        this.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      return true;
+    })()`);
+    await cdp.evaluate("document.getElementById('btn-import-progress').focus(); true");
+    await cdp.press('Enter', 'Enter', 13);
+    await waitFor(() => cdp.evaluate("document.getElementById('progress-transfer-status').textContent.startsWith('Imported ')"), 'maximum-size import UI success state');
+    const boundaryResult = await cdp.evaluate("({size:window.__selectedBackupSize,confirmCalls:window.__importConfirmCalls,status:document.getElementById('progress-transfer-status').textContent})");
+    assert.equal(boundaryResult.size, maxBackupBytes, 'fixture is exactly 256 KiB');
+    assert.equal(boundaryResult.confirmCalls, 1, 'the boundary-sized backup reaches confirmation instead of being rejected');
+    assert.match(boundaryResult.status, /Reloading/i, 'the valid boundary-sized file is imported');
+    await waitFor(() => cdp.evaluate(`performance.timeOrigin > ${beforeBoundaryImport} && localStorage.getItem('flappy-tap:best') === '47' && localStorage.getItem('flappy-tap:coins') === '123'`), 'accepted maximum-size backup reload', 10000);
+    await waitFor(() => cdp.evaluate("document.getElementById('boot-splash').hidden"), 'boot after maximum-size import');
+
     // The real live region is checked after keyboard-triggered gameplay events, with no frame-by-frame score narration.
     await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); true");
     await cdp.evaluate("document.getElementById('btn-play').focus(); true");
