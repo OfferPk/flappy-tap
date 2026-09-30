@@ -1222,6 +1222,47 @@ class DevTools {
     assert.deepEqual(modesEscape,{menuVisible:true,modesHidden:true,hudHidden:true,focus:'btn-modes',runs:modeRulesBefore.runs,best:modeRulesBefore.best},'Escape returns focus to the Modes opener without changing gameplay state');
     console.log('MODES FOCUS OK · heading on open · X/Escape restore trigger · run/record preserved');
 
+    const challengeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage()})");
+    const readChallengeState=()=>cdp.evaluate("(() => {const p=document.getElementById('challenge-stage-panel'),h=p.querySelector('h3'),a=document.activeElement;return {modesVisible:!document.getElementById('screen-modes').hidden,pickerVisible:!p.hidden,focus:a===h?'stage-heading':(a.id||a.tagName.toLowerCase()),headingTabIndex:h.getAttribute('tabindex'),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage()};})()");
+    await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden"),'open Modes for Challenge Stages audit');
+    await cdp.evaluate("document.getElementById('btn-open-challenge').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('challenge-stage-panel').hidden"),'open Challenge Stages picker');
+    const challengeOpen=await readChallengeState();
+    await cdp.evaluate("document.getElementById('btn-challenge-cancel').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("document.getElementById('challenge-stage-panel').hidden"),'Cancel closes Challenge Stages picker');
+    const challengeCancel=await readChallengeState();
+    await cdp.evaluate("document.getElementById('btn-open-challenge').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('challenge-stage-panel').hidden"),'reopen picker before Escape test');
+    await cdp.press('Escape','Escape',27);
+    await waitFor(()=>cdp.evaluate("document.getElementById('challenge-stage-panel').hidden"),'Escape closes Challenge Stages picker');
+    const challengeEscape=await readChallengeState();
+    await cdp.evaluate("document.getElementById('btn-open-challenge').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('challenge-stage-panel').hidden"),'reopen picker before X-close test');
+    await cdp.evaluate("document.querySelector('#challenge-stage-panel .panel-close').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("document.getElementById('challenge-stage-panel').hidden"),'X closes Challenge Stages picker');
+    const challengeClose=await readChallengeState();
+    await cdp.press('Escape','Escape',27);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('screen-modes').hidden"),'close Modes after Challenge Stages audit');
+    const challengeAfter=await readChallengeState();
+    assert.equal(challengeOpen.focus,'stage-heading','opening the picker moves keyboard focus to Pick a stage');
+    assert.equal(challengeOpen.headingTabIndex,'-1','the picker heading is programmatically focusable');
+    for (const [label,snapshot] of [['Cancel',challengeCancel],['Escape',challengeEscape],['X',challengeClose]]) {
+      assert.deepEqual({modesVisible:snapshot.modesVisible,pickerVisible:snapshot.pickerVisible,focus:snapshot.focus,runs:snapshot.runs,best:snapshot.best,stage:snapshot.stage},
+        {modesVisible:true,pickerVisible:false,focus:'btn-open-challenge',runs:challengeRulesBefore.runs,best:challengeRulesBefore.best,stage:challengeRulesBefore.stage},
+        label+' returns focus to Challenge Stages without changing run, record, or unlock progress');
+    }
+    assert.deepEqual({modesVisible:challengeAfter.modesVisible,pickerVisible:challengeAfter.pickerVisible,focus:challengeAfter.focus,runs:challengeAfter.runs,best:challengeAfter.best,stage:challengeAfter.stage},
+      {modesVisible:false,pickerVisible:false,focus:'btn-modes',runs:challengeRulesBefore.runs,best:challengeRulesBefore.best,stage:challengeRulesBefore.stage},
+      'closing Modes after picker cancellation returns to its menu trigger and preserves progress');
+    console.log('CHALLENGE STAGES FOCUS OK · heading entry · Cancel/X/Escape restore trigger · unlock/run/record preserved');
+
     const oneLifeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
     await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
     await cdp.press('Enter','Enter',13);

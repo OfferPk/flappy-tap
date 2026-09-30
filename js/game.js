@@ -1684,6 +1684,7 @@ function updateComboMeter(visible) {
   var menuPanelReturnFocus = null;
   var pauseReturnFocus = null;
   var collectionReturnFocus = null;
+  var challengeStageReturnFocus = null;
 
   function focusElementSafely(el) {
     if (!el || typeof el.focus !== 'function') return;
@@ -1692,7 +1693,7 @@ function updateComboMeter(visible) {
 
   function focusPanelHeading(panel) {
     if (!panel) return;
-    var heading = panel.querySelector('h2');
+    var heading = panel.querySelector('h2, h3');
     if (heading) {
       heading.setAttribute('tabindex', '-1');
       focusElementSafely(heading);
@@ -2108,6 +2109,8 @@ function updateComboMeter(visible) {
     if (appEl) appEl.classList.remove('sukoon-mode');
     hideCoach();
     hideAllScreens();
+    if (challengeStagePanel) challengeStagePanel.hidden = true;
+    challengeStageReturnFocus = null;
     screenStart.hidden = false;
     hud.hidden = true;
     syncStreakBtn();
@@ -6214,7 +6217,7 @@ function updateComboMeter(visible) {
       return true;
     }
     if (key === 'challenge-stages') {
-      if (challengeStagePanel) challengeStagePanel.hidden = true;
+      closeChallengeStageSelect();
       return true;
     }
     if (key === 'pause') { resumeGame(); return true; }
@@ -6316,7 +6319,7 @@ function updateComboMeter(visible) {
       return true;
     }
     if (challengeStagePanel && !challengeStagePanel.hidden) {
-      challengeStagePanel.hidden = true;
+      closeChallengeStageSelect();
       return true;
     }
     if (state === 'paused') { resumeGame(); return true; }
@@ -7636,6 +7639,7 @@ function updateComboMeter(visible) {
         card.addEventListener('click', function () {
           challengeStageIdx = idx;
           FTStorage.setChallengeStage(Math.max(FTStorage.getChallengeStage() || 1, st.id));
+          challengeStageReturnFocus = null;
           if (challengeStagePanel) challengeStagePanel.hidden = true;
           startRun(false, 'challenge');
           showToast(st.label + ' · score ' + st.target, 1800, 'medal');
@@ -7645,19 +7649,32 @@ function updateComboMeter(visible) {
     });
   }
 
-  function openChallengeStageSelect() {
+  function openChallengeStageSelect(returnTarget) {
+    challengeStageReturnFocus = returnTarget || document.getElementById('btn-open-challenge');
     hideAllScreens();
     if (screenModes) screenModes.hidden = false;
     if (challengeStagePanel) {
       challengeStagePanel.hidden = false;
       refreshChallengeStageSelect();
+      focusPanelHeading(challengeStagePanel);
     }
+  }
+
+  function closeChallengeStageSelect() {
+    if (challengeStagePanel) challengeStagePanel.hidden = true;
+    var returnTarget = challengeStageReturnFocus;
+    challengeStageReturnFocus = null;
+    if (!returnTarget || !returnTarget.isConnected || (returnTarget.closest && returnTarget.closest('[hidden]'))) {
+      returnTarget = document.getElementById('btn-open-challenge');
+    }
+    if (returnTarget && (!returnTarget.closest || !returnTarget.closest('[hidden]'))) focusElementSafely(returnTarget);
   }
 
   if (btnModes) btnModes.addEventListener('click', function () {
     hideAllScreens();
     if (screenModes) screenModes.hidden = false;
     if (challengeStagePanel) challengeStagePanel.hidden = true;
+    challengeStageReturnFocus = null;
     refreshDailyCountdown();
   });
   document.querySelectorAll('[data-close="modes"]').forEach(function (b) {
@@ -7668,7 +7685,7 @@ function updateComboMeter(visible) {
       var m = b.getAttribute('data-mode');
       FTAudio.unlock();
       if (m === 'challenge') {
-        openChallengeStageSelect();
+        openChallengeStageSelect(b);
         return;
       }
       if (m === 'relax') relaxDurationSec = FTSim.normalizeRelaxDuration(relaxDurationSelect && relaxDurationSelect.value);
@@ -7686,7 +7703,7 @@ function updateComboMeter(visible) {
   });
   var btnChallengeCancel = document.getElementById('btn-challenge-cancel');
   if (btnChallengeCancel) btnChallengeCancel.addEventListener('click', function () {
-    if (challengeStagePanel) challengeStagePanel.hidden = true;
+    closeChallengeStageSelect();
   });
 
   function buildMissionCalendarHtml() {
