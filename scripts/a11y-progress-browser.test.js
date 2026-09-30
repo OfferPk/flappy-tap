@@ -1222,8 +1222,8 @@ class DevTools {
     assert.deepEqual(modesEscape,{menuVisible:true,modesHidden:true,hudHidden:true,focus:'btn-modes',runs:modeRulesBefore.runs,best:modeRulesBefore.best},'Escape returns focus to the Modes opener without changing gameplay state');
     console.log('MODES FOCUS OK · heading on open · X/Escape restore trigger · run/record preserved');
 
-    const challengeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage()})");
-    const readChallengeState=()=>cdp.evaluate("(() => {const p=document.getElementById('challenge-stage-panel'),h=p.querySelector('h3'),a=document.activeElement;return {modesVisible:!document.getElementById('screen-modes').hidden,pickerVisible:!p.hidden,focus:a===h?'stage-heading':(a.id||a.tagName.toLowerCase()),headingTabIndex:h.getAttribute('tabindex'),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage()};})()");
+    const challengeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),score:document.getElementById('score-display').textContent})");
+    const readChallengeState=()=>cdp.evaluate("(() => {const p=document.getElementById('challenge-stage-panel'),h=p.querySelector('h3'),a=document.activeElement;return {modesVisible:!document.getElementById('screen-modes').hidden,pickerVisible:!p.hidden,focus:a===h?'stage-heading':(a.id||a.tagName.toLowerCase()),headingTabIndex:h.getAttribute('tabindex'),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),score:document.getElementById('score-display').textContent};})()");
     await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
     await cdp.press('Enter','Enter',13);
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden"),'open Modes for Challenge Stages audit');
@@ -1270,14 +1270,42 @@ class DevTools {
     assert.equal(challengeOpen.focus,'stage-heading','opening the picker moves keyboard focus to Pick a stage');
     assert.equal(challengeOpen.headingTabIndex,'-1','the picker heading is programmatically focusable');
     for (const [label,snapshot] of [['Cancel',challengeCancel],['Escape',challengeEscape],['X',challengeClose]]) {
-      assert.deepEqual({modesVisible:snapshot.modesVisible,pickerVisible:snapshot.pickerVisible,focus:snapshot.focus,runs:snapshot.runs,best:snapshot.best,stage:snapshot.stage},
-        {modesVisible:true,pickerVisible:false,focus:'btn-open-challenge',runs:challengeRulesBefore.runs,best:challengeRulesBefore.best,stage:challengeRulesBefore.stage},
-        label+' returns focus to Challenge Stages without changing run, record, or unlock progress');
+      assert.deepEqual({modesVisible:snapshot.modesVisible,pickerVisible:snapshot.pickerVisible,focus:snapshot.focus,runs:snapshot.runs,best:snapshot.best,stage:snapshot.stage,score:snapshot.score},
+        {modesVisible:true,pickerVisible:false,focus:'btn-open-challenge',runs:challengeRulesBefore.runs,best:challengeRulesBefore.best,stage:challengeRulesBefore.stage,score:challengeRulesBefore.score},
+        label+' returns focus to Challenge Stages without changing run, record, unlock, or score state');
     }
-    assert.deepEqual({modesVisible:challengeAfter.modesVisible,pickerVisible:challengeAfter.pickerVisible,focus:challengeAfter.focus,runs:challengeAfter.runs,best:challengeAfter.best,stage:challengeAfter.stage},
-      {modesVisible:false,pickerVisible:false,focus:'btn-modes',runs:challengeRulesBefore.runs,best:challengeRulesBefore.best,stage:challengeRulesBefore.stage},
-      'closing Modes after picker cancellation returns to its menu trigger and preserves progress');
+    assert.deepEqual({modesVisible:challengeAfter.modesVisible,pickerVisible:challengeAfter.pickerVisible,focus:challengeAfter.focus,runs:challengeAfter.runs,best:challengeAfter.best,stage:challengeAfter.stage,score:challengeAfter.score},
+      {modesVisible:false,pickerVisible:false,focus:'btn-modes',runs:challengeRulesBefore.runs,best:challengeRulesBefore.best,stage:challengeRulesBefore.stage,score:challengeRulesBefore.score},
+      'closing Modes after picker cancellation returns to its menu trigger and preserves score and progress');
     console.log('CHALLENGE STAGES A11Y OK · Tab order · explicit locked status/unlock hint · Cancel/X/Escape restore focus · progression unchanged');
+
+    await cdp.evaluate('window.FTStorage.setChallengeStage(3); true');
+    const challengeSelectionBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage()})");
+    assert.equal(challengeSelectionBefore.stage,3,'the isolated selection scenario begins with Stage 3 unlocked');
+    await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden"),'reopen Modes for unlocked-stage selection');
+    await cdp.evaluate("document.getElementById('btn-open-challenge').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('challenge-stage-panel').hidden"),'open Stage 3-unlocked picker');
+    await cdp.evaluate("document.querySelector('.challenge-stage-card:not(:disabled)').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('hud').hidden&&document.activeElement.id==='game'&&window.FTStorage.getRunCount()==="+(challengeSelectionBefore.runs+1)),'select Stage 1 and start exactly one run');
+    const challengeRunStart=await cdp.evaluate("({focus:document.activeElement.id,canvasTabIndex:document.getElementById('game').tabIndex,pickerHidden:document.getElementById('challenge-stage-panel').hidden,modeBadge:document.getElementById('mode-badge').textContent,score:document.getElementById('score-display').textContent,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage()})");
+    assert.deepEqual({focus:challengeRunStart.focus,canvasTabIndex:challengeRunStart.canvasTabIndex,pickerHidden:challengeRunStart.pickerHidden,score:challengeRunStart.score,runs:challengeRunStart.runs,best:challengeRunStart.best,stage:challengeRunStart.stage},
+      {focus:'game',canvasTabIndex:0,pickerHidden:true,score:'0',runs:challengeSelectionBefore.runs+1,best:challengeSelectionBefore.best,stage:challengeSelectionBefore.stage},
+      'selecting an unlocked stage focuses the game, starts one run, resets only the live score, and preserves best/unlock progress');
+    assert.ok(challengeRunStart.modeBadge.includes('City Warm-up'),'selecting Stage 1 starts the selected stage even when Stage 3 is unlocked; got '+challengeRunStart.modeBadge);
+    await cdp.evaluate("document.getElementById('btn-pause').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-pause').hidden"),'pause newly started Challenge run');
+    await cdp.evaluate("document.getElementById('btn-quit-pause').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('hud').hidden&&document.activeElement.id==='btn-play'"),'return to menu from selected Challenge run');
+    const challengeRunReturn=await cdp.evaluate("({focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),score:document.getElementById('score-display').textContent})");
+    assert.deepEqual(challengeRunReturn,{focus:'btn-play',runs:challengeSelectionBefore.runs+1,best:challengeSelectionBefore.best,stage:challengeSelectionBefore.stage,score:'0'},'returning to Menu does not add another run, record, or unlock, and the unscored run stays at zero');
+    await cdp.evaluate('window.FTStorage.setChallengeStage('+challengeRulesBefore.stage+'); true');
+    console.log('CHALLENGE STAGE START OK · selected cleared stage honored · canvas focus · one run · score/unlocks preserved');
 
     const oneLifeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
     await cdp.evaluate("document.getElementById('btn-modes').focus(); true");

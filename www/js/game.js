@@ -2663,7 +2663,8 @@ function updateComboMeter(visible) {
     }
     if (appEl) appEl.classList.toggle('sukoon-mode', isRelax());
     if (isChallenge()) {
-      challengeStageIdx = Math.max(0, Math.min(CHALLENGE_STAGES.length - 1, (FTStorage.getChallengeStage() || 1) - 1));
+      // The picker owns the selected stage; unlock progress is tracked separately in storage.
+      challengeStageIdx = Math.max(0, Math.min(CHALLENGE_STAGES.length - 1, challengeStageIdx | 0));
       areaOverride = (CHALLENGE_STAGES[challengeStageIdx] || {}).area || 'city';
     } else {
       areaOverride = null;
