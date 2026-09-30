@@ -1203,6 +1203,24 @@ class DevTools {
     console.log('RESULTS HOME/RETRY FOCUS OK · Retry → game · Home → Play · run/record preserved');
     console.log('RESULTS COLLECTION FOCUS OK · heading entry · Back/X/Escape restore Results · menu return preserved');
 
+    const oneLifeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    await cdp.evaluate("document.getElementById('btn-modes').click(); true");
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden"),'open modes for One Life regression');
+    await cdp.evaluate("document.querySelector('[data-mode=\"onelife\"]').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("document.getElementById('screen-modes').hidden&&!document.getElementById('hud').hidden"),'start a real One Life run');
+    const oneLifeResult=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('screen-death'),a=document.getElementById('run-result-announcement');return !d.hidden&&a.textContent?{mode:document.getElementById('mode-death-value').textContent,button:document.getElementById('btn-retry').textContent.trim(),continueHidden:document.getElementById('btn-continue').hidden,focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()}:null;})()"),'One Life run-end Results',20000);
+    assert.equal(oneLifeResult.mode,'One Life','the observed Results screen belongs to One Life mode');
+    assert.deepEqual({button:oneLifeResult.button,continueHidden:oneLifeResult.continueHidden,focus:oneLifeResult.focus,runs:oneLifeResult.runs,best:oneLifeResult.best},
+      {button:'HOME',continueHidden:true,focus:'run-summary-heading',runs:oneLifeRulesBefore.runs+1,best:oneLifeRulesBefore.best},
+      'One Life ends with a HOME action, no revive, Run Summary focus, one counted run, and unchanged best');
+    await cdp.evaluate("document.getElementById('btn-retry').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden"),'One Life HOME returns to the menu');
+    const oneLifeHome=await cdp.evaluate("({menuVisible:!document.getElementById('screen-start').hidden,resultsHidden:document.getElementById('screen-death').hidden,hudHidden:document.getElementById('hud').hidden,focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    assert.deepEqual(oneLifeHome,{menuVisible:true,resultsHidden:true,hudHidden:true,focus:'btn-play',runs:oneLifeRulesBefore.runs+1,best:oneLifeRulesBefore.best},'keyboard HOME leaves One Life Results for Play focus without starting another run or changing the record');
+    console.log('ONE LIFE RESULTS HOME OK · Run Summary → HOME → Play · no revive/retry side effects');
+
     await cdp.evaluate("(() => {localStorage.clear();localStorage.setItem('flappy-tap:best','0');localStorage.setItem('flappy-tap:coins','0');localStorage.setItem('flappy-tap:runs','0');localStorage.setItem('flappy-tap:coach-done','0');localStorage.setItem('flappy-tap:coach-step','0');localStorage.setItem('flappy-tap:mute','1');localStorage.setItem('flappy-tap:resume-countdown','0');return true;})()");
     await cdp.send('Page.reload',{ignoreCache:true});
     await waitFor(()=>cdp.evaluate("document.readyState==='complete'&&!!window.FTStorage&&document.getElementById('boot-splash').hidden&&!document.getElementById('screen-start').hidden"),'fresh first-run menu for coach-flow regression');
