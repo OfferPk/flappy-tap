@@ -152,7 +152,7 @@ class DevTools {
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && !!document.getElementById('btn-play')"), 'app initialization');
 
     // Seed a deterministic local save and skip first-run coach marks, then reload so the game initializes from it.
-    await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); true");
+    await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:runs','10'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); true");
     await cdp.send('Page.reload', { ignoreCache: true });
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden"), 'menu after boot');
     async function checkShortMenuViewport(width, height) {
@@ -485,7 +485,7 @@ class DevTools {
     await waitFor(() => cdp.evaluate("document.getElementById('boot-splash').hidden"), 'boot after maximum-size import');
 
     // The real live region is checked after keyboard-triggered gameplay events, with no frame-by-frame score narration.
-    await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); true");
+    await cdp.evaluate("localStorage.setItem('flappy-tap:best','0'); localStorage.setItem('flappy-tap:coins','123'); true");
     await cdp.evaluate("document.getElementById('btn-play').focus(); true");
     await cdp.press('Enter', 'Enter', 13);
     const gameEntry = await cdp.evaluate("({active:document.activeElement.id,startHidden:document.getElementById('screen-start').hidden,hudHidden:document.getElementById('hud').hidden,playDisabled:document.getElementById('btn-play').disabled,bootHidden:document.getElementById('boot-splash').hidden,settingsHidden:document.getElementById('screen-settings').hidden})");
@@ -494,6 +494,18 @@ class DevTools {
     assert.deepEqual(liveSemantics, { role: 'status', live: 'polite', atomic: 'true' }, 'the event announcement region has polite atomic status semantics');
     const startAnnouncement = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent.includes('run started') && document.getElementById('game-announcer').textContent"), 'run-start announcement');
     assert.match(startAnnouncement, /Classic run started/i);
+    await cdp.evaluate(`(() => {
+      const storage = window.FTStorage;
+      const getBest = storage.getBest;
+      const setBest = storage.setBest;
+      storage.getBest = () => -1;
+      storage.setBest = function (value) {
+        storage.getBest = getBest;
+        storage.setBest = setBest;
+        return setBest.call(storage, value);
+      };
+      return true;
+    })()`);
     const stableAnnouncement = await cdp.evaluate("document.getElementById('game-announcer').textContent");
     await delay(250);
     assert.equal(await cdp.evaluate("document.getElementById('game-announcer').textContent"), stableAnnouncement,
@@ -515,7 +527,22 @@ class DevTools {
     await cdp.press('Escape', 'Escape', 27);
     assert.equal(await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'Escape resume announcement'), 'Game resumed.');
 
-    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · pause button and Escape controls · event announcements · progress backup flows');
+    const firstRunResult = await waitFor(() => cdp.evaluate("!document.getElementById('screen-death').hidden && document.getElementById('run-result-announcement').textContent"), 'new-record run-end announcement', 15000);
+    assert.equal(firstRunResult, 'Run complete. Score 0. New personal record.', 'run end announces the final score and new record once in concise text');
+    const stableRunResult = await cdp.evaluate("document.getElementById('run-result-announcement').textContent");
+    await delay(250);
+    assert.equal(await cdp.evaluate("document.getElementById('run-result-announcement').textContent"), stableRunResult,
+      'the run-end live region does not repeat its announcement after the result is shown');
+    const resultRegion = await cdp.evaluate("(() => { const el=document.getElementById('run-result-announcement'); return {role:el.getAttribute('role'),live:el.getAttribute('aria-live'),atomic:el.getAttribute('aria-atomic')}; })()");
+    assert.deepEqual(resultRegion, { role: 'status', live: 'polite', atomic: 'true' }, 'the final result uses one polite atomic screen-reader status region');
+
+    await cdp.evaluate("document.getElementById('btn-retry').focus(); true");
+    await cdp.press('Enter', 'Enter', 13);
+    await waitFor(() => cdp.evaluate("document.getElementById('screen-death').hidden && !document.getElementById('hud').hidden"), 'start the no-new-record run');
+    const secondRunResult = await waitFor(() => cdp.evaluate("!document.getElementById('screen-death').hidden && document.getElementById('run-result-announcement').textContent"), 'no-new-record run-end announcement', 15000);
+    assert.equal(secondRunResult, 'Run complete. Score 0. No new record.', 'run end explicitly announces when the score is not a new record');
+
+    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · pause controls · event/run-end announcements · backup flows');
   } finally {
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
     if (browser && browser.exitCode === null) {

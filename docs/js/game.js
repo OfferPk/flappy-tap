@@ -2339,10 +2339,8 @@ function updateComboMeter(visible) {
     if (allNew.length) showToast('Unlocked: ' + allNew.join(', '), 2500);
     var resultAnnouncement = document.getElementById('run-result-announcement');
     if (resultAnnouncement) {
-      var resultMode = MODE_SHARE_LABELS[playMode] || playMode;
-      var modeBest = bestDeathEl ? bestDeathEl.textContent : String(score);
-      resultAnnouncement.textContent = 'Run complete. ' + resultMode + ' mode. Score ' + score + '. Best ' + modeBest +
-        (isRecord ? '. New personal record.' : '.');
+      resultAnnouncement.textContent = 'Run complete. Score ' + score + '. ' +
+        (isRecord ? 'New personal record.' : 'No new record.');
     }
     focusElementSafely(document.getElementById('run-summary-heading'));
   }
