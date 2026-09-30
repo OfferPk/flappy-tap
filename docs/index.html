@@ -305,12 +305,13 @@
         <div class="medal-disc" aria-hidden="true"><span class="medal-shine-sheen"></span></div>
         <span id="medal-label">Medal</span>
       </div>
-      <figure id="death-freeze-wrap" class="death-freeze-wrap" aria-label="Death freeze frame" hidden>
+      <figure id="death-freeze-wrap" class="death-freeze-wrap" aria-label="Saved flight path replay" hidden>
         <span id="death-freeze-badge" class="death-freeze-badge" hidden>❄ Impact</span>
         <img id="death-freeze-thumb" class="death-freeze-thumb" alt="Last moment freeze" hidden width="220" height="132" />
-        <canvas id="replay-viz-canvas" class="replay-viz-canvas" width="280" height="120" hidden aria-label="Last 5 seconds path replay"></canvas>
-        <figcaption class="hint">Impact freeze + path viz · tap Replay path</figcaption>
+        <canvas id="replay-viz-canvas" class="replay-viz-canvas" width="280" height="120" hidden role="img" aria-label="Bird's saved flight path" aria-describedby="replay-path-description"></canvas>
+        <figcaption class="hint">Saved path from the last five seconds of flight.</figcaption>
       </figure>
+      <p id="replay-path-description" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
       <p class="score-big">Score: <span id="final-score">0</span></p>
       <button id="btn-retry" class="btn primary run-retry-primary" type="button">RETRY</button>
       <div class="grade-wrap" aria-label="Run grade">
@@ -332,7 +333,7 @@
         <button id="btn-continue" class="btn reward continue-ready" type="button" hidden>DEMO · Simulate rewarded revive</button>
         <p id="continue-hint" class="hint continue-hint" hidden>Local demo only: no real ad is shown or verified.</p>
         <button id="btn-mystery-ad" class="btn reward" type="button" hidden>DEMO · Simulate +1 gift</button>
-        <button id="btn-replay-stub" class="btn secondary btn-sm" type="button">▶ Replay path (last 5s)</button>
+        <button id="btn-replay-stub" class="btn secondary btn-sm" type="button" aria-controls="replay-viz-canvas replay-path-description">▶ Replay path (last 5s)</button>
         <button id="btn-share" class="btn secondary" type="button">📤 Share</button>
         <div class="btn-row">
           <button id="btn-death-collection" class="btn secondary btn-sm" type="button">COLLECTION</button>

@@ -290,6 +290,7 @@
   const btnReplayStub = document.getElementById('btn-replay-stub');
   const replayVizCanvas = document.getElementById('replay-viz-canvas');
   const deathFreezeWrap = document.getElementById('death-freeze-wrap');
+  const replayPathDescriptionEl = document.getElementById('replay-path-description');
   const deathFreezeBadge = document.getElementById('death-freeze-badge');
   const dailyCountdownEl = document.getElementById('daily-reset-countdown');
   const dailyCountdownModesEl = document.getElementById('daily-reset-countdown-modes');
@@ -2588,6 +2589,15 @@ function updateComboMeter(visible) {
     if (!fromContinue) announceGameEvent((MODE_SHARE_LABELS[playMode] || playMode) + ' run started. Tap or press Space to flap.');
     hideAllScreens();
     hud.hidden = false;
+    if (replayVizRaf) { cancelAnimationFrame(replayVizRaf); replayVizRaf = 0; }
+    replaySnapshot.length = 0;
+    replaySampleAcc = 0;
+    deathFreezeCanvas = null;
+    if (replayVizCanvas) replayVizCanvas.hidden = true;
+    if (deathFreezeThumb) { deathFreezeThumb.hidden = true; deathFreezeThumb.removeAttribute('src'); }
+    if (deathFreezeBadge) deathFreezeBadge.hidden = true;
+    if (deathFreezeWrap) deathFreezeWrap.hidden = true;
+    if (replayPathDescriptionEl) replayPathDescriptionEl.textContent = '';
     hitFlash = 0;
     deathFreezeUntil = 0;
     flapCooldown = 0;
@@ -2620,14 +2630,10 @@ function updateComboMeter(visible) {
       turboTrail.length = 0;
       ghostSilTrail.length = 0;
       replayBuf.length = 0;
-      replaySnapshot.length = 0;
-      replaySampleAcc = 0;
-      deathFreezeCanvas = null;
       deathCamZoom = 0;
       envFade = 0;
       envFadeFrom = null;
       lastEnvArea = null;
-      if (replayVizRaf) { cancelAnimationFrame(replayVizRaf); replayVizRaf = 0; }
       score2xUntil = 0;
       metersFlown = 0;
       runCoins = 0;
@@ -3900,6 +3906,7 @@ function updateComboMeter(visible) {
       replayVizCanvas.hidden = true;
       return false;
     }
+    if (deathFreezeWrap) deathFreezeWrap.hidden = false;
     replayVizCanvas.hidden = false;
     var w = replayVizCanvas.width;
     var h = replayVizCanvas.height;
@@ -3962,9 +3969,33 @@ function updateComboMeter(visible) {
     return true;
   }
 
+  function describeReplayPath(buf) {
+    if (!buf || !buf.length) return 'No saved flight path is available for this run.';
+    if (buf.length < 2) return 'Only one flight position was saved, so there is not enough movement to summarize the path.';
+    var upward = 0, downward = 0, minY = buf[0].y, maxY = buf[0].y;
+    for (var i = 1; i < buf.length; i++) {
+      var dy = buf[i].y - buf[i - 1].y;
+      if (dy < 0) upward -= dy;
+      else downward += dy;
+      minY = Math.min(minY, buf[i].y);
+      maxY = Math.max(maxY, buf[i].y);
+    }
+    var durationMs = Math.max(0, (buf[buf.length - 1].t || 0) - (buf[0].t || 0));
+    var durationLabel = durationMs < 750 ? 'less than a second' : 'about ' + Math.max(1, Math.round(durationMs / 1000)) + ' seconds';
+    var movementThreshold = Math.max(12, H * 0.025);
+    var trend = maxY - minY < movementThreshold ? 'stayed nearly level'
+      : upward > downward * 1.25 ? 'mostly rose'
+        : downward > upward * 1.25 ? 'mostly fell' : 'moved up and down';
+    var endDelta = buf[buf.length - 1].y - buf[0].y;
+    var endHeight = Math.abs(endDelta) <= Math.max(12, H * 0.03) ? 'near'
+      : endDelta < 0 ? 'above' : 'below';
+    return 'Vertical path over ' + durationLabel + ': the bird ' + trend + ' and finished ' + endHeight + ' its starting height.';
+  }
+
   function startReplayVizAnim() {
     if (replayVizRaf) { cancelAnimationFrame(replayVizRaf); replayVizRaf = 0; }
     var buf = replaySnapshot.length ? replaySnapshot : replayBuf;
+    if (replayPathDescriptionEl) replayPathDescriptionEl.textContent = describeReplayPath(buf);
     if (!buf.length) {
       showToast('No path to replay yet', 1200);
       return;

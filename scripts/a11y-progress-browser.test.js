@@ -1125,24 +1125,34 @@ class DevTools {
     await cdp.evaluate("localStorage.setItem('flappy-tap:reduce-motion','1'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:resume-countdown','0'); true");
     await cdp.send('Page.reload',{ignoreCache:true});
     await waitFor(()=>cdp.evaluate("document.readyState==='complete'&&!!window.FTStorage&&document.getElementById('boot-splash').hidden&&document.documentElement.classList.contains('reduce-motion')&&!document.getElementById('screen-start').hidden"),'reduced-motion menu for replay regression');
+    // A fresh page has an empty replay buffer; expose the actual Replay control to exercise its empty-state handler.
+    await cdp.evaluate("document.getElementById('screen-start').hidden=true; document.getElementById('screen-death').hidden=false; document.getElementById('btn-replay-stub').scrollIntoView({block:'center'}); true");
+    await clickElementAt('#btn-replay-stub');
+    const emptyReplay=await cdp.evaluate("(() => {const c=document.getElementById('replay-viz-canvas'),w=document.getElementById('death-freeze-wrap'),d=document.getElementById('replay-path-description');return {description:d.textContent,canvasHidden:c.hidden,wrapperHidden:w.hidden};})()");
+    assert.deepEqual(emptyReplay,{description:'No saved flight path is available for this run.',canvasHidden:true,wrapperHidden:true},'an empty run receives a clear accessible message and no stale replay graphic');
+    await cdp.evaluate("document.getElementById('screen-death').hidden=true; document.getElementById('screen-death').scrollTop=0; document.getElementById('screen-start').hidden=false; true");
+    await delay(1300);
     await clickElementAt('#btn-play');
     await waitFor(()=>cdp.evaluate("document.getElementById('screen-start').hidden&&!document.getElementById('hud').hidden"),'reduced-motion run starts');
+    assert.equal(await cdp.evaluate("document.getElementById('replay-path-description').textContent"),'','a fresh run clears the previous empty-path message');
     await cdp.press(' ','Space',32);
     await delay(180);
     await cdp.press(' ','Space',32);
     await delay(180);
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-death').hidden&&document.getElementById('run-result-announcement').textContent"),'reduced-motion run-end for replay regression',15000);
     await cdp.evaluate("document.getElementById('btn-replay-stub').scrollIntoView({block:'center'}); true");
-    const replayBefore=await cdp.evaluate("(() => {const c=document.getElementById('replay-viz-canvas');return {visible:!c.hidden,data:c.toDataURL()};})()");
-    assert.equal(replayBefore.visible,false,'the replay canvas stays hidden until the player requests it');
+    const replayBefore=await cdp.evaluate("(() => {const c=document.getElementById('replay-viz-canvas'),w=document.getElementById('death-freeze-wrap');return {canvasHidden:c.hidden,wrapperHidden:w.hidden,description:document.getElementById('replay-path-description').textContent};})()");
+    assert.deepEqual(replayBefore,{canvasHidden:true,wrapperHidden:true,description:''},'the new run keeps its saved path concealed until Replay is requested');
     await clickElementAt('#btn-replay-stub');
-    const replayShown=await cdp.evaluate("(() => {const c=document.getElementById('replay-viz-canvas');return {visible:!c.hidden,data:c.toDataURL()};})()");
-    assert.equal(replayShown.visible,true,'tapping Replay reveals the recorded flight path');
+    const replayShown=await cdp.evaluate("(() => {const c=document.getElementById('replay-viz-canvas'),w=document.getElementById('death-freeze-wrap'),d=document.getElementById('replay-path-description');return {visible:!c.hidden&&!w.hidden&&c.getClientRects().length>0,data:c.toDataURL(),description:d.textContent,role:d.getAttribute('role'),live:d.getAttribute('aria-live'),canvasRole:c.getAttribute('role'),describedBy:c.getAttribute('aria-describedby')};})()");
+    assert.equal(replayShown.visible,true,'tapping Replay reveals the recorded flight path inside its previously hidden figure');
+    assert.match(replayShown.description,/^Vertical path over (?:less than a second|about \d+ seconds): the bird (?:stayed nearly level|mostly rose|mostly fell|moved up and down) and finished (?:near|above|below) its starting height\.$/,'the status summarizes duration and vertical movement from the saved samples');
+    assert.deepEqual({role:replayShown.role,live:replayShown.live,canvasRole:replayShown.canvasRole,describedBy:replayShown.describedBy},{role:'status',live:'polite',canvasRole:'img',describedBy:'replay-path-description'},'the visible canvas is connected to one polite live summary');
     await delay(250);
-    const replayAfter=await cdp.evaluate("document.getElementById('replay-viz-canvas').toDataURL()");
-    assert.equal(replayAfter,replayShown.data,'reduced motion keeps the revealed replay canvas static rather than animating the cursor');
+    const replayAfter=await cdp.evaluate("({data:document.getElementById('replay-viz-canvas').toDataURL(),description:document.getElementById('replay-path-description').textContent})");
+    assert.deepEqual(replayAfter,{data:replayShown.data,description:replayShown.description},'Reduced motion keeps the path static and the live summary does not repeat or change');
     assert.ok((await cdp.evaluate("document.getElementById('toast').textContent")).includes('Static replay'),'reduced-motion feedback explains that the path is being shown without animation');
-    console.log('REDUCED-MOTION REPLAY OK · static path · no animated cursor');
+    console.log('REPLAY DESCRIPTION OK · empty state · sample-derived summary · visible canvas · Reduced Motion stays static');
 
     console.log('BROWSER A11Y/PROGRESS OK · gameplay focus/Space controls · first-run coaching · background pause/recovery · menu/pause/game-over preservation · event/run-end announcements · backup flows');
   } finally {
