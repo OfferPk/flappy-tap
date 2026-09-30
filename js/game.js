@@ -1958,24 +1958,31 @@ function updateComboMeter(visible) {
   function updateA2hsTip() {
     var a2hs = document.getElementById('a2hs');
     if (!a2hs) return;
+    function setMenuPromptVisible(visible) {
+      if (screenStart) screenStart.classList.toggle('a2hs-prompt-visible', !!visible);
+    }
     if (isA2hsInstalled()) {
       a2hs.hidden = true;
+      setMenuPromptVisible(false);
       a2hs.classList.remove('a2hs-visible', 'a2hs-can-install', 'a2hs-ios', 'a2hs-flow');
       return;
     }
     try {
       if (localStorage.getItem(A2HS_DISMISS_KEY) === '1') {
         a2hs.hidden = true;
+        setMenuPromptVisible(false);
         return;
       }
       if (sessionStorage.getItem(A2HS_LATER_KEY) === '1') {
         a2hs.hidden = true;
+        setMenuPromptVisible(false);
         return;
       }
     } catch (_) { /* private mode */ }
     var runs = FTStorage.getRunCount ? FTStorage.getRunCount() : 0;
     var show = screenStart && !screenStart.hidden && runs >= 1;
     a2hs.hidden = !show;
+    setMenuPromptVisible(show);
     var canNative = !!(show && deferredA2hsPrompt);
     a2hs.classList.toggle('a2hs-can-install', canNative);
     a2hs.classList.toggle('a2hs-ios', !!(show && isIosSafari() && !deferredA2hsPrompt));
@@ -6265,6 +6272,7 @@ function updateComboMeter(visible) {
       var tip = document.getElementById('a2hs');
       if (tip) tip.hidden = true;
       a2hsFlowStep = 0;
+      if (screenStart) screenStart.classList.remove('a2hs-prompt-visible');
     });
   }
   var a2hsInstall = document.getElementById('a2hs-install');

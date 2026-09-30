@@ -1069,6 +1069,19 @@ html.reduce-motion .spin-result.win-flash { animation: none !important; }
   text-align: left;
 }
 .a2hs[hidden] { display: none !important; }
+#screen-start.a2hs-prompt-visible {
+  justify-content: flex-start;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#screen-start.a2hs-prompt-visible > .a2hs {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  margin: 12px auto 0;
+  flex: 0 0 auto;
+}
 .a2hs span { flex: 1; line-height: 1.35; }
 .a2hs-ur {
   display: block;

@@ -155,6 +155,21 @@ class DevTools {
     await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:runs','10'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); localStorage.setItem('flappy-tap:resume-countdown','1'); true");
     await cdp.send('Page.reload', { ignoreCache: true });
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden"), 'menu after boot');
+    async function clickElementAt(selector) {
+      const point = await cdp.evaluate(`(() => {
+        const element = document.querySelector(${JSON.stringify(selector)});
+        if (!element) return null;
+        const rect = element.getBoundingClientRect();
+        const x = (rect.left + rect.right) / 2;
+        const y = (rect.top + rect.bottom) / 2;
+        const target = document.elementFromPoint(x, y);
+        return { x, y, hidden: element.hidden, hit: !!target && (target === element || element.contains(target)) };
+      })()`);
+      assert.ok(point && !point.hidden && point.hit, `${selector} center is visible and receives pointer hits`);
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+    }
     async function changePageVisibility(hidden) {
       const state = hidden ? 'hidden' : 'visible';
       const actual = await cdp.evaluate(`(() => {
@@ -171,9 +186,15 @@ class DevTools {
       const initial = await cdp.evaluate(`(() => {
         const rect = (selector) => { const r = document.querySelector(selector).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
         const menu = document.getElementById('screen-start');
+        const prompt = document.getElementById('a2hs');
+        const play = document.getElementById('btn-play');
+        const playRect = play.getBoundingClientRect();
+        const hit = document.elementFromPoint((playRect.left + playRect.right) / 2, (playRect.top + playRect.bottom) / 2);
         return { viewport: [innerWidth, innerHeight], overflowY: getComputedStyle(menu).overflowY,
           clientHeight: menu.clientHeight, scrollHeight: menu.scrollHeight,
-          app: rect('#app'), title: rect('#screen-start .logo'), play: rect('#btn-play') };
+          app: rect('#app'), title: rect('#screen-start .logo'), play: rect('#btn-play'), prompt: rect('#a2hs'),
+          promptHidden: prompt.hidden, promptPosition: getComputedStyle(prompt).position,
+          promptLayout: menu.classList.contains('a2hs-prompt-visible'), playHit: !!(hit && hit.closest('#btn-play')) };
       })()`);
       assert.deepEqual(initial.viewport, [width, height], 'requested narrow viewport is active');
       assert.equal(initial.overflowY, 'auto', `${width}×${height} menu remains scrollable`);
@@ -182,14 +203,22 @@ class DevTools {
         `${width}×${height} title stays inside the first view: ${JSON.stringify(initial.title)}`);
       assert.ok(initial.play.top >= initial.app.top && initial.play.bottom <= initial.app.bottom,
         `${width}×${height} Play button stays inside the first view: ${JSON.stringify(initial.play)}`);
+      assert.equal(initial.promptHidden, false, `${width}×${height} A2HS prompt is present for the seeded returning player`);
+      assert.equal(initial.promptLayout, true, `${width}×${height} menu enters A2HS scroll layout while the prompt is visible`);
+      assert.equal(initial.promptPosition, 'static', `${width}×${height} prompt follows menu content rather than overlaying controls`);
+      assert.ok(initial.prompt.left >= initial.app.left && initial.prompt.right <= initial.app.right,
+        `${width}×${height} prompt stays within the app width: ${JSON.stringify(initial.prompt)}`);
+      assert.ok(initial.prompt.bottom <= initial.play.top || initial.prompt.top >= initial.play.bottom,
+        `${width}×${height} prompt never overlaps Play: prompt=${JSON.stringify(initial.prompt)} play=${JSON.stringify(initial.play)}`);
+      assert.equal(initial.playHit, true, `${width}×${height} Play center hit-tests to Play, not the install prompt`);
 
-      await cdp.evaluate("(() => { const menu=document.getElementById('screen-start'); menu.scrollTop=menu.scrollHeight; return menu.scrollTop; })()");
+      await cdp.evaluate("(() => { const menu=document.getElementById('screen-start'); const runs=menu.querySelector('.runs-line'); menu.scrollTop=Math.max(0, runs.offsetTop + runs.offsetHeight - menu.clientHeight); return menu.scrollTop; })()");
       const bottom = await cdp.evaluate(`(() => {
         const rect = (selector) => { const r = document.querySelector(selector).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
         const menu = document.getElementById('screen-start');
         return { scrollTop: menu.scrollTop, app: rect('#app'), hint: rect('#controls-hint'), guide: rect('.guide-quick-link-wrap'), runs: rect('.runs-line') };
       })()`);
-      assert.ok(bottom.scrollTop > 0, `${width}×${height} menu scrolls to its lower content`);
+      assert.ok(bottom.scrollTop > 0 || bottom.runs.bottom <= bottom.app.bottom, `${width}×${height} menu footer is reachable without scrolling past it to the A2HS prompt`);
       assert.ok(bottom.hint.top >= bottom.app.top && bottom.hint.bottom <= bottom.app.bottom,
         `${width}×${height} controls hint can be fully viewed: ${JSON.stringify(bottom.hint)}`);
       assert.ok(bottom.hint.bottom <= bottom.guide.top, `${width}×${height} hint does not overlap the guide link`);
@@ -198,7 +227,51 @@ class DevTools {
       await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
       console.log(`MENU VIEWPORT OK · ${width}×${height}`);
     }
+    async function checkA2hsPromptViewport(width, height) {
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
+      await waitFor(() => cdp.evaluate(`innerWidth === ${width} && innerHeight === ${height}`), `${width}×${height} A2HS viewport`);
+      await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
+      const layout = await cdp.evaluate(`(() => {
+        const menu = document.getElementById('screen-start');
+        const prompt = document.getElementById('a2hs');
+        const play = document.getElementById('btn-play');
+        const rect = (element) => { const r = element.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; };
+        const appRect = rect(document.getElementById('app'));
+        const playRect = rect(play);
+        const hit = document.elementFromPoint((playRect.left + playRect.right) / 2, (playRect.top + playRect.bottom) / 2);
+        return { app: appRect, play: playRect, prompt: rect(prompt), promptHidden: prompt.hidden,
+          position: getComputedStyle(prompt).position, overflowY: getComputedStyle(menu).overflowY,
+          layout: menu.classList.contains('a2hs-prompt-visible'), playHit: !!(hit && hit.closest('#btn-play')) };
+      })()`);
+      assert.equal(layout.promptHidden, false, `${width}×${height} install tip is visible`);
+      assert.equal(layout.layout, true, `${width}×${height} menu scroll state matches the visible tip`);
+      assert.equal(layout.position, 'static', `${width}×${height} tip is in normal menu flow`);
+      assert.equal(layout.overflowY, 'auto', `${width}×${height} menu can scroll to the tip`);
+      assert.ok(layout.play.top >= layout.app.top && layout.play.bottom <= layout.app.bottom,
+        `${width}×${height} Play stays visible: ${JSON.stringify(layout.play)}`);
+      assert.ok(layout.prompt.bottom <= layout.play.top || layout.prompt.top >= layout.play.bottom,
+        `${width}×${height} tip and Play do not overlap: ${JSON.stringify(layout)}`);
+      assert.equal(layout.playHit, true, `${width}×${height} Play receives a real pointer hit`);
+      console.log(`A2HS VIEWPORT OK · ${width}×${height}`);
+    }
     for (const [width, height] of [[320, 568], [320, 480], [320, 400]]) await checkShortMenuViewport(width, height);
+    await checkA2hsPromptViewport(390, 844);
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 320, height: 480, deviceScaleFactor: 1, mobile: true });
+    await waitFor(() => cdp.evaluate('innerWidth === 320 && innerHeight === 480'), '320×480 A2HS Play hit test viewport');
+    await cdp.evaluate("document.getElementById('screen-start').scrollTop = 0; true");
+    await clickElementAt('#btn-play');
+    await waitFor(() => cdp.evaluate("document.getElementById('screen-start').hidden"), 'Play tap starts a run while the A2HS prompt is present');
+    console.log('A2HS PLAY HIT TEST OK · 320×480');
+    await cdp.send('Page.reload', { ignoreCache: true });
+    await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden && !document.getElementById('screen-start').hidden"), 'menu restored after A2HS Play hit test');
+    await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:runs','10'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); localStorage.setItem('flappy-tap:resume-countdown','1'); true");
+    await cdp.send('Page.reload', { ignoreCache: true });
+    await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden && !document.getElementById('a2hs').hidden"), 'A2HS prompt restored for dismissal test');
+    await cdp.evaluate("document.getElementById('a2hs-ok').scrollIntoView({ block: 'center', inline: 'nearest' }); true");
+    await waitFor(() => cdp.evaluate("(() => { const r=document.getElementById('a2hs-ok').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()"), 'A2HS dismiss control scrolls into view');
+    await clickElementAt('#a2hs-ok');
+    await waitFor(() => cdp.evaluate("document.getElementById('a2hs').hidden && !document.getElementById('screen-start').classList.contains('a2hs-prompt-visible')"), 'dismissed A2HS prompt restores normal menu layout');
+    console.log('A2HS DISMISS HIT TEST OK · 320×480');
     await cdp.send('Emulation.clearDeviceMetricsOverride');
     await waitFor(() => cdp.evaluate('innerWidth > 320 && innerHeight > 400'), 'restore desktop viewport');
     const menuHint = await cdp.evaluate("document.getElementById('controls-hint').textContent");
