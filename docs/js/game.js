@@ -1791,6 +1791,10 @@ function updateComboMeter(visible) {
     return c;
   }
 
+  function isShareCancelled(error) {
+    return !!error && error.name === 'AbortError';
+  }
+
   function shareScoreCardImage() {
     try {
       var c = buildShareCardCanvas();
@@ -1811,8 +1815,8 @@ function updateComboMeter(visible) {
             files: [file],
             title: 'Urr Jaa!',
             text: text
-          }).catch(function () {
-            downloadShareImage(c);
+          }).catch(function (err) {
+            if (!isShareCancelled(err)) downloadShareImage(c);
           });
         } else if (navigator.share) {
           // fallback: text share + offer download
@@ -1917,8 +1921,8 @@ function updateComboMeter(visible) {
   function shareRunSummary() {
     var text = buildShareText();
     if (navigator.share) {
-      navigator.share({ title: 'Urr Jaa!', text: text, url: 'https://offerpk.github.io/flappy-tap/' }).catch(function () {
-        copyShareText(text);
+      navigator.share({ title: 'Urr Jaa!', text: text, url: 'https://offerpk.github.io/flappy-tap/' }).catch(function (err) {
+        if (!isShareCancelled(err)) copyShareText(text);
       });
       return;
     }

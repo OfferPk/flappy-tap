@@ -1172,6 +1172,57 @@ class DevTools {
     assert.ok((await cdp.evaluate("document.getElementById('toast').textContent")).includes('Static replay'),'reduced-motion feedback explains that the path is being shown without animation');
     console.log('REPLAY DETAILS OK · empty state · collapsed default · expand/collapse · no repeated live text · Reduced Motion stays static');
 
+    await cdp.evaluate(`(() => {
+      const probe = window.__shareProbe = {shareCalls:0,copyCalls:0,downloads:0,errorName:'AbortError'};
+      Object.defineProperty(navigator,'share',{configurable:true,value:function(){probe.shareCalls++;return Promise.reject(new DOMException('Share sheet dismissed',probe.errorName));}});
+      Object.defineProperty(navigator,'canShare',{configurable:true,value:function(){return true;}});
+      Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:function(){probe.copyCalls++;return Promise.resolve();}}});
+      Object.defineProperty(window,'__shareOriginalAnchorClick',{configurable:true,value:HTMLAnchorElement.prototype.click});
+      HTMLAnchorElement.prototype.click=function(){if(this.download==='urr-jaa-score.png'){probe.downloads++;return;}return window.__shareOriginalAnchorClick.call(this);};
+      return true;
+    })()`);
+    const clickShareControl = async (selector) => {
+      await cdp.evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',inline:'nearest'}); true`);
+      await clickElementAt(selector);
+    };
+    const openSharePreview = async () => {
+      await clickShareControl('#btn-share');
+      await waitFor(()=>cdp.evaluate("!document.getElementById('share-preview').hidden"),'share preview opens');
+    };
+    await cdp.evaluate("window.__shareProbe.errorName='AbortError';document.getElementById('toast').textContent='share cancel baseline';true");
+    await openSharePreview();
+    await clickShareControl('#btn-share-confirm');
+    await waitFor(()=>cdp.evaluate('window.__shareProbe.shareCalls===1'),'text share sheet opens');
+    await delay(80);
+    const cancelledTextShare=await cdp.evaluate("({shareCalls:window.__shareProbe.shareCalls,copyCalls:window.__shareProbe.copyCalls,downloads:window.__shareProbe.downloads,toast:document.getElementById('toast').textContent})");
+    assert.deepEqual(cancelledTextShare,{shareCalls:1,copyCalls:0,downloads:0,toast:'share cancel baseline'},'cancelling text sharing does not silently copy text or report a false success');
+
+    await cdp.evaluate("document.getElementById('toast').textContent='image cancel baseline';true");
+    await openSharePreview();
+    await clickShareControl('#btn-share-image');
+    await waitFor(()=>cdp.evaluate('window.__shareProbe.shareCalls===2'),'image share sheet opens');
+    await delay(80);
+    const cancelledImageShare=await cdp.evaluate("({shareCalls:window.__shareProbe.shareCalls,copyCalls:window.__shareProbe.copyCalls,downloads:window.__shareProbe.downloads,toast:document.getElementById('toast').textContent,previewHidden:document.getElementById('share-preview').hidden})");
+    assert.deepEqual(cancelledImageShare,{shareCalls:2,copyCalls:0,downloads:0,toast:'image cancel baseline',previewHidden:false},'cancelling image sharing does not start an unrequested download and leaves the share choices available');
+    await clickShareControl('#btn-share-close');
+    await waitFor(()=>cdp.evaluate("document.getElementById('share-preview').hidden"),'share preview closes after cancellation');
+
+    await cdp.evaluate("window.__shareProbe.errorName='NotAllowedError';document.getElementById('toast').textContent='text fallback baseline';true");
+    await openSharePreview();
+    await clickShareControl('#btn-share-confirm');
+    await waitFor(()=>cdp.evaluate('window.__shareProbe.shareCalls===3&&window.__shareProbe.copyCalls===1'),'text share failure fallback');
+    await delay(40);
+    const textShareFallback=await cdp.evaluate("({copyCalls:window.__shareProbe.copyCalls,downloads:window.__shareProbe.downloads,toast:document.getElementById('toast').textContent})");
+    assert.deepEqual(textShareFallback,{copyCalls:1,downloads:0,toast:'Copied share text'},'a non-cancellation text-share failure still copies the result as a fallback');
+
+    await cdp.evaluate("document.getElementById('toast').textContent='image fallback baseline';true");
+    await openSharePreview();
+    await clickShareControl('#btn-share-image');
+    await waitFor(()=>cdp.evaluate('window.__shareProbe.shareCalls===4&&window.__shareProbe.downloads===1'),'image share failure fallback');
+    const imageShareFallback=await cdp.evaluate("({copyCalls:window.__shareProbe.copyCalls,downloads:window.__shareProbe.downloads,toast:document.getElementById('toast').textContent})");
+    assert.deepEqual(imageShareFallback,{copyCalls:1,downloads:1,toast:'Score card saved 📷'},'a non-cancellation image-share failure still saves the score card as a fallback');
+    console.log('SHARE CANCELLATION OK · no surprise copy/download · real failures retain fallbacks');
+
     console.log('BROWSER A11Y/PROGRESS OK · gameplay focus/Space controls · first-run coaching · background pause/recovery · menu/pause/game-over preservation · event/run-end announcements · backup flows');
   } finally {
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
