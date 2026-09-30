@@ -35,7 +35,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 
 - **Soft collision dust** · **area/menu music stub** · **collection % meter** · **mystery jackpot juice**
 - Changelog · flap whoosh · guide refresh · perf · haptic intensity · boss warn · gift→spin toast
-- Death freeze · concise screen-reader path summary with optional expanded details · Reduced-motion safe · env fade · coin popup · coach · share card that does not copy/download on cancel
+- Death freeze · concise screen-reader path summary with optional expanded details · quiet screen-reader countdowns · Reduced-motion safe · env fade · coin popup · coach · share card that does not copy/download on cancel
 - **Mystery wheel 15s** Spin once (KEEP) · Close (X) · tips · fireworks · pipes · safe-area
 - Power VFX clarity (Slow-mo / Ghost / Turbo) · Challenge stage picker · One Life heart HUD
 - Coin economy balance · Bird unlock teasers · Gift haptic · Landscape safe-area

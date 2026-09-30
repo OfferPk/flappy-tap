@@ -316,8 +316,8 @@ async function testOfflineAssetFallback() {
   const cached = await warmWorker.fetch({ method: 'GET', url: 'https://game.test/app/js/game.js', mode: 'cors' });
   assert.equal(cached.body, 'cached game code', 'a precached game script remains available');
 
-  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v78-20260930', 'another-app-cache', 'urrjaa-v79-20260930', 'urrjaa-v80-20260930', 'urrjaa-v81-20260930', 'urrjaa-v82-20260930', 'urrjaa-v83-20260930', 'urrjaa-v84-20260930', 'urrjaa-v85-20260930', 'urrjaa-v86-20260930', 'urrjaa-v87-20260930', 'urrjaa-v88-20260930', 'urrjaa-v89-20260930', 'urrjaa-v90-20260930', 'urrjaa-v91-20260930']);
-  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v78-20260930', 'urrjaa-v79-20260930', 'urrjaa-v80-20260930', 'urrjaa-v81-20260930', 'urrjaa-v82-20260930', 'urrjaa-v83-20260930', 'urrjaa-v84-20260930', 'urrjaa-v85-20260930', 'urrjaa-v86-20260930', 'urrjaa-v87-20260930', 'urrjaa-v88-20260930', 'urrjaa-v89-20260930', 'urrjaa-v90-20260930'], 'activation deletes this app’s old named caches and preserves unrelated/current caches');
+  const namespacedWorker = serviceWorkerHarness(networkDown, [], ['urrjaa-v78-20260930', 'another-app-cache', 'urrjaa-v79-20260930', 'urrjaa-v80-20260930', 'urrjaa-v81-20260930', 'urrjaa-v82-20260930', 'urrjaa-v83-20260930', 'urrjaa-v84-20260930', 'urrjaa-v85-20260930', 'urrjaa-v86-20260930', 'urrjaa-v87-20260930', 'urrjaa-v88-20260930', 'urrjaa-v89-20260930', 'urrjaa-v90-20260930', 'urrjaa-v91-20260930', 'urrjaa-v92-20260930']);
+  assert.deepEqual(await namespacedWorker.activate(), ['urrjaa-v78-20260930', 'urrjaa-v79-20260930', 'urrjaa-v80-20260930', 'urrjaa-v81-20260930', 'urrjaa-v82-20260930', 'urrjaa-v83-20260930', 'urrjaa-v84-20260930', 'urrjaa-v85-20260930', 'urrjaa-v86-20260930', 'urrjaa-v87-20260930', 'urrjaa-v88-20260930', 'urrjaa-v89-20260930', 'urrjaa-v90-20260930', 'urrjaa-v91-20260930'], 'activation deletes this app’s old named caches and preserves unrelated/current caches');
 }
 
 async function testMagicAdsUnavailableWithoutSdk() {
@@ -415,6 +415,10 @@ async function main() {
   assert.match(html, /id="screen-magic"[^>]*hidden/, 'MAGIC menu is a separate screen');
   assert.match(html, /name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/, 'viewport remains user-zoomable');
   assert.match(html, /id="game-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"/, 'important game events have a dedicated polite live region');
+  assert.match(html, /id="daily-reset-countdown" class="daily-reset-countdown hint" role="timer" aria-live="off" hidden>/,
+    'the once-per-second menu countdown remains available without repeated live announcements');
+  assert.match(html, /id="daily-reset-countdown-modes" class="daily-reset-countdown hint" role="timer" aria-live="off" hidden>/,
+    'the Modes countdown also uses quiet timer semantics');
   assert.match(html, /id="btn-export-progress"/, 'settings expose a progress backup export action');
   assert.match(html, /id="btn-import-progress"/, 'settings expose a progress backup import action');
   assert.match(html, /id="btn-continue"[^>]*hidden/, 'demo revive starts hidden outside the explicit local demo');

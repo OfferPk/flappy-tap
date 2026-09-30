@@ -155,6 +155,24 @@ class DevTools {
     await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:runs','10'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); localStorage.setItem('flappy-tap:resume-countdown','1'); true");
     await cdp.send('Page.reload', { ignoreCache: true });
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden"), 'menu after boot');
+    const dailyCountdowns = await cdp.evaluate(`(() => {
+      const menu = document.getElementById('daily-reset-countdown');
+      const modes = document.getElementById('daily-reset-countdown-modes');
+      const info = (el) => ({role:el.getAttribute('role'),live:el.getAttribute('aria-live'),hidden:el.hidden,text:el.textContent});
+      return {menu:info(menu),modes:info(modes)};
+    })()`);
+    assert.equal(dailyCountdowns.menu.role,'timer','menu countdown has timer semantics, not a repeating status announcement');
+    assert.equal(dailyCountdowns.menu.live,'off','menu clock updates do not announce every second');
+    assert.equal(dailyCountdowns.menu.hidden,false,'the visual menu countdown remains visible');
+    assert.match(dailyCountdowns.menu.text,/^Daily resets in \d+:\d{2}:\d{2}$/,'the visible menu text still includes the reset time');
+    assert.equal(dailyCountdowns.modes.role,'timer','Modes countdown also has timer semantics');
+    assert.equal(dailyCountdowns.modes.live,'off','Modes clock updates are not a live announcement stream');
+    const nextCountdownTick = await waitFor(() => cdp.evaluate(`(() => {
+      const text = document.getElementById('daily-reset-countdown').textContent;
+      return text !== ${JSON.stringify(dailyCountdowns.menu.text)} ? text : null;
+    })()`), 'visible daily countdown tick', 3500);
+    assert.notEqual(nextCountdownTick,dailyCountdowns.menu.text,'the visual countdown continues updating once its announcements are silenced');
+
     async function clickElementAt(selector) {
       const point = await cdp.evaluate(`(() => {
         const element = document.querySelector(${JSON.stringify(selector)});
@@ -564,6 +582,11 @@ class DevTools {
     assert.notEqual(focusStyle, 'none', 'keyboard focus has a visible outline');
     await cdp.press('Enter', 'Enter', 13);
     await waitFor(() => cdp.evaluate("document.activeElement.tagName === 'H2' && !!document.activeElement.closest('#screen-modes')"), 'mode panel heading focus');
+    const visibleModesCountdown = await cdp.evaluate("(() => { const e=document.getElementById('daily-reset-countdown-modes'); return {hidden:e.hidden,text:e.textContent,role:e.getAttribute('role'),live:e.getAttribute('aria-live')}; })()");
+    assert.equal(visibleModesCountdown.hidden,false,'the Modes reset countdown remains visible when its panel opens');
+    assert.equal(visibleModesCountdown.role,'timer','the visible Modes countdown keeps timer semantics');
+    assert.equal(visibleModesCountdown.live,'off','opening Modes does not enable per-second announcements');
+    assert.match(visibleModesCountdown.text,/^⏱ Daily resets in \d+:\d{2}:\d{2}$/,'Modes retains its visible reset-time copy');
     await cdp.press('Escape', 'Escape', 27);
     await waitFor(() => cdp.evaluate("document.getElementById('screen-modes').hidden && document.activeElement.id === 'btn-modes'"), 'panel close focus restoration');
 
