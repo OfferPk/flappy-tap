@@ -6470,6 +6470,9 @@ function updateComboMeter(visible) {
     setProgressTransferStatus('Choose a Flappy Tap progress backup JSON file.');
     progressImportFile.click();
   });
+  if (progressImportFile) progressImportFile.addEventListener('cancel', function () {
+    setProgressTransferStatus('No new backup selected. Saved progress was not changed.');
+  });
   if (progressImportFile) progressImportFile.addEventListener('change', async function () {
     var file = progressImportFile.files && progressImportFile.files[0];
     progressImportFile.value = '';

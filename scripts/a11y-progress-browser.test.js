@@ -155,6 +155,8 @@ class DevTools {
     await cdp.evaluate("localStorage.setItem('flappy-tap:best','47'); localStorage.setItem('flappy-tap:coins','123'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:mute','1'); true");
     await cdp.send('Page.reload', { ignoreCache: true });
     await waitFor(() => cdp.evaluate("document.readyState === 'complete' && !!window.FTStorage && document.getElementById('boot-splash').hidden"), 'menu after boot');
+    const menuHint = await cdp.evaluate("document.getElementById('controls-hint').textContent");
+    assert.match(menuHint, /Pause: ⏸ or Esc/i, 'the main-menu hint names the touch-accessible pause button and keyboard shortcut');
 
     const activeId = () => cdp.evaluate("document.activeElement && document.activeElement.id || ''");
     let current = await activeId();
@@ -460,14 +462,24 @@ class DevTools {
     await delay(250);
     assert.equal(await cdp.evaluate("document.getElementById('game-announcer').textContent"), stableAnnouncement,
       'the polite live region remains quiet between meaningful events');
-    await cdp.press('Escape', 'Escape', 27);
+    const pauseControl = await cdp.evaluate("(() => { const button=document.getElementById('btn-pause'); return {visible:!!button && button.getClientRects().length > 0, label:button && button.getAttribute('aria-label')}; })()");
+    assert.deepEqual(pauseControl, { visible: true, label: 'Pause' }, 'the on-screen pause button is visible and named for assistive technology');
+    await cdp.evaluate("document.getElementById('btn-pause').focus(); true");
+    await cdp.press('Enter', 'Enter', 13);
     const pauseAnnouncement = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent.includes('Game paused') && document.getElementById('game-announcer').textContent"), 'pause announcement');
     assert.match(pauseAnnouncement, /Score \d+/);
+    const pausePanelVisible = await cdp.evaluate("!document.getElementById('screen-pause').hidden && document.activeElement.id === 'btn-resume'");
+    assert.equal(pausePanelVisible, true, 'keyboard activation of the visible pause control opens the pause panel and focuses Resume');
     await cdp.press('Escape', 'Escape', 27);
     const resumeAnnouncement = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'resume announcement');
     assert.equal(resumeAnnouncement, 'Game resumed.');
+    await cdp.press('Escape', 'Escape', 27);
+    const escapePause = await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent.includes('Game paused') && document.getElementById('game-announcer').textContent"), 'Escape pause announcement');
+    assert.match(escapePause, /Score \d+/);
+    await cdp.press('Escape', 'Escape', 27);
+    assert.equal(await waitFor(() => cdp.evaluate("document.getElementById('game-announcer').textContent === 'Game resumed.' && document.getElementById('game-announcer').textContent"), 'Escape resume announcement'), 'Game resumed.');
 
-    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · event announcements · valid/rejected/oversized imports · rollback after simulated storage failure');
+    console.log('BROWSER A11Y/PROGRESS OK · keyboard/focus · pause button and Escape controls · event announcements · progress backup flows');
   } finally {
     if (ws && ws.readyState === WebSocket.OPEN) ws.close();
     if (browser && browser.exitCode === null) {
