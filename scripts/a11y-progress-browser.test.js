@@ -1203,6 +1203,25 @@ class DevTools {
     console.log('RESULTS HOME/RETRY FOCUS OK · Retry → game · Home → Play · run/record preserved');
     console.log('RESULTS COLLECTION FOCUS OK · heading entry · Back/X/Escape restore Results · menu return preserved');
 
+    const modeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    const modesOpen=await waitFor(()=>cdp.evaluate("(() => {const m=document.getElementById('screen-modes'),h=m.querySelector('h2');return !m.hidden&&document.activeElement===h?{modesVisible:true,menuHidden:document.getElementById('screen-start').hidden,hudHidden:document.getElementById('hud').hidden,heading:h.textContent,focusTabIndex:h.tabIndex,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()}:null;})()"),'keyboard Modes open moves focus to its heading');
+    assert.deepEqual(modesOpen,{modesVisible:true,menuHidden:true,hudHidden:true,heading:'Modes',focusTabIndex:-1,runs:modeRulesBefore.runs,best:modeRulesBefore.best},'opening Modes moves focus into the panel without starting a run or changing the record');
+    await cdp.evaluate("document.querySelector('#screen-modes .panel-close').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('screen-modes').hidden"),'Modes X-close returns to menu');
+    const modesClose=await cdp.evaluate("({menuVisible:!document.getElementById('screen-start').hidden,modesHidden:document.getElementById('screen-modes').hidden,hudHidden:document.getElementById('hud').hidden,focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    assert.deepEqual(modesClose,{menuVisible:true,modesHidden:true,hudHidden:true,focus:'btn-modes',runs:modeRulesBefore.runs,best:modeRulesBefore.best},'Modes X-close returns focus to its opener without changing gameplay state');
+    await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden&&document.activeElement===document.querySelector('#screen-modes h2')"),'reopen Modes before Escape test');
+    await cdp.press('Escape','Escape',27);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('screen-modes').hidden"),'Modes Escape returns to menu');
+    const modesEscape=await cdp.evaluate("({menuVisible:!document.getElementById('screen-start').hidden,modesHidden:document.getElementById('screen-modes').hidden,hudHidden:document.getElementById('hud').hidden,focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
+    assert.deepEqual(modesEscape,{menuVisible:true,modesHidden:true,hudHidden:true,focus:'btn-modes',runs:modeRulesBefore.runs,best:modeRulesBefore.best},'Escape returns focus to the Modes opener without changing gameplay state');
+    console.log('MODES FOCUS OK · heading on open · X/Escape restore trigger · run/record preserved');
+
     const oneLifeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
     await cdp.evaluate("document.getElementById('btn-modes').click(); true");
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden"),'open modes for One Life regression');
