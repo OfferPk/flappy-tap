@@ -85,7 +85,7 @@ Extract `dist/urr-jaa-web-windows.zip` (also in `docs/`) → **PLAY-WINDOWS.bat*
 | Desi voices | speechSynthesis + chirp · **cooldown ~6s** · same-phrase ~12s · variety pools · gift lines · Preview · Settings ON/OFF (**≠ mute**) |
 | Streak | Day 1–7 → coins → mystery → rare skin |
 | Boards | PB · Today · All-Time · Distance · Combo (localStorage) |
-| PWA | `sw.js` cache **urrjaa-v81-20260930** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
+| PWA | `sw.js` cache **urrjaa-v82-20260930** · failed asset requests stay asset errors; only offline navigations fall back to the app shell |
 | Capacitor | `appId` **com.offerpk.urrjaa**, `webDir` www |
 
 ## Capacitor / Android (optional)

@@ -1695,6 +1695,25 @@ html.reduce-motion .btn-streak-ready { animation: none !important; }
   box-shadow: 0 4px 12px rgba(0,0,0,.22);
 }
 
+@media (max-height: 600px) {
+  #screen-streak {
+    gap: 6px;
+    padding-top: calc(8px + var(--safe-top));
+    padding-bottom: calc(12px + var(--safe-bottom));
+  }
+  #screen-streak h2 {
+    font-size: clamp(1.3rem, 10vh, 1.85rem);
+    margin: 0;
+  }
+  #screen-streak > .hint { margin: 0; }
+  #screen-streak .streak-actions { gap: 10px; padding-top: 4px; }
+  #screen-streak .streak-actions .btn {
+    min-height: 48px;
+    padding: 4px 12px;
+    line-height: 1.15;
+  }
+}
+
 .pause-stats {
   display: flex;
   gap: 12px;

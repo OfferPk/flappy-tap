@@ -432,7 +432,8 @@ class DevTools {
         const claimStyle=getComputedStyle(claim), backStyle=getComputedStyle(back);
         const safe=getComputedStyle(document.documentElement);
         const body=document.getElementById('streak-body');
-        return {viewport:[innerWidth,innerHeight],app:rect(document.getElementById('app')),claim:Object.assign(rect(claim),{text:claim.textContent,disabled:claim.disabled,color:claimStyle.color,backgroundColor:claimStyle.backgroundColor,backgroundImage:claimStyle.backgroundImage,opacity:claimStyle.opacity}),back:Object.assign(rect(back),{text:back.textContent,color:backStyle.color,backgroundColor:backStyle.backgroundColor}),safe:{left:parseFloat(safe.getPropertyValue('--safe-left'))||0,right:parseFloat(safe.getPropertyValue('--safe-right'))||0,bottom:parseFloat(safe.getPropertyValue('--safe-bottom'))||0},body:{clientHeight:body.clientHeight,scrollHeight:body.scrollHeight}};
+        const screen=document.getElementById('screen-streak'), screenStyle=getComputedStyle(screen);
+        return {viewport:[innerWidth,innerHeight],app:rect(document.getElementById('app')),screen:rect(screen),screenStyle:{paddingTop:screenStyle.paddingTop,paddingBottom:screenStyle.paddingBottom,boxSizing:screenStyle.boxSizing,height:screenStyle.height,gap:screenStyle.gap},claim:Object.assign(rect(claim),{text:claim.textContent,disabled:claim.disabled,color:claimStyle.color,backgroundColor:claimStyle.backgroundColor,backgroundImage:claimStyle.backgroundImage,opacity:claimStyle.opacity}),back:Object.assign(rect(back),{text:back.textContent,color:backStyle.color,backgroundColor:backStyle.backgroundColor}),safe:{left:parseFloat(safe.getPropertyValue('--safe-left'))||0,right:parseFloat(safe.getPropertyValue('--safe-right'))||0,bottom:parseFloat(safe.getPropertyValue('--safe-bottom'))||0},body:{clientHeight:body.clientHeight,scrollHeight:body.scrollHeight}};
       })()`);
       assert.deepEqual(data.viewport, [width, height], 'requested Streak viewport is active');
       assert.equal(data.claim.visible && data.back.visible, true, `${width}×${height} both Streak actions are rendered`);
@@ -442,7 +443,7 @@ class DevTools {
         assert.ok(button.left >= data.app.left + data.safe.left - 1 && button.right <= data.app.right - data.safe.right + 1,
           `${name} stays inside the app and horizontal safe area: ${JSON.stringify(button)}`);
         assert.ok(button.bottom <= data.app.bottom - data.safe.bottom - 10,
-          `${name} stays above the bottom safe area: ${JSON.stringify(button)}`);
+          `${name} stays above the bottom safe area: ${JSON.stringify({button,app:data.app,safe:data.safe,screen:data.screen,screenStyle:data.screenStyle})}`);
       }
       assert.ok(data.back.top - data.claim.bottom >= 8, `Claim and Back have a clear gap and never overlap: ${JSON.stringify({claim:data.claim,back:data.back})}`);
       const stops = data.claim.backgroundImage.match(/rgba?\([^)]+\)/g) || [data.claim.backgroundColor];
@@ -464,6 +465,54 @@ class DevTools {
       console.log(`STREAK ACTIONS OK · ${width}×${height} · claim ${claimContrast.toFixed(1)}:1 · back ${backContrast.toFixed(1)}:1`);
       return data;
     }
+    async function checkScaledStreakViewport(width,height,insets,landscape) {
+      await cdp.send('Emulation.setDeviceMetricsOverride',{
+        width,height,deviceScaleFactor:2,mobile:true,
+        screenOrientation:{type:landscape?'landscapePrimary':'portraitPrimary',angle:landscape?90:0}
+      });
+      await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets});
+      await cdp.evaluate("(() => {const s=document.documentElement.style;s.fontSize='200%';['--safe-top','--safe-bottom','--safe-left','--safe-right'].forEach(k=>s.removeProperty(k));return true;})()");
+      await openStreak();
+      const actions=await inspectStreakActions(width,height,true);
+      const layout=await cdp.evaluate(`(() => {
+        const screen=document.getElementById('screen-streak'),body=document.getElementById('streak-body');
+        const rect=(e)=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right};};
+        const root=getComputedStyle(document.documentElement);
+        const selectors=['.streak-status','.streak-days','.streak-day','.streak-day strong','.streak-calendar','.streak-cal-head','.streak-cal-dows','.streak-cal-grid','.streak-cal-cell'];
+        const overflow=[];
+        selectors.forEach(selector=>screen.querySelectorAll(selector).forEach(e=>{if(e.scrollWidth>e.clientWidth+1)overflow.push({selector,text:(e.textContent||'').trim().slice(0,40),width:e.clientWidth,scrollWidth:e.scrollWidth});}));
+        const close=screen.querySelector('[data-close="streak"]');
+        return {rootFont:getComputedStyle(document.documentElement).fontSize,
+          safe:['--safe-top','--safe-left','--safe-bottom','--safe-right'].map(k=>root.getPropertyValue(k).trim()),
+          heading:rect(screen.querySelector('h2')),body:rect(body),actions:rect(screen.querySelector('.streak-actions')),
+          bodyScroll:{width:body.clientWidth,scrollWidth:body.scrollWidth,height:body.clientHeight,scrollHeight:body.scrollHeight},overflow,
+          claimFont:getComputedStyle(document.getElementById('btn-claim-streak')).fontSize,
+          backHit:(()=>{const r=close.getBoundingClientRect();const h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !!h&&(h===close||close.contains(h));})()};
+      })()`);
+      assert.equal(layout.rootFont,'32px',`${width}×${height} Streak uses 200% text scale`);
+      assert.deepEqual(layout.safe,[`${insets.top}px`,`${insets.left}px`,`${insets.bottom}px`,`${insets.right}px`],`${width}×${height} native insets reach Streak CSS`);
+      assert.ok(layout.heading.top>=insets.top && layout.heading.left>=insets.left && layout.heading.right<=width-insets.right,
+        `${width}×${height} Streak heading remains inside the safe area: ${JSON.stringify(layout.heading)}`);
+      assert.ok(layout.heading.bottom<=layout.body.top && layout.body.bottom<=layout.actions.top,
+        `${width}×${height} Streak header, scrollable calendar, and footer do not overlap: ${JSON.stringify(layout)}`);
+      assert.ok(layout.bodyScroll.width>=layout.bodyScroll.scrollWidth-1,
+        `${width}×${height} scaled Streak content has no horizontal scroll/clipping: ${JSON.stringify(layout)}`);
+      assert.deepEqual(layout.overflow,[],`${width}×${height} Streak calendar labels fit without horizontal clipping: ${JSON.stringify(layout.overflow)}`);
+      assert.ok(Number.parseFloat(layout.claimFont)>=30,`${width}×${height} reward status text scales with the user's text setting`);
+      assert.equal(layout.backHit,true,`${width}×${height} Back remains hit-testable at 200% scale`);
+      const initial={claimTop:actions.claim.top,backTop:actions.back.top};
+      await cdp.evaluate("(() => {const b=document.getElementById('streak-body');b.scrollTop=b.scrollHeight;return b.scrollTop;})()");
+      const afterScroll=await cdp.evaluate("(() => {const c=document.getElementById('btn-claim-streak').getBoundingClientRect(),b=document.querySelector('#screen-streak [data-close=\"streak\"]').getBoundingClientRect(),s=document.getElementById('streak-body');return {claimTop:c.top,backTop:b.top,scrollTop:s.scrollTop,scrollHeight:s.scrollHeight};})()");
+      assert.ok(afterScroll.scrollTop>0 && Math.abs(afterScroll.claimTop-initial.claimTop)<1 && Math.abs(afterScroll.backTop-initial.backTop)<1,
+        `${width}×${height} fixed Streak actions stay visible while the scaled calendar scrolls: ${JSON.stringify(afterScroll)}`);
+      await tapAt('#screen-streak [data-close="streak"]');
+      await waitFor(()=>cdp.evaluate("document.getElementById('screen-streak').hidden"),`${width}×${height} scaled Streak Back action`);
+      await cdp.evaluate("(() => {const s=document.documentElement.style;s.fontSize='';['--safe-top','--safe-bottom','--safe-left','--safe-right'].forEach(k=>s.removeProperty(k));return true;})()");
+      await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{}});
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
+      await waitFor(()=>cdp.evaluate('innerWidth>320&&innerHeight>400'),'restore desktop after Streak audit');
+      console.log(`STREAK SCALE/SAFE AREA OK · ${width}×${height} · 200% · ${landscape?'landscape':'portrait'}`);
+    }
 
     await setStreakViewport(704, 1540);
     await openStreak();
@@ -478,6 +527,8 @@ class DevTools {
     assert.equal(await cdp.evaluate("document.activeElement.id"), 'btn-streak', 'Back restores focus to the Streak menu control');
 
     await cdp.evaluate("(() => { const n=new Date(); const day=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); localStorage.setItem('flappy-tap:streak-date',day); localStorage.setItem('flappy-tap:streak-day','2'); localStorage.setItem('flappy-tap:streak-claimed','1'); return true; })()");
+    await checkScaledStreakViewport(320,568,{top:28,left:0,bottom:34,right:0},false);
+    await checkScaledStreakViewport(568,320,{top:8,left:44,bottom:21,right:44},true);
     for (const [width, height] of [[704, 1540], [393, 690], [320, 568]]) {
       await setStreakViewport(width, height);
       await openStreak();
@@ -524,6 +575,62 @@ class DevTools {
     assert.equal(current, 'btn-settings', 'keyboard traversal reaches Settings');
     await cdp.press('Enter', 'Enter', 13);
     await waitFor(() => cdp.evaluate("document.activeElement.tagName === 'H2' && !!document.activeElement.closest('#screen-settings')"), 'settings panel heading focus');
+
+    async function checkScaledSettingsViewport(width, height, insets, landscape) {
+      await cdp.send('Emulation.setDeviceMetricsOverride', {
+        width, height, deviceScaleFactor: 2, mobile: true,
+        screenOrientation: { type: landscape ? 'landscapePrimary' : 'portraitPrimary', angle: landscape ? 90 : 0 }
+      });
+      await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets });
+      await waitFor(() => cdp.evaluate(`innerWidth === ${width} && innerHeight === ${height}`), `${width}×${height} Settings viewport`);
+      await cdp.evaluate("(() => { document.documentElement.style.fontSize='200%'; const s=document.getElementById('screen-settings'); s.scrollTop=0; s.querySelector('.settings-card').scrollTop=0; return true; })()");
+      const layout = await cdp.evaluate(`(() => {
+        const screen=document.getElementById('screen-settings');
+        const card=screen.querySelector('.settings-card');
+        const rect=(e)=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height};};
+        const rows=[...screen.querySelectorAll('.setting-row')];
+        const text=[...screen.querySelectorAll('.setting-hint,.settings-group')];
+        const root=getComputedStyle(document.documentElement);
+        const box=(e)=>({width:e.clientWidth,scrollWidth:e.scrollWidth});
+        const overflows=(items)=>items.filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>(e.textContent||'').trim().slice(0,70));
+        return {rootFont:getComputedStyle(document.documentElement).fontSize,
+          safe:['--safe-top','--safe-left','--safe-bottom','--safe-right'].map(k=>root.getPropertyValue(k).trim()),
+          screen:rect(screen),screenOverflow:getComputedStyle(screen).overflowY,screenScrollHeight:screen.scrollHeight,screenClientHeight:screen.clientHeight,
+          heading:rect(screen.querySelector('h2')),close:rect(screen.querySelector('.panel-close')),
+          card:rect(card),cardOverflow:getComputedStyle(card).overflowY,cardScrollHeight:card.scrollHeight,cardClientHeight:card.clientHeight,cardSize:box(card),
+          rowOverflows:overflows(rows),textOverflows:overflows(text)};
+      })()`);
+      assert.equal(layout.rootFont,'32px',`${width}×${height} Settings uses 200% text scale`);
+      assert.deepEqual(layout.safe,[`${insets.top}px`,`${insets.left}px`,`${insets.bottom}px`,`${insets.right}px`],`${width}×${height} native safe insets reach Settings`);
+      assert.equal(layout.screenOverflow,'auto',`${width}×${height} Settings screen can scroll`);
+      assert.equal(layout.cardOverflow,'auto',`${width}×${height} Settings sections can scroll within their card`);
+      assert.ok(layout.screenScrollHeight>=layout.screenClientHeight && layout.cardScrollHeight>layout.cardClientHeight,
+        `${width}×${height} Settings content is not clipped by fixed-height containers`);
+      assert.ok(layout.heading.top>=insets.top && layout.heading.left>=insets.left && layout.heading.right<=width-insets.right,
+        `${width}×${height} Settings heading is inside the safe viewport: ${JSON.stringify(layout.heading)}`);
+      assert.ok(layout.close.top>=insets.top && layout.close.right<=width-insets.right,
+        `${width}×${height} Settings close control is inside the safe viewport: ${JSON.stringify(layout.close)}`);
+      assert.ok(layout.card.left>=insets.left && layout.card.right<=width-insets.right && layout.cardSize.scrollWidth<=layout.cardSize.width+1,
+        `${width}×${height} Settings card has no horizontal clipping: ${JSON.stringify(layout)}`);
+      assert.deepEqual(layout.rowOverflows,[],`${width}×${height} setting labels and controls wrap without horizontal overflow`);
+      assert.deepEqual(layout.textOverflows,[],`${width}×${height} setting hints and headings wrap without horizontal overflow`);
+
+      await cdp.evaluate("document.getElementById('btn-import-progress').scrollIntoView({block:'center',inline:'nearest'}); true");
+      const importControl=await cdp.evaluate("(() => {const e=document.getElementById('btn-import-progress');const r=e.getBoundingClientRect();const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,visible:r.top>=0&&r.bottom<=innerHeight,hit:!!hit&&(hit===e||e.contains(hit))};})()");
+      assert.ok(importControl.visible && importControl.hit && importControl.left>=insets.left && importControl.right<=width-insets.right,
+        `${width}×${height} scaled Import action remains visible and tappable: ${JSON.stringify(importControl)}`);
+      await cdp.evaluate("document.getElementById('btn-settings-close').scrollIntoView({block:'center',inline:'nearest'}); true");
+      const done=await cdp.evaluate("(() => {const e=document.getElementById('btn-settings-close');const r=e.getBoundingClientRect();const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,visible:r.top>=0&&r.bottom<=innerHeight,hit:!!hit&&(hit===e||e.contains(hit))};})()");
+      assert.ok(done.visible && done.hit && done.left>=insets.left && done.right<=width-insets.right,
+        `${width}×${height} scaled Done action is reachable and tappable: ${JSON.stringify(done)}`);
+      await cdp.evaluate("(() => {document.documentElement.style.fontSize='';const s=document.getElementById('screen-settings');s.scrollTop=0;s.querySelector('.settings-card').scrollTop=0;return true;})()");
+      await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{}});
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
+      await waitFor(()=>cdp.evaluate('innerWidth>320&&innerHeight>400'),'restore desktop after Settings audit');
+      console.log(`SETTINGS SCALE/SAFE AREA OK · ${width}×${height} · 200% · ${landscape?'landscape':'portrait'}`);
+    }
+    await checkScaledSettingsViewport(320,568,{top:28,left:0,bottom:34,right:0},false);
+    await checkScaledSettingsViewport(568,320,{top:8,left:44,bottom:21,right:44},true);
 
     // Walk the actual settings tab order to the export/import controls.
     current = await activeId();
