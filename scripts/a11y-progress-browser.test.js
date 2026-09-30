@@ -1498,6 +1498,8 @@ class DevTools {
     await cdp.evaluate("(() => {localStorage.clear();localStorage.setItem('flappy-tap:best','0');localStorage.setItem('flappy-tap:coins','0');localStorage.setItem('flappy-tap:runs','0');localStorage.setItem('flappy-tap:coach-done','0');localStorage.setItem('flappy-tap:coach-step','0');localStorage.setItem('flappy-tap:mute','1');localStorage.setItem('flappy-tap:resume-countdown','0');return true;})()");
     await cdp.send('Page.reload',{ignoreCache:true});
     await waitFor(()=>cdp.evaluate("document.readyState==='complete'&&!!window.FTStorage&&document.getElementById('boot-splash').hidden&&!document.getElementById('screen-start').hidden"),'fresh first-run menu for coach-flow regression');
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 320, height: 568, deviceScaleFactor: 1, mobile: true });
+    await waitFor(() => cdp.evaluate('innerWidth === 320 && innerHeight === 568'), '320×568 first-run coach viewport');
     assert.equal(await cdp.evaluate("document.getElementById('game').tabIndex"),-1,'the canvas is not an extra Tab stop in the menu');
     await cdp.evaluate("document.getElementById('btn-play').focus(); true");
     await cdp.press('Enter','Enter',13);
@@ -1505,6 +1507,9 @@ class DevTools {
     const coachStart=await cdp.evaluate("(() => {const d=document.getElementById('coach-marks'),t=document.getElementById('coach-text'),g=document.getElementById('game');return {visible:!d.hidden,role:d.getAttribute('role'),description:d.getAttribute('aria-describedby'),textRole:t.getAttribute('role'),textLive:t.getAttribute('aria-live'),text:t.textContent,focus:document.activeElement.id,canvasTabIndex:g.tabIndex};})()");
     assert.equal(firstCoach,true,'first-run coaching begins on an eligible run');
     assert.deepEqual(coachStart,{visible:true,role:'dialog',description:'coach-text',textRole:'status',textLive:'polite',text:'👆 Tap or press Space to flap — keep flapping!',focus:'game',canvasTabIndex:0},'coach instructions are announced while Space remains ready to flap');
+    const coachMagicAction=await cdp.evaluate("(() => {const b=document.getElementById('btn-magic-action'),c=document.querySelector('#coach-marks .coach-card'),br=b.getBoundingClientRect(),cr=c.getBoundingClientRect(),x=(br.left+br.right)/2,y=(br.top+br.bottom)/2,hit=document.elementFromPoint(x,y),overlap=cr.left<br.right&&cr.right>br.left&&cr.top<br.bottom&&cr.bottom>br.top;return {visible:!b.hidden,enabled:!b.disabled,overlap,hit:hit&&hit.closest('button')?hit.closest('button').id:''};})()");
+    assert.deepEqual(coachMagicAction,{visible:true,enabled:true,overlap:false,hit:'btn-magic-action'},'first-run coach leaves the available MAGIC action visible and directly hit-testable at 320×568');
+    console.log('COACH / MAGIC TARGET OK · 320×568 · both actions unobstructed');
     await cdp.press(' ','Space',32);
     const nextCoach=await waitFor(()=>cdp.evaluate("document.getElementById('coach-text').textContent.includes('Fly through')&&document.getElementById('coach-text').textContent"),'Space flaps and advances the initial coach step');
     assert.equal(nextCoach,'🕊 Fly through the gaps between pipes','Space on the game surface performs the advertised flap');
@@ -1534,6 +1539,8 @@ class DevTools {
     await cdp.press(' ','Space',32);
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('hud').hidden&&document.getElementById('game').tabIndex===-1&&document.activeElement.id==='btn-play'"),'quitting to menu removes the canvas tab stop and restores Play focus');
     console.log('GAMEPLAY KEYBOARD FOCUS OK · Space flap · coach actions · Pause/Resume · menu return');
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 320, height: 480, deviceScaleFactor: 1, mobile: true });
+    await waitFor(() => cdp.evaluate('innerWidth === 320 && innerHeight === 480'), 'restore 320×480 viewport after coach regression');
 
     await cdp.evaluate("localStorage.setItem('flappy-tap:reduce-motion','1'); localStorage.setItem('flappy-tap:coach-done','1'); localStorage.setItem('flappy-tap:resume-countdown','0'); true");
     await cdp.send('Page.reload',{ignoreCache:true});
