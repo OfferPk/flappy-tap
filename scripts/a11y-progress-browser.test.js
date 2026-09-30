@@ -1167,6 +1167,34 @@ class DevTools {
     const secondRunResult = await waitFor(() => cdp.evaluate("!document.getElementById('screen-death').hidden && document.getElementById('run-result-announcement').textContent"), 'no-new-record run-end announcement', 15000);
     assert.equal(secondRunResult, 'Run complete. Score 0. No new record.', 'run end explicitly announces when the score is not a new record');
 
+    const openCollectionFromResults = async () => {
+      await cdp.evaluate("document.getElementById('btn-death-collection').scrollIntoView({block:'center'}); true");
+      await clickElementAt('#btn-death-collection');
+      await waitFor(()=>cdp.evaluate("!document.getElementById('screen-collection').hidden"),'Collection opens from Run Summary');
+      const entry=await cdp.evaluate("(() => {const c=document.getElementById('screen-collection');return {collectionVisible:!c.hidden,summaryHidden:document.getElementById('screen-death').hidden,focusHeading:document.activeElement===c.querySelector('h2')};})()");
+      assert.deepEqual(entry,{collectionVisible:true,summaryHidden:true,focusHeading:true},'opening Collection from Results focuses its heading');
+    };
+    const waitForSummaryReturnFocus = label => waitFor(()=>cdp.evaluate("(!document.getElementById('screen-death').hidden&&document.getElementById('screen-collection').hidden&&document.activeElement.id==='btn-death-collection')"),label);
+    await openCollectionFromResults();
+    await cdp.evaluate("document.querySelector('#screen-collection [data-close=collection]').scrollIntoView({block:'center'}); true");
+    await clickElementAt('#screen-collection [data-close="collection"]');
+    assert.equal(await waitForSummaryReturnFocus('Collection Back returns to Run Summary focus'),true,'Back restores the Results screen and Collection-button focus');
+    await openCollectionFromResults();
+    await cdp.press('Escape','Escape',27);
+    assert.equal(await waitForSummaryReturnFocus('Collection Escape returns to Run Summary focus'),true,'Escape restores the Results screen and Collection-button focus');
+    await openCollectionFromResults();
+    await cdp.evaluate("document.querySelector('#screen-collection .panel-close').click(); true");
+    assert.equal(await waitForSummaryReturnFocus('Collection X close returns to Run Summary focus'),true,'the panel-close X restores the Results screen and Collection-button focus');
+    await cdp.evaluate("document.getElementById('btn-menu').click(); true");
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden"),'return to menu before menu Collection check');
+    await cdp.evaluate("document.getElementById('btn-collection').scrollIntoView({block:'center'}); true");
+    await clickElementAt('#btn-collection');
+    await waitFor(()=>cdp.evaluate("(() => {const c=document.getElementById('screen-collection');return !c.hidden&&document.activeElement===c.querySelector('h2');})()"),'menu Album opens with heading focus');
+    await cdp.evaluate("document.querySelector('#screen-collection [data-close=collection]').scrollIntoView({block:'center'}); true");
+    await clickElementAt('#screen-collection [data-close="collection"]');
+    assert.equal(await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('screen-collection').hidden&&document.activeElement.id==='btn-collection'"),'menu Album returns to its menu trigger'),true,'menu-origin Collection navigation retains its existing focus return');
+    console.log('RESULTS COLLECTION FOCUS OK · heading entry · Back/X/Escape restore Results · menu return preserved');
+
     await cdp.evaluate("(() => {localStorage.clear();localStorage.setItem('flappy-tap:best','0');localStorage.setItem('flappy-tap:coins','0');localStorage.setItem('flappy-tap:runs','0');localStorage.setItem('flappy-tap:coach-done','0');localStorage.setItem('flappy-tap:coach-step','0');localStorage.setItem('flappy-tap:mute','1');localStorage.setItem('flappy-tap:resume-countdown','0');return true;})()");
     await cdp.send('Page.reload',{ignoreCache:true});
     await waitFor(()=>cdp.evaluate("document.readyState==='complete'&&!!window.FTStorage&&document.getElementById('boot-splash').hidden&&!document.getElementById('screen-start').hidden"),'fresh first-run menu for coach-flow regression');

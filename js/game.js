@@ -1683,6 +1683,7 @@ function updateComboMeter(visible) {
 
   var menuPanelReturnFocus = null;
   var pauseReturnFocus = null;
+  var collectionReturnFocus = null;
 
   function focusElementSafely(el) {
     if (!el || typeof el.focus !== 'function') return;
@@ -2130,6 +2131,18 @@ function updateComboMeter(visible) {
     menuPanelReturnFocus = null;
     pauseReturnFocus = null;
     focusElementSafely(returnTarget && returnTarget.isConnected ? returnTarget : btnPlay);
+  }
+
+  function returnFromCollection() {
+    var returnTarget = collectionReturnFocus;
+    collectionReturnFocus = null;
+    if (returnTarget && returnTarget.isConnected && screenDeath) {
+      hideAllScreens();
+      screenDeath.hidden = false;
+      focusElementSafely(returnTarget);
+      return;
+    }
+    showMenu();
   }
 
   function persistScore() {
@@ -6216,8 +6229,9 @@ function updateComboMeter(visible) {
       showMenu();
       return true;
     }
+    if (key === 'collection') { returnFromCollection(); return true; }
     // Generic panel → menu
-    if (key === 'modes' || key === 'garage' || key === 'missions' || key === 'collection' ||
+    if (key === 'modes' || key === 'garage' || key === 'missions' ||
         key === 'boards' || key === 'streak' || key === 'guide' || key === 'magic') {
       showMenu();
       return true;
@@ -6313,7 +6327,8 @@ function updateComboMeter(visible) {
     for (var i = 0; i < panels.length; i++) {
       if (panels[i] && !panels[i].hidden) {
         if (panels[i] === screenGifts) abortPendingSpinKeepCharge();
-        showMenu();
+        if (panels[i] === screenCollection) returnFromCollection();
+        else showMenu();
         return true;
       }
     }
@@ -8005,7 +8020,7 @@ function updateComboMeter(visible) {
     refreshCollection();
   });
   document.querySelectorAll('[data-close="collection"]').forEach(function (b) {
-    b.addEventListener('click', function () { showMenu(); });
+    b.addEventListener('click', function () { returnFromCollection(); });
   });
 
   function refreshBoards() {
@@ -8177,9 +8192,12 @@ function updateComboMeter(visible) {
   });
 
   if (btnDeathCollection) btnDeathCollection.addEventListener('click', function () {
+    collectionReturnFocus = btnDeathCollection;
+    menuPanelReturnFocus = null;
     hideAllScreens();
     if (screenCollection) screenCollection.hidden = false;
     refreshCollection();
+    focusPanelHeading(screenCollection);
   });
   if (btnMysteryOk) btnMysteryOk.addEventListener('click', function () {
     if (mysteryOverlay) mysteryOverlay.hidden = true;
