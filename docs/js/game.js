@@ -2404,7 +2404,11 @@ function updateComboMeter(visible) {
       setTimeout(function () { maybeShowSpinUnlockPopup(); }, 700);
     }
     if (btnRetry) {
-      btnRetry.textContent = isOneLife() ? 'HOME' : (playMode === 'daily' ? 'RETRY DAILY' : 'RETRY');
+      var retryLabel = 'RETRY';
+      if (isOneLife()) retryLabel = 'HOME';
+      else if (playMode === 'daily') retryLabel = 'RETRY DAILY';
+      else if (playMode === 'challenge' && challengeWon) retryLabel = 'PLAY CLASSIC';
+      btnRetry.textContent = retryLabel;
     }
     // Persist daily missions (today's 3 from pool)
     FTStorage.bumpMission('fly_m', Math.floor(metersFlown));

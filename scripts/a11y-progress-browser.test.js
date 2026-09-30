@@ -27,6 +27,7 @@ const MIME = {
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp',
   '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2'
 };
+let challengeTargetOverrideForTests = null;
 const server = http.createServer((request, response) => {
   let pathname;
   try { pathname = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname); }
@@ -37,6 +38,21 @@ const server = http.createServer((request, response) => {
   try {
     if (fs.statSync(filename).isDirectory()) filename = path.join(filename, 'index.html');
     const stat = fs.statSync(filename);
+    if (pathname === '/js/game.js' && challengeTargetOverrideForTests !== null) {
+      let source = fs.readFileSync(filename, 'utf8');
+      const targetPattern = /(\{ id: 1, label: 'City Warm-up', area: 'city', target: )15(,)/;
+      if (!targetPattern.test(source)) { response.writeHead(500).end('Challenge test fixture could not find Stage 1 target'); return; }
+      source = source.replace(targetPattern, '$1' + challengeTargetOverrideForTests + '$2');
+      // Make the actual first-pipe score/clear branch quick and deterministic in this browser-only fixture.
+      const gapPattern = /var gapY = margin \+ rng\(\) \* Math\.max\(10, maxTop - margin\);/;
+      const startPattern = /var startX = W \+ 60;/;
+      if (!gapPattern.test(source) || !startPattern.test(source)) { response.writeHead(500).end('Challenge test fixture could not locate initial pipe setup'); return; }
+      source = source.replace(gapPattern, 'var gapY = H * 0.42 - g / 2;').replace(startPattern, 'var startX = BIRD_X + 160;');
+      const body = Buffer.from(source + '\nwindow.__flappyA11yChallengeTargetOverride = ' + challengeTargetOverrideForTests + ';\n');
+      response.writeHead(200, { 'Content-Type': MIME['.js'], 'Content-Length': body.length, 'Cache-Control': 'no-store' });
+      response.end(body);
+      return;
+    }
     response.writeHead(200, {
       'Content-Type': MIME[path.extname(filename).toLowerCase()] || 'application/octet-stream',
       'Content-Length': stat.size,
@@ -1319,6 +1335,59 @@ class DevTools {
     assert.deepEqual(challengeRunReturn,{focus:'btn-play',runs:challengeSelectionBefore.runs+2,best:challengeSelectionBefore.best,stage:challengeSelectionBefore.stage,score:'0'},'returning to Menu does not add another run, record, or unlock, and the unscored run stays at zero');
     await cdp.evaluate('window.FTStorage.setChallengeStage('+challengeRulesBefore.stage+'); true');
     console.log('CHALLENGE RETRY OK · failed Stage 1 → Retry Stage 1 · one run · canvas focus · score/unlocks preserved');
+
+    await cdp.evaluate('window.FTStorage.setChallengeStage(1); true');
+    challengeTargetOverrideForTests = 1;
+    await cdp.send('Page.reload',{ignoreCache:true});
+    await waitFor(()=>cdp.evaluate("document.readyState==='complete'&&window.__flappyA11yChallengeTargetOverride===1&&!!window.FTStorage&&!document.getElementById('screen-start').hidden"),'deterministic Stage 1 clear fixture reload');
+    const challengeWinBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),coins:window.FTStorage.getCoins()})");
+    assert.equal(challengeWinBefore.stage,1,'the deterministic win fixture begins at Stage 1');
+    await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-modes').hidden"),'open Modes for Stage 1 clear flow');
+    await cdp.evaluate("document.getElementById('btn-open-challenge').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('challenge-stage-panel').hidden"),'open Challenge picker for Stage 1 clear flow');
+    await cdp.evaluate("document.querySelector('.challenge-stage-card:not(:disabled)').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('hud').hidden&&document.activeElement.id==='game'&&window.FTStorage.getRunCount()==="+(challengeWinBefore.runs+1)),'start deterministic Stage 1 Challenge run');
+    assert.equal(await cdp.evaluate('window.__flappyA11yChallengeTargetOverride'),1,'only the browser fixture lowers the Challenge threshold');
+    let challengeWinProgress=null;
+    for (let tap=0; tap<40; tap++) {
+      await cdp.press(' ','Space',32);
+      await delay(430);
+      challengeWinProgress=await cdp.evaluate("({score:Number(document.getElementById('score-display').textContent),stage:window.FTStorage.getChallengeStage(),deathVisible:!document.getElementById('screen-death').hidden})");
+      if (challengeWinProgress.stage>=2 || challengeWinProgress.deathVisible) break;
+    }
+    assert.equal(challengeWinProgress.stage,2,'passing a pipe clears Stage 1 and unlocks Stage 2; observed '+JSON.stringify(challengeWinProgress));
+    const challengeWinResult=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('screen-death');return !d.hidden&&document.activeElement.id==='run-summary-heading'&&window.FTStorage.getRunCount()==="+(challengeWinBefore.runs+1)+"?{mode:document.getElementById('mode-death-value').textContent,stageLabel:document.getElementById('mode-badge').textContent,score:document.getElementById('final-score').textContent,button:document.getElementById('btn-retry').textContent.trim(),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),coins:window.FTStorage.getCoins()}:null;})()"),'Stage 1 clear Run Summary',20000);
+    assert.equal(challengeWinResult.mode,'Challenge','the completed stage still identifies its finished run as Challenge');
+    assert.ok(Number(challengeWinResult.score)>=1,'the cleared Challenge run retains a positive score');
+    assert.ok(challengeWinResult.stageLabel.includes('City Warm-up'),'the stage clear belongs to Stage 1');
+    assert.equal(challengeWinResult.best,Math.max(challengeWinBefore.best,Number(challengeWinResult.score)),'the Challenge score updates the best only when it exceeds the prior record');
+    assert.deepEqual({focus:await cdp.evaluate('document.activeElement.id'),runs:challengeWinResult.runs,stage:challengeWinResult.stage,coins:challengeWinResult.coins},
+      {focus:'run-summary-heading',runs:challengeWinBefore.runs+1,stage:2,coins:challengeWinBefore.coins+40},
+      'stage clear focuses the summary, counts one run, awards the Stage 1 reward once, and unlocks Stage 2');
+    assert.equal(challengeWinResult.button,'PLAY CLASSIC','the completed-stage button labels its intentional Classic transition clearly');
+    await cdp.evaluate("document.getElementById('btn-retry').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('hud').hidden&&document.activeElement.id==='game'&&window.FTStorage.getRunCount()==="+(challengeWinBefore.runs+2)+"&&document.getElementById('game-announcer').textContent.includes('Classic run started')"),'completed-stage action starts Classic');
+    const challengeWinRetry=await cdp.evaluate("({focus:document.activeElement.id,announcement:document.getElementById('game-announcer').textContent,score:document.getElementById('score-display').textContent,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),coins:window.FTStorage.getCoins()})");
+    assert.deepEqual({focus:challengeWinRetry.focus,score:challengeWinRetry.score,runs:challengeWinRetry.runs,best:challengeWinRetry.best,stage:challengeWinRetry.stage,coins:challengeWinRetry.coins},
+      {focus:'game',score:'0',runs:challengeWinBefore.runs+2,best:challengeWinResult.best,stage:2,coins:challengeWinBefore.coins+40},
+      'the post-clear action starts one Classic run, resets only live score, and preserves the best score, Stage 2 unlock, and one-time reward');
+    assert.match(challengeWinRetry.announcement,/Classic run started/,'the started mode is announced as Classic');
+    await cdp.evaluate("document.getElementById('btn-pause').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-pause').hidden"),'pause post-clear Classic run');
+    await cdp.evaluate("document.getElementById('btn-quit-pause').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.activeElement.id==='btn-play'"),'return from post-clear Classic run');
+    challengeTargetOverrideForTests = null;
+    await cdp.evaluate('window.FTStorage.setChallengeStage('+challengeWinBefore.stage+'); true');
+    await cdp.send('Page.reload',{ignoreCache:true});
+    await waitFor(()=>cdp.evaluate("document.readyState==='complete'&&window.__flappyA11yChallengeTargetOverride===undefined&&!!window.FTStorage&&!document.getElementById('screen-start').hidden"),'restore normal Challenge game after deterministic win fixture');
+    console.log('CHALLENGE CLEAR TRANSITION OK · Stage 2 unlocked · PLAY CLASSIC starts Classic · focus/score/reward preserved');
 
     const oneLifeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
     await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
