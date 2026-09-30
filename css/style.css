@@ -274,6 +274,7 @@ html.reduce-motion #app.shake { animation: none; }
   gap: 3px;
   transition: border-color .15s, transform .1s;
 }
+.skin-card[hidden] { display: none !important; }
 .skin-card canvas { width: 48px; height: 48px; display: block; }
 .skin-card span {
   font-size: 0.65rem;

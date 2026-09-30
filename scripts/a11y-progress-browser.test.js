@@ -1256,6 +1256,22 @@ class DevTools {
     assert.deepEqual(modesEscape,{menuVisible:true,modesHidden:true,hudHidden:true,focus:'btn-modes',runs:modeRulesBefore.runs,best:modeRulesBefore.best},'Escape returns focus to the Modes opener without changing gameplay state');
     console.log('MODES FOCUS OK · heading on open · X/Escape restore trigger · run/record preserved');
 
+    const garageProgressBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),stage:window.FTStorage.getChallengeStage()})");
+    await cdp.evaluate("document.getElementById('btn-garage').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("!document.getElementById('screen-garage').hidden"),'keyboard Garage open');
+    await cdp.evaluate("(() => {const q=document.getElementById('garage-search');q.value='Sparrow';q.dispatchEvent(new Event('input',{bubbles:true}));return true;})()");
+    const garageFiltered=await cdp.evaluate("(() => {const cards=Array.from(document.querySelectorAll('#garage-birds .skin-card'));const rendered=cards.filter(card=>{const r=card.getBoundingClientRect();return getComputedStyle(card).display!=='none'&&r.width>0&&r.height>0;});return {query:document.getElementById('garage-search').value,renderedLabels:rendered.map(card=>card.dataset.label),cardCount:cards.length,hiddenNonmatches:cards.filter(card=>card.dataset.label!=='Sparrow').every(card=>card.hidden)};})()");
+    assert.deepEqual(garageFiltered,{query:'Sparrow',renderedLabels:['Sparrow'],cardCount:garageFiltered.cardCount,hiddenNonmatches:true},'Garage search visually hides every nonmatching bird instead of only displaying the query');
+    await clickElementAt('#garage-search-clear');
+    const garageRestored=await waitFor(()=>cdp.evaluate("(() => {const cards=Array.from(document.querySelectorAll('#garage-birds .skin-card'));const shown=cards.filter(card=>getComputedStyle(card).display!=='none'&&card.getBoundingClientRect().width>0);return document.getElementById('garage-search').value===''&&shown.length===cards.length?{query:'',shown:shown.length,total:cards.length}:null;})()"),'Garage clear-search restores all bird choices');
+    assert.deepEqual(garageRestored,{query:'',shown:garageFiltered.cardCount,total:garageFiltered.cardCount},'clearing the Garage query restores every bird choice');
+    const garageProgressAfter=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),coins:window.FTStorage.getCoins(),stage:window.FTStorage.getChallengeStage()})");
+    assert.deepEqual(garageProgressAfter,garageProgressBefore,'Garage search and clear preserve runs, best, coins, and Challenge unlocks');
+    await cdp.evaluate("document.querySelector('#screen-garage .panel-close').click(); true");
+    await waitFor(()=>cdp.evaluate("document.getElementById('screen-garage').hidden&&!document.getElementById('screen-start').hidden"),'Garage close returns to menu');
+    console.log('GARAGE SEARCH OK · only matching cards render · clear restores all · progress preserved');
+
     const challengeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),score:document.getElementById('score-display').textContent})");
     const readChallengeState=()=>cdp.evaluate("(() => {const p=document.getElementById('challenge-stage-panel'),h=p.querySelector('h3'),a=document.activeElement;return {modesVisible:!document.getElementById('screen-modes').hidden,pickerVisible:!p.hidden,focus:a===h?'stage-heading':(a.id||a.tagName.toLowerCase()),headingTabIndex:h.getAttribute('tabindex'),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),score:document.getElementById('score-display').textContent};})()");
     await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
