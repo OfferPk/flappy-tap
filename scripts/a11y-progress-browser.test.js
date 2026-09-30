@@ -1296,6 +1296,19 @@ class DevTools {
       {focus:'game',canvasTabIndex:0,pickerHidden:true,score:'0',runs:challengeSelectionBefore.runs+1,best:challengeSelectionBefore.best,stage:challengeSelectionBefore.stage},
       'selecting an unlocked stage focuses the game, starts one run, resets only the live score, and preserves best/unlock progress');
     assert.ok(challengeRunStart.modeBadge.includes('City Warm-up'),'selecting Stage 1 starts the selected stage even when Stage 3 is unlocked; got '+challengeRunStart.modeBadge);
+    const challengeFailed=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('screen-death');return !d.hidden&&document.activeElement.id==='run-summary-heading'&&window.FTStorage.getRunCount()==="+(challengeSelectionBefore.runs+1)+"?{mode:document.getElementById('mode-death-value').textContent,stageLabel:document.getElementById('mode-badge').textContent,score:document.getElementById('final-score').textContent,button:document.getElementById('btn-retry').textContent.trim(),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage()}:null;})()"),'failed Stage 1 Challenge Results',20000);
+    assert.deepEqual({mode:challengeFailed.mode,score:challengeFailed.score,button:challengeFailed.button,runs:challengeFailed.runs,best:challengeFailed.best,stage:challengeFailed.stage},
+      {mode:'Challenge',score:'0',button:'RETRY',runs:challengeSelectionBefore.runs+1,best:challengeSelectionBefore.best,stage:challengeSelectionBefore.stage},
+      'an unscored Stage 1 run fails without changing the best score or Stage 3 unlock');
+    assert.ok(challengeFailed.stageLabel.includes('City Warm-up'),'the failed run was the selected Stage 1; got '+challengeFailed.stageLabel);
+    await cdp.evaluate("document.getElementById('btn-retry').focus(); true");
+    await cdp.press('Enter','Enter',13);
+    await waitFor(()=>cdp.evaluate("document.getElementById('screen-death').hidden&&!document.getElementById('hud').hidden&&document.activeElement.id==='game'&&window.FTStorage.getRunCount()==="+(challengeSelectionBefore.runs+2)),'Retry starts one new Challenge run on the selected stage');
+    const challengeRetryStart=await cdp.evaluate("({focus:document.activeElement.id,modeBadge:document.getElementById('mode-badge').textContent,score:document.getElementById('score-display').textContent,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage()})");
+    assert.deepEqual({focus:challengeRetryStart.focus,score:challengeRetryStart.score,runs:challengeRetryStart.runs,best:challengeRetryStart.best,stage:challengeRetryStart.stage},
+      {focus:'game',score:'0',runs:challengeSelectionBefore.runs+2,best:challengeSelectionBefore.best,stage:challengeSelectionBefore.stage},
+      'Retry focuses the game, starts exactly one additional run, resets only live score, and preserves best/unlock progress');
+    assert.ok(challengeRetryStart.modeBadge.includes('City Warm-up'),'Retry repeats the selected Stage 1 even when Stage 3 is unlocked; got '+challengeRetryStart.modeBadge);
     await cdp.evaluate("document.getElementById('btn-pause').focus(); true");
     await cdp.press('Enter','Enter',13);
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-pause').hidden"),'pause newly started Challenge run');
@@ -1303,9 +1316,9 @@ class DevTools {
     await cdp.press('Enter','Enter',13);
     await waitFor(()=>cdp.evaluate("!document.getElementById('screen-start').hidden&&document.getElementById('hud').hidden&&document.activeElement.id==='btn-play'"),'return to menu from selected Challenge run');
     const challengeRunReturn=await cdp.evaluate("({focus:document.activeElement.id,runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),score:document.getElementById('score-display').textContent})");
-    assert.deepEqual(challengeRunReturn,{focus:'btn-play',runs:challengeSelectionBefore.runs+1,best:challengeSelectionBefore.best,stage:challengeSelectionBefore.stage,score:'0'},'returning to Menu does not add another run, record, or unlock, and the unscored run stays at zero');
+    assert.deepEqual(challengeRunReturn,{focus:'btn-play',runs:challengeSelectionBefore.runs+2,best:challengeSelectionBefore.best,stage:challengeSelectionBefore.stage,score:'0'},'returning to Menu does not add another run, record, or unlock, and the unscored run stays at zero');
     await cdp.evaluate('window.FTStorage.setChallengeStage('+challengeRulesBefore.stage+'); true');
-    console.log('CHALLENGE STAGE START OK · selected cleared stage honored · canvas focus · one run · score/unlocks preserved');
+    console.log('CHALLENGE RETRY OK · failed Stage 1 → Retry Stage 1 · one run · canvas focus · score/unlocks preserved');
 
     const oneLifeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
     await cdp.evaluate("document.getElementById('btn-modes').focus(); true");
