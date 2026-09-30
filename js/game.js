@@ -4373,13 +4373,20 @@ function updateComboMeter(visible) {
       var st = CHALLENGE_STAGES[challengeStageIdx] || CHALLENGE_STAGES[0];
       if (score >= st.target) {
         challengeWon = true;
-        FTStorage.addCoins(40 + challengeStageIdx * 10);
+        var stageReward = 40 + challengeStageIdx * 10;
+        var unlockedBefore = FTStorage.getChallengeStage() || 1;
+        FTStorage.addCoins(stageReward);
         var next = Math.min(CHALLENGE_STAGES.length, challengeStageIdx + 2);
         FTStorage.setChallengeStage(next);
+        var newlyUnlocked = next > unlockedBefore ? CHALLENGE_STAGES[next - 1] : null;
+        var stageClearMessage = 'Stage ' + st.id + ' cleared.';
+        if (newlyUnlocked) stageClearMessage += ' Stage ' + newlyUnlocked.id + ': ' + newlyUnlocked.label + ' unlocked.';
+        stageClearMessage += ' +' + stageReward + ' coins.';
         FTAudio.combo();
         voiceCue('shabaash');
         showBanner('STAGE CLEAR!', 1600);
-        showToast('Stage clear! Stage ' + next + ' unlocked', 2500);
+        announceGameEvent(stageClearMessage);
+        showToast(stageClearMessage, 2500);
         updateCoinHud();
       }
     }

@@ -1356,10 +1356,16 @@ class DevTools {
     for (let tap=0; tap<40; tap++) {
       await cdp.press(' ','Space',32);
       await delay(430);
-      challengeWinProgress=await cdp.evaluate("({score:Number(document.getElementById('score-display').textContent),stage:window.FTStorage.getChallengeStage(),deathVisible:!document.getElementById('screen-death').hidden})");
+      challengeWinProgress=await cdp.evaluate("({score:Number(document.getElementById('score-display').textContent),stage:window.FTStorage.getChallengeStage(),deathVisible:!document.getElementById('screen-death').hidden,toastText:document.getElementById('toast').textContent.trim(),toastHidden:document.getElementById('toast').hidden,toastLive:document.getElementById('toast').getAttribute('aria-live')})");
       if (challengeWinProgress.stage>=2 || challengeWinProgress.deathVisible) break;
     }
     assert.equal(challengeWinProgress.stage,2,'passing a pipe clears Stage 1 and unlocks Stage 2; observed '+JSON.stringify(challengeWinProgress));
+    const stageClearMessage='Stage 1 cleared. Stage 2: Bridge Dash unlocked. +40 coins.';
+    const stageClearAnnouncement=await waitFor(()=>cdp.evaluate("(() => {const live=document.getElementById('game-announcer');return live.textContent.trim()==="+JSON.stringify(stageClearMessage)+"?{message:live.textContent.trim(),role:live.getAttribute('role'),live:live.getAttribute('aria-live')}:null;})()"),'polite Stage Clear live announcement');
+    assert.deepEqual({toast:challengeWinProgress.toastText,toastHidden:challengeWinProgress.toastHidden,toastLive:challengeWinProgress.toastLive,gameAnnouncement:stageClearAnnouncement.message,gameLiveRole:stageClearAnnouncement.role,gameLive:stageClearAnnouncement.live},
+      {toast:stageClearMessage,toastHidden:false,toastLive:null,gameAnnouncement:stageClearMessage,gameLiveRole:'status',gameLive:'polite'},
+      'stage-clear visual copy names the newly unlocked stage and reward, and the same concise message is announced once through the polite live region');
+    console.log('CHALLENGE CLEAR ANNOUNCEMENT OK · Stage 2: Bridge Dash · +40 coins · synchronized toast/live region');
     const challengeWinResult=await waitFor(()=>cdp.evaluate("(() => {const d=document.getElementById('screen-death');return !d.hidden&&document.activeElement.id==='run-summary-heading'&&window.FTStorage.getRunCount()==="+(challengeWinBefore.runs+1)+"?{mode:document.getElementById('mode-death-value').textContent,stageLabel:document.getElementById('mode-badge').textContent,score:document.getElementById('final-score').textContent,button:document.getElementById('btn-retry').textContent.trim(),runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest(),stage:window.FTStorage.getChallengeStage(),coins:window.FTStorage.getCoins()}:null;})()"),'Stage 1 clear Run Summary',20000);
     assert.equal(challengeWinResult.mode,'Challenge','the completed stage still identifies its finished run as Challenge');
     assert.ok(Number(challengeWinResult.score)>=1,'the cleared Challenge run retains a positive score');
