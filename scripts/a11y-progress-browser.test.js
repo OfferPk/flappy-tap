@@ -194,6 +194,112 @@ class DevTools {
     const menuHint = await cdp.evaluate("document.getElementById('controls-hint').textContent");
     assert.match(menuHint, /Pause: ⏸ or Esc/i, 'the main-menu hint names the touch-accessible pause button and keyboard shortcut');
 
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+    async function setStreakViewport(width, height) {
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: true });
+      await waitFor(() => cdp.evaluate(`innerWidth === ${width} && innerHeight === ${height}`), `${width}×${height} Streak viewport`);
+      await cdp.evaluate("(() => { const r=document.documentElement.style; r.setProperty('--safe-top','24px'); r.setProperty('--safe-bottom','34px'); r.setProperty('--safe-left','8px'); r.setProperty('--safe-right','8px'); return true; })()");
+    }
+    async function openStreak() {
+      await cdp.evaluate("document.getElementById('btn-streak').click(); true");
+      await waitFor(() => cdp.evaluate("!document.getElementById('screen-streak').hidden"), 'Streak panel open');
+      await delay(280);
+    }
+    async function tapAt(selector) {
+      const point = await cdp.evaluate(`(() => { const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; })()`);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x: point.x, y: point.y }] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await delay(100);
+    }
+    function parseRgb(value) {
+      const match = String(value).match(/rgba?\(([^)]+)\)/);
+      assert.ok(match, `expected a computed RGB color, got ${value}`);
+      return match[1].split(',').slice(0, 3).map((channel) => Number(channel.trim()));
+    }
+    function contrastRatio(foreground, background) {
+      const luminance = (rgb) => {
+        const channels = rgb.map((value) => {
+          const c = value / 255;
+          return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      };
+      const a = luminance(parseRgb(foreground));
+      const b = luminance(parseRgb(background));
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }
+    async function inspectStreakActions(width, height, expectedDisabled) {
+      const data = await cdp.evaluate(`(() => {
+        const rect = (el) => { const r=el.getBoundingClientRect(); return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height,visible:!!el.getClientRects().length}; };
+        const claim=document.getElementById('btn-claim-streak');
+        const back=document.querySelector('#screen-streak [data-close="streak"]');
+        const claimStyle=getComputedStyle(claim), backStyle=getComputedStyle(back);
+        const safe=getComputedStyle(document.documentElement);
+        const body=document.getElementById('streak-body');
+        return {viewport:[innerWidth,innerHeight],app:rect(document.getElementById('app')),claim:Object.assign(rect(claim),{text:claim.textContent,disabled:claim.disabled,color:claimStyle.color,backgroundColor:claimStyle.backgroundColor,backgroundImage:claimStyle.backgroundImage,opacity:claimStyle.opacity}),back:Object.assign(rect(back),{text:back.textContent,color:backStyle.color,backgroundColor:backStyle.backgroundColor}),safe:{left:parseFloat(safe.getPropertyValue('--safe-left'))||0,right:parseFloat(safe.getPropertyValue('--safe-right'))||0,bottom:parseFloat(safe.getPropertyValue('--safe-bottom'))||0},body:{clientHeight:body.clientHeight,scrollHeight:body.scrollHeight}};
+      })()`);
+      assert.deepEqual(data.viewport, [width, height], 'requested Streak viewport is active');
+      assert.equal(data.claim.visible && data.back.visible, true, `${width}×${height} both Streak actions are rendered`);
+      assert.equal(data.claim.disabled, expectedDisabled, 'Claim is enabled only when a reward is available');
+      for (const [name, button] of [['Claim', data.claim], ['Back', data.back]]) {
+        assert.ok(button.width >= 44 && button.height >= 44, `${name} has a usable 44×44px touch target: ${JSON.stringify(button)}`);
+        assert.ok(button.left >= data.app.left + data.safe.left - 1 && button.right <= data.app.right - data.safe.right + 1,
+          `${name} stays inside the app and horizontal safe area: ${JSON.stringify(button)}`);
+        assert.ok(button.bottom <= data.app.bottom - data.safe.bottom - 10,
+          `${name} stays above the bottom safe area: ${JSON.stringify(button)}`);
+      }
+      assert.ok(data.back.top - data.claim.bottom >= 8, `Claim and Back have a clear gap and never overlap: ${JSON.stringify({claim:data.claim,back:data.back})}`);
+      const stops = data.claim.backgroundImage.match(/rgba?\([^)]+\)/g) || [data.claim.backgroundColor];
+      const claimContrast = Math.min(...stops.map((color) => contrastRatio(data.claim.color, color)));
+      const backContrast = contrastRatio(data.back.color, data.back.backgroundColor);
+      assert.ok(claimContrast >= 4.5, `Claim/status text contrast is WCAG AA: ${claimContrast.toFixed(2)}:1`);
+      assert.ok(backContrast >= 4.5, `Back text contrast is WCAG AA: ${backContrast.toFixed(2)}:1`);
+      if (expectedDisabled) {
+        assert.equal(data.claim.text, 'Claimed today', 'the completed reward state has clear status text');
+        assert.equal(data.claim.opacity, '1', 'the claimed status is not dimmed like an unavailable action');
+      }
+      if (width === 320 && height === 568) {
+        const scrolled = await cdp.evaluate("(() => { const b=document.getElementById('streak-body'); b.scrollTop=b.scrollHeight; const c=document.getElementById('btn-claim-streak').getBoundingClientRect(); const k=document.querySelector('#screen-streak [data-close=\"streak\"]').getBoundingClientRect(); return {scrollTop:b.scrollTop,scrollHeight:b.scrollHeight,clientHeight:b.clientHeight,claimTop:c.top,backTop:k.top}; })()");
+        assert.ok(scrolled.scrollTop > 0 && scrolled.scrollHeight > scrolled.clientHeight, 'calendar details remain independently scrollable on a small phone');
+        assert.ok(Math.abs(scrolled.claimTop - data.claim.top) < 1 && Math.abs(scrolled.backTop - data.back.top) < 1,
+          'the Claim and Back actions remain fixed and visible while the calendar scrolls');
+        await cdp.evaluate("document.getElementById('streak-body').scrollTop=0; true");
+      }
+      console.log(`STREAK ACTIONS OK · ${width}×${height} · claim ${claimContrast.toFixed(1)}:1 · back ${backContrast.toFixed(1)}:1`);
+      return data;
+    }
+
+    await setStreakViewport(704, 1540);
+    await openStreak();
+    const claimableLayout = await inspectStreakActions(704, 1540, false);
+    assert.match(claimableLayout.claim.text, /Claim Day 1/i, 'a claimable streak shows the current reward action');
+    const coinsBeforeClaim = Number(await cdp.evaluate("localStorage.getItem('flappy-tap:coins') || '0'"));
+    await tapAt('#btn-claim-streak');
+    const claimOutcome = await waitFor(() => cdp.evaluate("(() => { const b=document.getElementById('btn-claim-streak'); return b.disabled && b.textContent === 'Claimed today' ? {text:b.textContent,coins:Number(localStorage.getItem('flappy-tap:coins')||'0')} : null; })()"), 'streak claim result');
+    assert.equal(claimOutcome.coins, coinsBeforeClaim + 12, 'a Day 1 tap preserves and grants exactly the configured 12-coin reward');
+    await tapAt('#screen-streak [data-close="streak"]');
+    await waitFor(() => cdp.evaluate("document.getElementById('screen-streak').hidden && !document.getElementById('screen-start').hidden"), 'Streak Back returns to menu');
+    assert.equal(await cdp.evaluate("document.activeElement.id"), 'btn-streak', 'Back restores focus to the Streak menu control');
+
+    await cdp.evaluate("(() => { const n=new Date(); const day=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); localStorage.setItem('flappy-tap:streak-date',day); localStorage.setItem('flappy-tap:streak-day','2'); localStorage.setItem('flappy-tap:streak-claimed','1'); return true; })()");
+    for (const [width, height] of [[704, 1540], [393, 690], [320, 568]]) {
+      await setStreakViewport(width, height);
+      await openStreak();
+      const claimedLayout = await inspectStreakActions(width, height, true);
+      assert.equal(claimedLayout.claim.text, 'Claimed today');
+      const coinsBeforeDisabledTap = Number(await cdp.evaluate("localStorage.getItem('flappy-tap:coins') || '0'"));
+      await tapAt('#btn-claim-streak');
+      assert.equal(await cdp.evaluate("!document.getElementById('screen-streak').hidden"), true, 'tapping the disabled claimed status does not activate another action');
+      assert.equal(Number(await cdp.evaluate("localStorage.getItem('flappy-tap:coins') || '0'")), coinsBeforeDisabledTap, 'the claimed state cannot grant duplicate rewards');
+      await tapAt('#screen-streak [data-close="streak"]');
+      await waitFor(() => cdp.evaluate("document.getElementById('screen-streak').hidden && !document.getElementById('screen-start').hidden"), `${width}×${height} Back tap returns to menu`);
+    }
+    await cdp.evaluate("(() => { const s=document.documentElement.style; ['--safe-top','--safe-bottom','--safe-left','--safe-right'].forEach(k=>s.removeProperty(k)); localStorage.setItem('flappy-tap:coins','123'); ['streak-date','streak-day','streak-claimed','streak-log'].forEach(k=>localStorage.removeItem('flappy-tap:'+k)); return true; })()");
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    await cdp.send('Emulation.clearDeviceMetricsOverride');
+    await waitFor(() => cdp.evaluate('innerWidth > 320 && innerHeight > 400'), 'restore desktop viewport');
+    await cdp.evaluate("document.getElementById('btn-play').focus(); true");
+
     const activeId = () => cdp.evaluate("document.activeElement && document.activeElement.id || ''");
     let current = await activeId();
     if (!current) {
