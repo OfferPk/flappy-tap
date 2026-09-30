@@ -223,7 +223,7 @@ html.reduce-motion #app.shake { animation: none; }
 
 .scroll-screen { justify-content: flex-start; }
 
-.pause-screen { justify-content: center; }
+.pause-screen { justify-content: safe center; }
 .pause-screen h2 { color: var(--accent); }
 
 .logo {

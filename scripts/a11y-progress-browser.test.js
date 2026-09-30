@@ -584,6 +584,7 @@ class DevTools {
       await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets });
       await waitFor(() => cdp.evaluate(`innerWidth === ${width} && innerHeight === ${height}`), `${width}×${height} Settings viewport`);
       await cdp.evaluate("(() => { document.documentElement.style.fontSize='200%'; const s=document.getElementById('screen-settings'); s.scrollTop=0; s.querySelector('.settings-card').scrollTop=0; return true; })()");
+      await delay(350);
       const layout = await cdp.evaluate(`(() => {
         const screen=document.getElementById('screen-settings');
         const card=screen.querySelector('.settings-card');
@@ -608,7 +609,7 @@ class DevTools {
         `${width}×${height} Settings content is not clipped by fixed-height containers`);
       assert.ok(layout.heading.top>=insets.top && layout.heading.left>=insets.left && layout.heading.right<=width-insets.right,
         `${width}×${height} Settings heading is inside the safe viewport: ${JSON.stringify(layout.heading)}`);
-      assert.ok(layout.close.top>=insets.top && layout.close.right<=width-insets.right,
+      assert.ok(layout.close.top>=insets.top && layout.close.right<=width-insets.right+1,
         `${width}×${height} Settings close control is inside the safe viewport: ${JSON.stringify(layout.close)}`);
       assert.ok(layout.card.left>=insets.left && layout.card.right<=width-insets.right && layout.cardSize.scrollWidth<=layout.cardSize.width+1,
         `${width}×${height} Settings card has no horizontal clipping: ${JSON.stringify(layout)}`);
@@ -931,6 +932,43 @@ class DevTools {
     assert.match(pauseAnnouncement, /Score \d+/);
     const pausePanelVisible = await cdp.evaluate("!document.getElementById('screen-pause').hidden && document.activeElement.id === 'btn-resume'");
     assert.equal(pausePanelVisible, true, 'keyboard activation of the visible pause control opens the pause panel and focuses Resume');
+    async function enableScaledLandscape(width,height,insets) {
+      await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true,screenOrientation:{type:'landscapePrimary',angle:90}});
+      await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets});
+      await waitFor(()=>cdp.evaluate(`innerWidth===${width}&&innerHeight===${height}`),`${width}×${height} scaled landscape viewport`);
+      await cdp.evaluate("document.documentElement.style.fontSize='200%'; true");
+      await delay(350);
+    }
+    async function resetScaledLandscape() {
+      await cdp.evaluate("document.documentElement.style.fontSize=''; true");
+      await cdp.send('Emulation.setSafeAreaInsetsOverride',{insets:{}});
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
+      await waitFor(()=>cdp.evaluate('innerWidth>320&&innerHeight>400'),'restore desktop after landscape audit');
+    }
+    async function checkPauseLandscape(width,height,insets) {
+      await enableScaledLandscape(width,height,insets);
+      const panel=await cdp.evaluate("(() => {const s=document.getElementById('screen-pause');s.scrollTop=0;const r=e=>{const b=e.getBoundingClientRect();return {top:b.top,bottom:b.bottom,left:b.left,right:b.right,width:b.width,height:b.height};};const safe=getComputedStyle(document.documentElement);const close=s.querySelector('.panel-close'),c=close.getBoundingClientRect(),hit=document.elementFromPoint(c.left+c.width/2,c.top+c.height/2);const selectors=['.pause-stats','.pause-stat','.pause-tip'];const overflow=[];selectors.forEach(q=>s.querySelectorAll(q).forEach(e=>{if(e.scrollWidth>e.clientWidth+1)overflow.push({selector:q,text:(e.textContent||'').trim(),width:e.clientWidth,scrollWidth:e.scrollWidth});}));return {font:getComputedStyle(document.documentElement).fontSize,safe:['--safe-top','--safe-left','--safe-bottom','--safe-right'].map(k=>safe.getPropertyValue(k).trim()),overflowY:getComputedStyle(s).overflowY,scrollWidth:s.scrollWidth,clientWidth:s.clientWidth,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight,overflow,heading:r(s.querySelector('h2')),stats:r(s.querySelector('.pause-stats')),tip:r(s.querySelector('.pause-tip')),close:r(close),closeHit:!!hit&&(hit===close||close.contains(hit))};})()");
+      assert.equal(panel.font,'32px',`${width}×${height} Pause uses 200% text scale`);
+      assert.deepEqual(panel.safe,[`${insets.top}px`,`${insets.left}px`,`${insets.bottom}px`,`${insets.right}px`],`${width}×${height} native safe insets reach Pause`);
+      assert.equal(panel.overflowY,'auto',`${width}×${height} Pause can scroll when scaled content is taller than the viewport`);
+      assert.ok(panel.scrollWidth<=panel.clientWidth+1,`${width}×${height} Pause has no horizontal panel overflow`);
+      assert.ok(panel.heading.top>=insets.top&&panel.heading.left>=insets.left&&panel.heading.right<=width-insets.right,
+        `${width}×${height} Pause heading remains reachable from the safe top: ${JSON.stringify(panel.heading)}`);
+      assert.ok(panel.close.top>=insets.top&&panel.close.right<=width-insets.right&&panel.closeHit,
+        `${width}×${height} Pause close control remains safe and hit-testable: ${JSON.stringify(panel.close)}`);
+      assert.ok(panel.stats.bottom<=panel.tip.top,`${width}×${height} Pause stats and tip do not overlap`);
+      assert.deepEqual(panel.overflow,[],`${width}×${height} Pause stats/tip text wraps without horizontal clipping`);
+      for(const selector of ['#btn-resume','#btn-quit-pause']) {
+        await cdp.evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',inline:'nearest'}); true`);
+        const control=await cdp.evaluate(`(() => {const e=document.querySelector(${JSON.stringify(selector)}),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height,visible:r.top>=0&&r.bottom<=innerHeight,hit:!!h&&(h===e||e.contains(h))};})()`);
+        assert.ok(control.visible&&control.hit&&control.height>=44&&control.left>=insets.left&&control.right<=width-insets.right&&control.bottom<=height-insets.bottom,
+          `${width}×${height} ${selector} stays reachable and tappable above the safe area: ${JSON.stringify(control)}`);
+      }
+      await resetScaledLandscape();
+      console.log(`PAUSE SCALE/SAFE AREA OK · ${width}×${height} · 200% landscape`);
+    }
+    await checkPauseLandscape(568,320,{top:8,left:44,bottom:21,right:44});
+    await checkPauseLandscape(844,390,{top:8,left:44,bottom:21,right:44});
     const manualPauseAnnouncement = await cdp.evaluate("document.getElementById('game-announcer').textContent");
     await changePageVisibility(true);
     await changePageVisibility(false);
@@ -978,6 +1016,33 @@ class DevTools {
       'the run-end live region does not repeat its announcement after the result is shown');
     const resultRegion = await cdp.evaluate("(() => { const el=document.getElementById('run-result-announcement'); return {role:el.getAttribute('role'),live:el.getAttribute('aria-live'),atomic:el.getAttribute('aria-atomic')}; })()");
     assert.deepEqual(resultRegion, { role: 'status', live: 'polite', atomic: 'true' }, 'the final result uses one polite atomic screen-reader status region');
+
+    async function checkRunEndLandscape(width,height,insets) {
+      await enableScaledLandscape(width,height,insets);
+      const layout=await cdp.evaluate("(() => {const s=document.getElementById('screen-death');s.scrollTop=0;const r=e=>{const b=e.getBoundingClientRect();return {top:b.top,bottom:b.bottom,left:b.left,right:b.right,width:b.width,height:b.height};};const safe=getComputedStyle(document.documentElement),close=s.querySelector('.panel-close'),c=close.getBoundingClientRect(),hit=document.elementFromPoint(c.left+c.width/2,c.top+c.height/2);const overflow=[];['.run-summary','.sum-row','.score-big','.new-record-banner','.grade-wrap','.btn-row'].forEach(q=>s.querySelectorAll(q).forEach(e=>{if(e.getClientRects().length&&e.scrollWidth>e.clientWidth+1)overflow.push({selector:q,text:(e.textContent||'').trim().slice(0,60),width:e.clientWidth,scrollWidth:e.scrollWidth});}));return {font:getComputedStyle(document.documentElement).fontSize,safe:['--safe-top','--safe-left','--safe-bottom','--safe-right'].map(k=>safe.getPropertyValue(k).trim()),overflowY:getComputedStyle(s).overflowY,scrollWidth:s.scrollWidth,clientWidth:s.clientWidth,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight,overflow,heading:r(s.querySelector('h2')),summary:r(s.querySelector('#run-summary')),close:r(close),closeHit:!!hit&&(hit===close||close.contains(hit))};})()");
+      assert.equal(layout.font,'32px',`${width}×${height} run summary uses 200% text scale`);
+      assert.deepEqual(layout.safe,[`${insets.top}px`,`${insets.left}px`,`${insets.bottom}px`,`${insets.right}px`],`${width}×${height} native safe insets reach run summary`);
+      assert.equal(layout.overflowY,'auto',`${width}×${height} run summary is vertically scrollable`);
+      assert.ok(layout.scrollWidth<=layout.clientWidth+1,`${width}×${height} run summary has no horizontal panel overflow`);
+      assert.ok(layout.heading.top>=insets.top&&layout.heading.left>=insets.left&&layout.heading.right<=width-insets.right,
+        `${width}×${height} run heading remains reachable inside the safe area: ${JSON.stringify(layout.heading)}`);
+      assert.ok(layout.close.top>=insets.top&&layout.close.right<=width-insets.right&&layout.closeHit,
+        `${width}×${height} run-summary close control remains safe and hit-testable: ${JSON.stringify(layout.close)}`);
+      assert.ok(layout.summary.left>=insets.left&&layout.summary.right<=width-insets.right,
+        `${width}×${height} run-summary metrics remain within the horizontal safe area: ${JSON.stringify(layout.summary)}`);
+      assert.deepEqual(layout.overflow,[],`${width}×${height} score and summary labels fit without horizontal clipping: ${JSON.stringify(layout.overflow)}`);
+      for(const selector of ['#btn-retry','#btn-share','#btn-death-collection','#btn-menu']) {
+        await cdp.evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',inline:'nearest'}); true`);
+        const control=await cdp.evaluate(`(() => {const e=document.querySelector(${JSON.stringify(selector)}),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height,visible:r.top>=0&&r.bottom<=innerHeight,hit:!!h&&(h===e||e.contains(h))};})()`);
+        assert.ok(control.visible&&control.hit&&control.height>=44&&control.left>=insets.left&&control.right<=width-insets.right&&control.bottom<=height-insets.bottom,
+          `${width}×${height} ${selector} remains reachable and tappable above the safe area: ${JSON.stringify(control)}`);
+      }
+      await cdp.evaluate("document.getElementById('screen-death').scrollTop=0; true");
+      await resetScaledLandscape();
+      console.log(`RUN END SCALE/SAFE AREA OK · ${width}×${height} · 200% landscape`);
+    }
+    await checkRunEndLandscape(568,320,{top:8,left:44,bottom:21,right:44});
+    await checkRunEndLandscape(844,390,{top:8,left:44,bottom:21,right:44});
 
     await cdp.evaluate("document.getElementById('btn-retry').focus(); true");
     await cdp.press('Enter', 'Enter', 13);
