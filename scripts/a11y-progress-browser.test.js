@@ -1231,6 +1231,22 @@ class DevTools {
     await cdp.press('Enter','Enter',13);
     await waitFor(()=>cdp.evaluate("!document.getElementById('challenge-stage-panel').hidden"),'open Challenge Stages picker');
     const challengeOpen=await readChallengeState();
+    const challengeStageDom=await cdp.evaluate("Array.from(document.querySelectorAll('.challenge-stage-card')).map((e,index)=>({index,disabled:e.disabled,label:e.querySelector('strong').textContent,text:e.innerText.replace(/\\s+/g,' ').trim(),ariaLabel:e.getAttribute('aria-label')}))");
+    await cdp.press('Tab','Tab',9);
+    const challengeTabFirst=await cdp.evaluate("({isStage:document.activeElement.classList.contains('challenge-stage-card'),disabled:!!document.activeElement.disabled,index:Array.from(document.querySelectorAll('.challenge-stage-card')).indexOf(document.activeElement),label:document.activeElement.querySelector&&document.activeElement.querySelector('strong')?document.activeElement.querySelector('strong').textContent:document.activeElement.id})");
+    await cdp.press('Tab','Tab',9);
+    const challengeTabNext=await cdp.evaluate("({id:document.activeElement.id,className:document.activeElement.className,tag:document.activeElement.tagName})");
+    const challengeAxTree=await cdp.send('Accessibility.getFullAXTree');
+    const challengeStageAx=challengeAxTree.result.nodes.filter(n=>n.role&&n.role.value==='button'&&n.name&&n.name.value.includes('Target')).map(n=>({name:n.name.value,disabled:(n.properties||[]).filter(p=>p.name==='disabled').map(p=>p.value&&p.value.value)}));
+    const firstLockedDom=challengeStageDom.find(card=>card.disabled);
+    const firstLockedAx=challengeStageAx.find(node=>node.disabled.includes(true));
+    assert.deepEqual({isStage:challengeTabFirst.isStage,disabled:challengeTabFirst.disabled,index:challengeTabFirst.index},{isStage:true,disabled:false,index:0},'Tab from the picker heading reaches the first unlocked stage');
+    assert.equal(challengeTabNext.id,'btn-challenge-cancel','Tab skips native-disabled locked stages and reaches Cancel');
+    assert.ok(firstLockedDom,'at least one locked stage is present for the accessibility audit');
+    assert.match(firstLockedDom.ariaLabel,/^Stage \d+: .+\. Locked\./,'locked stage DOM name states its lock status');
+    assert.ok(firstLockedAx,'the Chromium accessibility tree exposes a disabled locked stage button');
+    assert.match(firstLockedAx.name,/^Stage \d+: .+\. Locked\./,'locked stage accessible name includes explicit status');
+    assert.match(firstLockedAx.name,/Clear the previous stage to unlock\./,'locked stage accessible name explains how to unlock');
     await cdp.evaluate("document.getElementById('btn-challenge-cancel').focus(); true");
     await cdp.press('Enter','Enter',13);
     await waitFor(()=>cdp.evaluate("document.getElementById('challenge-stage-panel').hidden"),'Cancel closes Challenge Stages picker');
@@ -1261,7 +1277,7 @@ class DevTools {
     assert.deepEqual({modesVisible:challengeAfter.modesVisible,pickerVisible:challengeAfter.pickerVisible,focus:challengeAfter.focus,runs:challengeAfter.runs,best:challengeAfter.best,stage:challengeAfter.stage},
       {modesVisible:false,pickerVisible:false,focus:'btn-modes',runs:challengeRulesBefore.runs,best:challengeRulesBefore.best,stage:challengeRulesBefore.stage},
       'closing Modes after picker cancellation returns to its menu trigger and preserves progress');
-    console.log('CHALLENGE STAGES FOCUS OK · heading entry · Cancel/X/Escape restore trigger · unlock/run/record preserved');
+    console.log('CHALLENGE STAGES A11Y OK · Tab order · explicit locked status/unlock hint · Cancel/X/Escape restore focus · progression unchanged');
 
     const oneLifeRulesBefore=await cdp.evaluate("({runs:window.FTStorage.getRunCount(),best:window.FTStorage.getBest()})");
     await cdp.evaluate("document.getElementById('btn-modes').focus(); true");

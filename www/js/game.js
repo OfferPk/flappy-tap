@@ -7633,6 +7633,7 @@ function updateComboMeter(visible) {
       card.className = 'challenge-stage-card' + (open ? '' : ' locked') + (cleared ? ' cleared' : '') +
         (idx === challengeStageIdx && open ? ' current' : '');
       card.disabled = !open;
+      if (!open) card.setAttribute('aria-label', 'Stage ' + st.id + ': ' + st.label + '. Locked. Target ' + st.target + ' · ' + st.area + '. Clear the previous stage to unlock.');
       card.innerHTML = '<span class="cs-num">' + (cleared ? '✓' : (open ? st.id : '🔒')) + '</span>' +
         '<span class="cs-body"><strong>' + st.label + '</strong><em>Target ' + st.target + ' · ' + st.area + '</em></span>';
       if (open) {
