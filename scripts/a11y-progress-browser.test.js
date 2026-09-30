@@ -249,6 +249,58 @@ class DevTools {
     async function snapshotLocalStorage() {
       return cdp.evaluate("(() => { const entries=[]; for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);entries.push([key,localStorage.getItem(key)]);} return entries.sort((a,b)=>a[0].localeCompare(b[0])); })()");
     }
+    async function verifySameBackupFileCanBeSelectedTwice() {
+      await cdp.evaluate("localStorage.setItem('flappy-tap:best','209'); localStorage.setItem('flappy-tap:coins','51'); true");
+      const beforeTimeOrigin = await cdp.evaluate('performance.timeOrigin');
+      const beforeSnapshot = await snapshotLocalStorage();
+      await cdp.evaluate(`(() => {
+        const input = document.getElementById('progress-import-file');
+        window.__sameBackupFile = new File([${JSON.stringify(backupText)}], 'same-progress-backup.json', { type: 'application/json' });
+        window.__sameFileConfirmCalls = 0;
+        window.__sameFileChooserCalls = 0;
+        window.__sameFileChangeEvents = 0;
+        window.__sameFileSuppressed = 0;
+        window.confirm = () => { window.__sameFileConfirmCalls++; return false; };
+        input.addEventListener('change', () => { window.__sameFileChangeEvents++; });
+        input.click = function () {
+          window.__sameFileChooserCalls++;
+          if (this.files.length === 1 && this.files[0].name === window.__sameBackupFile.name) {
+            window.__sameFileSuppressed++;
+            return;
+          }
+          const transfer = new DataTransfer();
+          transfer.items.add(window.__sameBackupFile);
+          this.files = transfer.files;
+          this.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        return true;
+      })()`);
+      async function chooseAgain() {
+        await cdp.evaluate("document.getElementById('btn-import-progress').focus(); true");
+        await cdp.press('Enter', 'Enter', 13);
+      }
+      await chooseAgain();
+      await waitFor(() => cdp.evaluate("window.__sameFileConfirmCalls === 1 && document.getElementById('progress-transfer-status').textContent.includes('Import cancelled.')"), 'first selection of the backup file');
+      const first = await cdp.evaluate("({value:document.getElementById('progress-import-file').value,files:document.getElementById('progress-import-file').files.length,confirmCalls:window.__sameFileConfirmCalls,changeEvents:window.__sameFileChangeEvents,chooserCalls:window.__sameFileChooserCalls,suppressed:window.__sameFileSuppressed,status:document.getElementById('progress-transfer-status').textContent})");
+      assert.equal(first.value, '', 'the file input value resets after the first selection');
+      assert.equal(first.files, 0, 'the first selected file is cleared so the browser can report it again');
+      assert.equal(first.confirmCalls, 1, 'the first selection reaches import confirmation');
+      assert.equal(first.changeEvents, 1, 'the first selection dispatches a change event');
+      assert.match(first.status, /Import cancelled\. Nothing was changed\./);
+
+      await chooseAgain();
+      await waitFor(() => cdp.evaluate("window.__sameFileConfirmCalls === 2 && document.getElementById('progress-transfer-status').textContent.includes('Import cancelled.')"), 'second selection of the same backup file');
+      const second = await cdp.evaluate("({value:document.getElementById('progress-import-file').value,files:document.getElementById('progress-import-file').files.length,timeOrigin:performance.timeOrigin,confirmCalls:window.__sameFileConfirmCalls,changeEvents:window.__sameFileChangeEvents,chooserCalls:window.__sameFileChooserCalls,suppressed:window.__sameFileSuppressed,status:document.getElementById('progress-transfer-status').textContent})");
+      assert.equal(second.confirmCalls, 2, 'reselecting the same file reaches confirmation a second time');
+      assert.equal(second.changeEvents, 2, 'the second same-file selection dispatches another change event');
+      assert.equal(second.chooserCalls, 2, 'the import chooser is activated twice');
+      assert.equal(second.suppressed, 0, 'the simulated chooser does not suppress the same file after input reset');
+      assert.equal(second.value, '', 'the file input is cleared again after the second selection');
+      assert.equal(second.files, 0);
+      assert.equal(second.timeOrigin, beforeTimeOrigin, 'canceling both confirmations does not reload the page');
+      assert.match(second.status, /Import cancelled\. Nothing was changed\./);
+      assert.deepEqual(await snapshotLocalStorage(), beforeSnapshot, 'canceling both selections preserves all saved progress');
+    }
     async function verifyFilePickerCancel() {
       await cdp.evaluate("localStorage.setItem('flappy-tap:best','209'); localStorage.setItem('flappy-tap:coins','51'); true");
       const beforeTimeOrigin = await cdp.evaluate('performance.timeOrigin');
@@ -311,6 +363,7 @@ class DevTools {
       assert.deepEqual(await snapshotLocalStorage(), beforeSnapshot, label + ' preserves every saved localStorage entry');
     }
 
+    await verifySameBackupFileCanBeSelectedTwice();
     await verifyFilePickerCancel();
     await verifyRejectedImport('cancelled backup import', backupText, false, 'Import cancelled. Nothing was changed.', 1);
     await verifyRejectedImport('malformed JSON backup', '{"format":"flappy-tap-progress",', true, 'Could not read that backup file.', 0);
